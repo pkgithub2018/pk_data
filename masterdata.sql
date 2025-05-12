@@ -16,6 +16,13 @@ CREATE TABLE IF NOT EXISTS "public"."tbusers" (
     enabled text NOT NULL /* yes/no */
 );
 
+CREATE TABLE IF NOT EXISTS "public"."tbusergroup" (
+    "id" SERIAL PRIMARY KEY,
+    "title" TEXT NOT NULL,  /* 1=admin, 2=outdomxay, 3=borten border, 4=lab, 5=other */
+    "desc" TEXT,
+    enabled text NOT NULL /* yes/no */
+);
+
 CREATE TABLE IF NOT EXISTS "sch_ephyto"."tblocation" (
     "id" SERIAL PRIMARY KEY,
     "bordername_eng" TEXT NOT NULL,

@@ -1,15 +1,27 @@
 
-CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbusers" (
+CREATE TABLE IF NOT EXISTS "public"."tbusers" (
     id SERIAL PRIMARY KEY,
     name text NOT NULL,
     surname text,
-    uname text NOT NULL,
-    psw text NOT NULL,
+    sex text NOT NULL, /* m-male and f-female */
+    psw text NOT NULL, /* encrypted password - In PostgreSQL, need to CREATE EXTENSION IF NOT EXISTS pgcrypto; */
+    position text,
+    unit text, /* workplace: 1-rootuser: DOA, 2-Provincial users:, 3-Viewuser: Borderpoints */
     phone text,
-    email text,
-    workplace text,
-    usertype integer NOT NULL,
-    sex "char" NOT NULL /* 1-rootuser: DOA, 2-Provincial users:, 3-Viewuser: Borderpoints */
+    email text, /* used as username: email should be unique */
+    last_login timestamp,
+    group_id INTEGER NOT NULL, /* 1=admin, 2=provincial, 3=borderpoint, 4=lab, 5=other */
+    group_admin text NOT NULL, /* yes/no */
+    location_id INTEGER NOT NULL, /* borderpoint_id */
+    enabled text NOT NULL /* yes/no */
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbusergroup" (
+    "id" SERIAL PRIMARY KEY,
+    "title" TEXT NOT NULL,  /* Group name: 1=admin, 2=outdomxay, 3=borten border, 4=lab, 5=other */
+    "desc" TEXT,
+    enabled text NOT NULL /* yes/no */
+);
 
 CREATE TABLE IF NOT EXISTS "sch_ephyto"."tblocation" (
     "id" SERIAL PRIMARY KEY,

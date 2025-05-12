@@ -21,7 +21,7 @@
     $_SESSION["username"] = $username;
     $_SESSION["email"] = $username; // Use email as username
     $_SESSION["passw"] = $password;
-      
+     /* 
     $sqlchuser = "SELECT username, passw, email, usertype FROM tbusers 
               WHERE email = '".$_SESSION["username"]."' AND passw = '".$_SESSION["passw"]."'";
     $result = mysqli_query($con, $sqlchuser) or die(mysqli_connect_error());
@@ -33,7 +33,22 @@
       //$message = "Hello, Login: " . $unamelogin . "<br>Your password is: " . $pswlogin;
       echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin';</script>";
       exit();
-    }   
+    }  
+    */
+    $sqlchuser = "SELECT name, psw, email, group_id FROM tbusers 
+              WHERE email = '" . pg_escape_string($con, $_SESSION["username"]) . "' 
+              AND psw = crypt('" . pg_escape_string($con, $_SESSION["passw"]) . "', psw)";
+    $result = pg_query($con, $sqlchuser) or die(pg_last_error($con));
+
+    if (pg_num_rows($result) == 0) {
+    $message = "Incorrect username or password. Please try again.";
+    } else {
+    list($unamelogin, $pswlogin, $emaillogin, $groupid) = pg_fetch_array($result);
+    // Prepare the message
+    $message = "Hello, Login: " . $unamelogin . "<br>Your password is: " . $pswlogin;
+    echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin';</script>";
+    exit();
+}
 }
 // IN CASE OF SUBMISSION THROUGH LINKS
 // ***

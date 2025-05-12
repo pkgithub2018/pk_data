@@ -1,0 +1,92 @@
+
+body {
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; 
+    
+}
+.nav-tabs .nav-link {
+    font-size: 1.2rem;
+}
+.tab-content {
+    margin-top: 20px;
+}
+.header {
+    background-color: #343a40;
+    color: #ffffff;
+    padding: 10px 20px;
+}
+.header .nav-link {
+    color: #ffffff;
+}
+.header .dropdown-menu {
+    background-color: #343a40;
+}
+.header .dropdown-item {
+    color: #ffffff;
+}
+.header .dropdown-item:hover {
+    background-color: #495057;
+}
+footer {
+    background-color: #343a40;
+    color: #ffffff;
+    padding: 20px;
+    position: relative;
+    text-align: left;
+}
+footer .footer-icon {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+.content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.content-main {
+    padding: 20px;
+    flex: 1;
+}
+.login-container {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px; 
+    margin-bottom: 10px;
+}
+.login-container .form-control {
+    border-radius: 20px;
+}
+.login-container .btn {
+    border-radius: 20px;
+}
+.login-container .form-check-label {
+    font-size: 0.9rem;
+}
+.linemenu-color {
+    color: #ffffff;
+    padding: 5px;
+}
+.tabledata-fonts {
+    font-size: 10pt;  
+}
+.table-icon {
+    font-size: 12px; /* Adjust the size as needed */
+    /* width: 10px;
+    height: 10px;
+    vertical-align: middle;
+    */
+     /* Aligns icons and inputs vertically */
+}
+
+.large-checkbox {
+        width: 25px;
+        height: 20px;
+    }

@@ -23,12 +23,35 @@ CREATE TABLE IF NOT EXISTS "public"."tbusergroup" (
     enabled text NOT NULL /* yes/no */
 );
 
-CREATE TABLE IF NOT EXISTS "sch_ephyto"."tblocation" (
+CREATE TABLE IF NOT EXISTS "public"."tbgrouppermits" (
     "id" SERIAL PRIMARY KEY,
-    "bordername_eng" TEXT NOT NULL,
-    "bordername_lao" TEXT NOT NULL,
-    "location" TEXT NOT NULL,
-    "border_type" INTEGER /* 1=traditional, 2=local, 3=International */
+    "gid" INTEGER NOT NULL,  /* Group id - foreign key will be added later*/
+    "mid" INTEGER NOT NULL,  /* module id - foreign key */
+    "read" TEXT NOT NULL,  /* yes/no */
+    "write" TEXT NOT NULL, /* yes/no */ 
+    "update" TEXT NOT NULL, /* yes/no */
+    "delete" TEXT NOT NULL, /* yes/no */
+    CONSTRAINT fk_gid FOREIGN KEY ("gid") REFERENCES "public"."tbusergroup"("id"),
+    CONSTRAINT fk_mid FOREIGN KEY ("mid") REFERENCES "public"."tbmodules"("id")
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbmodules" (
+    "id" SERIAL PRIMARY KEY,
+    "name" TEXT NOT NULL,  
+    "desc" TEXT,
+    enabled text NOT NULL /* yes/no */
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tblocations" (
+    "id" SERIAL PRIMARY KEY,
+    "lid" TEXT NOT NULL,
+    "name_eng" TEXT NOT NULL,
+    "name_lao" TEXT NOT NULL,
+    "location_type" TEXT NOT NULL, /* 1=International, 2=local, 3=traditional  */
+    "pid" TEXT NOT NULL,
+    "did" TEXT NOT NULL,
+    CONSTRAINT fk_pid FOREIGN KEY ("pid") REFERENCES "public"."tbprovinces"("id"),
+    CONSTRAINT fk_did FOREIGN KEY ("did") REFERENCES "public"."tbdistricts"("id")
 );
 
 CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbbordertype" (
@@ -38,7 +61,7 @@ CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbbordertype" (
 
 CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbdistricts" (
     "id" SERIAL PRIMARY KEY,
-    "pid" INTEGER NOT NULL,
+    "pid" TEXT NOT NULL,
     "dname" TEXT NOT NULL
 );
 

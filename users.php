@@ -1,0 +1,775 @@
+<?php
+      // Pk: 2025-04-30
+  session_start();
+
+  require("php-bin/connection.php"); // replace include with require
+  require("php-bin/supports.php"); // replace include with require
+
+  $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
+  $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+  <title>Users Group</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+  <!-- Ajax PK -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="jspk/users-validate.js"></script>  
+   <!-- 
+    PK Script: Users and Usersgroup includes:
+              1. handleCheckboxChange function
+  -->
+    
+  <!-- Favicons -->
+  <link href="assets/img/favicon.png" rel="icon">
+  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+  <!-- Vendor CSS Files -->
+  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
+  <link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
+  <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
+  <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
+  <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
+
+  <!-- Template Main CSS File - PK -->
+  <link href="assets/css/style.css" rel="stylesheet">
+  <!--  CSS File- PK -->
+  <link href="stylecss/scss.css" rel="stylesheet">
+
+  <!-- =======================================================
+  * Template Name: NiceAdmin
+  * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
+  * Updated: Apr 7 2025 with Bootstrap v5.3.5
+  * Author: BootstrapMade.com
+  * License: https://bootstrapmade.com/license/
+  ======================================================== -->
+</head>
+
+<body>
+  <!-- ======= Header ======= -->
+  <header id="header" class="header fixed-top d-flex align-items-center">
+
+    <div class="d-flex align-items-center justify-content-between">
+      <a href="main.php" class="logo d-flex align-items-center">
+        <img src="assets/img/logo.png" alt="">
+        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+      </a>
+      <i class="bi bi-list toggle-sidebar-btn"></i>
+    </div><!-- End Logo -->
+
+    <div class="search-bar">
+      <form class="search-form d-flex align-items-center" method="POST" action="#">
+        <input type="text" name="query" placeholder="Search" title="Enter search keyword">
+        <button type="submit" title="Search"><i class="bi bi-search"></i></button>
+      </form>
+    </div><!-- End Search Bar -->
+
+    <nav class="header-nav ms-auto">
+      <ul class="d-flex align-items-center">
+
+        <li class="nav-item d-block d-lg-none">
+          <a class="nav-link nav-icon search-bar-toggle " href="#">
+            <i class="bi bi-search"></i>
+          </a>
+        </li><!-- End Search Icon-->
+
+        <li class="nav-item dropdown">
+
+          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+            <i class="bi bi-bell"></i>
+            <span class="badge bg-primary badge-number">4</span>
+          </a><!-- End Notification Icon -->
+
+          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
+            <li class="dropdown-header">
+              You have 4 new notifications
+              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="notification-item">
+              <i class="bi bi-exclamation-circle text-warning"></i>
+              <div>
+                <h4>Lorem Ipsum</h4>
+                <p>Quae dolorem earum veritatis oditseno</p>
+                <p>30 min. ago</p>
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="notification-item">
+              <i class="bi bi-x-circle text-danger"></i>
+              <div>
+                <h4>Atque rerum nesciunt</h4>
+                <p>Quae dolorem earum veritatis oditseno</p>
+                <p>1 hr. ago</p>
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="notification-item">
+              <i class="bi bi-check-circle text-success"></i>
+              <div>
+                <h4>Sit rerum fuga</h4>
+                <p>Quae dolorem earum veritatis oditseno</p>
+                <p>2 hrs. ago</p>
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="notification-item">
+              <i class="bi bi-info-circle text-primary"></i>
+              <div>
+                <h4>Dicta reprehenderit</h4>
+                <p>Quae dolorem earum veritatis oditseno</p>
+                <p>4 hrs. ago</p>
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li class="dropdown-footer">
+              <a href="#">Show all notifications</a>
+            </li>
+
+          </ul><!-- End Notification Dropdown Items -->
+
+        </li><!-- End Notification Nav -->
+
+        <li class="nav-item dropdown">
+
+          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+            <i class="bi bi-chat-left-text"></i>
+            <span class="badge bg-success badge-number">3</span>
+          </a><!-- End Messages Icon -->
+
+          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow messages">
+            <li class="dropdown-header">
+              You have 3 new messages
+              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="message-item">
+              <a href="#">
+                <img src="assets/img/messages-1.jpg" alt="" class="rounded-circle">
+                <div>
+                  <h4>Maria Hudson</h4>
+                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
+                  <p>4 hrs. ago</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="message-item">
+              <a href="#">
+                <img src="assets/img/messages-2.jpg" alt="" class="rounded-circle">
+                <div>
+                  <h4>Anna Nelson</h4>
+                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
+                  <p>6 hrs. ago</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="message-item">
+              <a href="#">
+                <img src="assets/img/messages-3.jpg" alt="" class="rounded-circle">
+                <div>
+                  <h4>David Muldon</h4>
+                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
+                  <p>8 hrs. ago</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="dropdown-footer">
+              <a href="#">Show all messages</a>
+            </li>
+
+          </ul><!-- End Messages Dropdown Items -->
+
+        </li><!-- End Messages Nav -->
+
+        <li class="nav-item dropdown pe-3">
+
+          <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
+            <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $uname; ?></span>
+          </a><!-- End Profile Iamge Icon -->
+
+          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
+            <li class="dropdown-header">
+              <h6><?php echo $uname; ?></h6>
+              <span>National IT Consultant</span>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+                <i class="bi bi-person"></i>
+                <span>My Profile</span>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+                <i class="bi bi-gear"></i>
+                <span>Account Settings</span>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
+                <i class="bi bi-question-circle"></i>
+                <span>Need Help?</span>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="index.php">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Sign Out</span>
+              </a>
+            </li>
+
+          </ul><!-- End Profile Dropdown Items -->
+        </li><!-- End Profile Nav -->
+
+      </ul>
+    </nav><!-- End Icons Navigation -->
+
+  </header><!-- End Header -->
+
+  <!-- ======= Sidebar ======= -->
+  <aside id="sidebar" class="sidebar">
+
+    <ul class="sidebar-nav" id="sidebar-nav">
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="main.php">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li><!-- End Dashboard Nav -->
+    <!--  
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-menu-button-wide"></i><span>Components</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="components-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="components-alerts.html">
+              <i class="bi bi-circle"></i><span>Alerts</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-accordion.html">
+              <i class="bi bi-circle"></i><span>Accordion</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-badges.html">
+              <i class="bi bi-circle"></i><span>Badges</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-breadcrumbs.html">
+              <i class="bi bi-circle"></i><span>Breadcrumbs</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-buttons.html">
+              <i class="bi bi-circle"></i><span>Buttons</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-cards.html">
+              <i class="bi bi-circle"></i><span>Cards</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-carousel.html">
+              <i class="bi bi-circle"></i><span>Carousel</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-list-group.html">
+              <i class="bi bi-circle"></i><span>List group</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-modal.html">
+              <i class="bi bi-circle"></i><span>Modal</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-tabs.html">
+              <i class="bi bi-circle"></i><span>Tabs</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-pagination.html">
+              <i class="bi bi-circle"></i><span>Pagination</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-progress.html">
+              <i class="bi bi-circle"></i><span>Progress</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-spinners.html">
+              <i class="bi bi-circle"></i><span>Spinners</span>
+            </a>
+          </li>
+          <li>
+            <a href="components-tooltips.html">
+              <i class="bi bi-circle"></i><span>Tooltips</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+      -->
+      <!-- End Components Nav -->
+    <!--
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-journal-text"></i><span>Forms</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="forms-elements.html">
+              <i class="bi bi-circle"></i><span>Form Elements</span>
+            </a>
+          </li>
+          <li>
+            <a href="forms-layouts.html">
+              <i class="bi bi-circle"></i><span>Form Layouts</span>
+            </a>
+          </li>
+          <li>
+            <a href="forms-editors.html">
+              <i class="bi bi-circle"></i><span>Form Editors</span>
+            </a>
+          </li>
+          <li>
+            <a href="forms-validation.html">
+              <i class="bi bi-circle"></i><span>Form Validation</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+      -->
+      <!-- End Forms Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link " data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="tables-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="tables-general.html">
+              <i class="bi bi-circle"></i><span>General Tables</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Companies</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Commodities/Product</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Districts</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Location</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Provinces</span>
+            </a>
+          </li>
+        </ul>
+      </li><!-- End Tables Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#charts-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-bar-chart"></i><span>Charts</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="charts-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="charts-chartjs.html">
+              <i class="bi bi-circle"></i><span>Chart.js</span>
+            </a>
+          </li>
+          <li>
+            <a href="charts-apexcharts.html">
+              <i class="bi bi-circle"></i><span>ApexCharts</span>
+            </a>
+          </li>
+          <li>
+            <a href="charts-echarts.html">
+              <i class="bi bi-circle"></i><span>ECharts</span>
+            </a>
+          </li>
+        </ul>
+      </li><!-- End Charts Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#icons-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-gem"></i><span>Icons</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="icons-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="icons-bootstrap.html">
+              <i class="bi bi-circle"></i><span>Bootstrap Icons</span>
+            </a>
+          </li>
+          <li>
+            <a href="icons-remix.html">
+              <i class="bi bi-circle"></i><span>Remix Icons</span>
+            </a>
+          </li>
+          <li>
+            <a href="icons-boxicons.html">
+              <i class="bi bi-circle"></i><span>Boxicons</span>
+            </a>
+          </li>
+        </ul>
+      </li><!-- End Icons Nav -->
+
+      <li class="nav-heading">Pages</li>
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="users-profile.html">
+          <i class="bi bi-person"></i>
+          <span>Profile</span>
+        </a>
+      </li><!-- End Profile Page Nav -->
+      
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="users.php?part=upermits">
+          <i class="bi bi-shield-lock"></i>
+          <span>Group permits</span>
+        </a>
+      </li><!-- End User Group permit -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-person-plus"></i><span>Users</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="users.php?part=userslist">
+              <i class="bi bi-circle"></i><span>Users list</span>
+            </a>
+          </li>
+          <li>
+            <a href="forms-usregister.php">
+              <i class="bi bi-circle"></i><span>Add new user</span>
+            </a>
+          </li>
+        </ul>
+      </li>  <!-- End Users Nav -->
+    </ul>
+
+  </aside><!-- End Sidebar-->
+   
+  <main id="main" class="main">
+    <!-- ======= *************** User Groups ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='ugroup'){
+    ?>
+
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Users Group</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Users Group</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addGroupModal" data-gid="new">
+          <i class="bi bi-plus-circle"></i> Add New Group
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form == -->
+      <div class="modal fade" id="addGroupModal" tabindex="-1" aria-labelledby="addGroupModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addGroupModalLabel">Add New Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for gid -->
+                <input type="hidden" id="groupId" name="groupId">
+                <div class="mb-3">
+                  <label for="groupName" class="form-label">Group Name</label>
+                  <input type="text" class="form-control" id="groupName" name="groupName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="groupDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="groupDescription" name="groupDescription" rows="3" required></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitGroup" name="submitGroup" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    
+     <?php
+      //1.) Add new group: Modal form submit
+      if (isset($_POST['submitGroup']) && $_POST['submitGroup'] === 'Submit') {
+        $groupName = pg_escape_string($con, $_POST['groupName']);
+        $groupDescription = pg_escape_string($con, $_POST['groupDescription']);
+        Groupnew($groupName,$groupDescription,$con); // List of Groups
+      }
+      //2.) Delete group:  link in Grouplist function in supports.php
+      if (isset($_GET['ug']) && isset($_GET['ugid'])) { 
+        $groupid = $_GET['ugid'];
+        Groupdelete($groupid,$con); // Delete group and back to list
+      }
+
+      //3.) Updat/Edit group:  link in Grouplist function in supports.php
+      if (isset($_GET['ug']) && isset($_GET['ugid'])) { 
+        $groupid = $_GET['ugid'];
+        Groupedit($groupid,$con); // Edit group and back to list
+      }
+      //4.) Update group: Modal form submit
+      if(isset($_POST['submitGroup']) && $_POST['submitGroup'] === 'Update') {
+        $groupId = pg_escape_string($con,$_POST['groupId']);
+        $groupName = pg_escape_string($con, $_POST['groupName']);
+        $groupDescription = pg_escape_string($con, $_POST['groupDescription']);
+
+        echo "<script>alert('Group ID for update: " . $groupId . "');</script>"; // Debugging line
+        
+        Groupupdate($groupId,$groupName,$groupDescription,$con); // Update group and back to list
+      }
+    ?>
+    <section class="section">
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Users Group</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - List of Users Group</p>
+
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts" >
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th><b>Group</b>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Action</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php Grouplist($con); ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+   <?php } ?> <!-- ********* End of if part=ugroup ********* -->
+    <!-- ======= Users List ======= -->
+     <?php
+     if(isset($_GET['part']) && $_GET['part']==='userslist'){
+    ?>
+     <section class="section">
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Users List</h5>
+              <nav>
+                <ol class="breadcrumb">
+                  <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+                  <li class="breadcrumb-item">Tables</li>
+                  <li class="breadcrumb-item active">Users List</li>
+                </ol>
+              </nav>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Users list</p>
+
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts" >
+                <thead>
+                  <tr>
+                   <th>
+                      <b>N</b>o
+                    </th>
+                    <th>
+                      <b>N</b>ame
+                    </th>
+                    <th>Surname</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php Userlist($con); ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <?php } ?> <!-- ********* End of if part=userslist ********* -->
+  </main><!-- End #main -->
+ 
+ <!-- End User Groups -->
+ 
+  <!-- ======= Footer ======= -->
+  <!--  PK: No need for footer in this page
+  <footer id="footer" class="footer">
+    <div class="copyright">
+      &copy; Copyright <strong><span>DOA</span></strong>. All Rights Reserved
+    </div>
+
+  </footer>
+    -->
+  <!-- End Footer -->
+  <div id="usdiv"></div> <!-- Make ajax happy in users-validate.js -->
+  <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+
+  <!-- Vendor JS Files -->
+  <script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
+  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/vendor/chart.js/chart.umd.js"></script>
+  <script src="assets/vendor/echarts/echarts.min.js"></script>
+  <script src="assets/vendor/quill/quill.js"></script>
+  <script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
+  <script src="assets/vendor/tinymce/tinymce.min.js"></script>
+  <script src="assets/vendor/php-email-form/validate.js"></script>
+
+  <!-- Template Main JS File -->
+  <script src="assets/js/main.js"></script>
+  <script>
+   /* ----===== Users and Usersgroup =====----  */    
+   // MODAL FORM - UPDATE ON USERGROUP:  link in Grouplist function in supports.php
+    // Add an event listener for when the modal is shown
+    var addGroupModal = document.getElementById('addGroupModal');
+        addGroupModal.addEventListener('show.bs.modal', function (event) {
+        // Get the button that triggered the modal
+        var button = event.relatedTarget;
+
+        // Extract the group ID from the data-gid attribute
+        var gId = button.getAttribute('data-gid');
+        var gName = button.getAttribute('data-gname');
+        var gDesc = button.getAttribute('data-gdesc'); 
+        // Populate the modal with the group ID (if needed)
+        var modalTitle = addGroupModal.querySelector('#addGroupModalLabel');
+        var groupId = addGroupModal.querySelector('#groupId');
+        var groupNameInput = addGroupModal.querySelector('#groupName');
+        var groupDesc = addGroupModal.querySelector('#groupDescription');
+        var btnsubmit = addGroupModal.querySelector('#submitGroup');
+        
+        if(gId !== 'new') { // Update group
+            groupId.value = gId; // Assign the group ID to the hidden input field
+            //alert('Group ID: ' + gId); // Debugging line
+            groupNameInput.value = gName || ''; // Assign the data values to input field
+            groupDesc.value = gDesc || '';
+            btnsubmit.textContent = 'Update'; // Change button value to Update for Updating Usergroup
+            btnsubmit.value = 'Update';
+            if(modalTitle) modalTitle.textContent = 'Update Users Group';
+        } else {
+            groupNameInput.value = '';
+            groupDesc.value = ''; 
+            btnsubmit.textContent = 'Submit'; // Change button value to Submit
+            btnsubmit.value = 'Submit';
+            if(modalTitle) modalTitle.textContent = 'Add New Group';
+        }    
+    });
+    // Set focus after modal is fully shown
+        addGroupModal.addEventListener('shown.bs.modal', function () {
+          var groupNameInput = addGroupModal.querySelector('#groupName');
+        if (groupNameInput) groupNameInput.focus();
+        });
+    /* ----===== End of Users and Usersgroup =====----  */ 
+    
+  </script>
+  
+</body>
+
+</html>

@@ -7,6 +7,7 @@
 
   $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
   $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
+ //echo "<script>alert('uname: " . $uname . "');</script>"; // Debugging line
 ?>
 
 <!DOCTYPE html>
@@ -63,7 +64,7 @@
   <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="main.php" class="logo d-flex align-items-center">
+      <a href="main.php?us=<?php echo $uname; ?>" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
         <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
       </a>
@@ -85,158 +86,14 @@
             <i class="bi bi-search"></i>
           </a>
         </li><!-- End Search Icon-->
-
-        <li class="nav-item dropdown">
-
-          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
-            <i class="bi bi-bell"></i>
-            <span class="badge bg-primary badge-number">4</span>
-          </a><!-- End Notification Icon -->
-
-          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
-            <li class="dropdown-header">
-              You have 4 new notifications
-              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="notification-item">
-              <i class="bi bi-exclamation-circle text-warning"></i>
-              <div>
-                <h4>Lorem Ipsum</h4>
-                <p>Quae dolorem earum veritatis oditseno</p>
-                <p>30 min. ago</p>
-              </div>
-            </li>
-
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="notification-item">
-              <i class="bi bi-x-circle text-danger"></i>
-              <div>
-                <h4>Atque rerum nesciunt</h4>
-                <p>Quae dolorem earum veritatis oditseno</p>
-                <p>1 hr. ago</p>
-              </div>
-            </li>
-
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="notification-item">
-              <i class="bi bi-check-circle text-success"></i>
-              <div>
-                <h4>Sit rerum fuga</h4>
-                <p>Quae dolorem earum veritatis oditseno</p>
-                <p>2 hrs. ago</p>
-              </div>
-            </li>
-
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="notification-item">
-              <i class="bi bi-info-circle text-primary"></i>
-              <div>
-                <h4>Dicta reprehenderit</h4>
-                <p>Quae dolorem earum veritatis oditseno</p>
-                <p>4 hrs. ago</p>
-              </div>
-            </li>
-
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-            <li class="dropdown-footer">
-              <a href="#">Show all notifications</a>
-            </li>
-
-          </ul><!-- End Notification Dropdown Items -->
-
-        </li><!-- End Notification Nav -->
-
-        <li class="nav-item dropdown">
-
-          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
-            <i class="bi bi-chat-left-text"></i>
-            <span class="badge bg-success badge-number">3</span>
-          </a><!-- End Messages Icon -->
-
-          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow messages">
-            <li class="dropdown-header">
-              You have 3 new messages
-              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="message-item">
-              <a href="#">
-                <img src="assets/img/messages-1.jpg" alt="" class="rounded-circle">
-                <div>
-                  <h4>Maria Hudson</h4>
-                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
-                  <p>4 hrs. ago</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="message-item">
-              <a href="#">
-                <img src="assets/img/messages-2.jpg" alt="" class="rounded-circle">
-                <div>
-                  <h4>Anna Nelson</h4>
-                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
-                  <p>6 hrs. ago</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="message-item">
-              <a href="#">
-                <img src="assets/img/messages-3.jpg" alt="" class="rounded-circle">
-                <div>
-                  <h4>David Muldon</h4>
-                  <p>Velit asperiores et ducimus soluta repudiandae labore officia est ut...</p>
-                  <p>8 hrs. ago</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-
-            <li class="dropdown-footer">
-              <a href="#">Show all messages</a>
-            </li>
-
-          </ul><!-- End Messages Dropdown Items -->
-
-        </li><!-- End Messages Nav -->
-
         <li class="nav-item dropdown pe-3">
-
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
             <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $uname; ?></span>
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['uname']; ?></span>
           </a><!-- End Profile Iamge Icon -->
-
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $uname; ?></h6>
+              <h6><?php echo $_SESSION['uname']; ?></h6>
               <span>National IT Consultant</span>
             </li>
             <li>
@@ -294,140 +151,36 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php">
+        <a class="nav-link collapsed" href="main.php?us=<?php echo $uname; ?>" >
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
-    <!--  
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-menu-button-wide"></i><span>Components</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="components-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="components-alerts.html">
-              <i class="bi bi-circle"></i><span>Alerts</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-accordion.html">
-              <i class="bi bi-circle"></i><span>Accordion</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-badges.html">
-              <i class="bi bi-circle"></i><span>Badges</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-breadcrumbs.html">
-              <i class="bi bi-circle"></i><span>Breadcrumbs</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-buttons.html">
-              <i class="bi bi-circle"></i><span>Buttons</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-cards.html">
-              <i class="bi bi-circle"></i><span>Cards</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-carousel.html">
-              <i class="bi bi-circle"></i><span>Carousel</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-list-group.html">
-              <i class="bi bi-circle"></i><span>List group</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-modal.html">
-              <i class="bi bi-circle"></i><span>Modal</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-tabs.html">
-              <i class="bi bi-circle"></i><span>Tabs</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-pagination.html">
-              <i class="bi bi-circle"></i><span>Pagination</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-progress.html">
-              <i class="bi bi-circle"></i><span>Progress</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-spinners.html">
-              <i class="bi bi-circle"></i><span>Spinners</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-tooltips.html">
-              <i class="bi bi-circle"></i><span>Tooltips</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-      -->
-      <!-- End Components Nav -->
-    <!--
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span>Forms</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="forms-elements.html">
-              <i class="bi bi-circle"></i><span>Form Elements</span>
-            </a>
-          </li>
-          <li>
-            <a href="forms-layouts.html">
-              <i class="bi bi-circle"></i><span>Form Layouts</span>
-            </a>
-          </li>
-          <li>
-            <a href="forms-editors.html">
-              <i class="bi bi-circle"></i><span>Form Editors</span>
-            </a>
-          </li>
-          <li>
-            <a href="forms-validation.html">
-              <i class="bi bi-circle"></i><span>Form Validation</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-      -->
-      <!-- End Forms Nav -->
-
+    
       <li class="nav-item">
         <a class="nav-link " data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+         
           <li>
-            <a href="tables-general.html">
-              <i class="bi bi-circle"></i><span>General Tables</span>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Companies/Entities</span>
             </a>
           </li>
           <li>
             <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Companies</span>
+              <i class="bi bi-circle"></i><span>Commodities</span>
             </a>
           </li>
           <li>
             <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Commodities/Product</span>
+              <i class="bi bi-circle"></i><span>Conveyence</span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=countries">
+              <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
           <li>
@@ -435,64 +188,19 @@
               <i class="bi bi-circle"></i><span>Districts</span>
             </a>
           </li>
+          
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Location</span>
+            <a href="masterdata.php?part=locations">
+              <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
+            <a href="masterdata.php?part=provinces">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
         </ul>
       </li><!-- End Tables Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#charts-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-bar-chart"></i><span>Charts</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="charts-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="charts-chartjs.html">
-              <i class="bi bi-circle"></i><span>Chart.js</span>
-            </a>
-          </li>
-          <li>
-            <a href="charts-apexcharts.html">
-              <i class="bi bi-circle"></i><span>ApexCharts</span>
-            </a>
-          </li>
-          <li>
-            <a href="charts-echarts.html">
-              <i class="bi bi-circle"></i><span>ECharts</span>
-            </a>
-          </li>
-        </ul>
-      </li><!-- End Charts Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#icons-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-gem"></i><span>Icons</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="icons-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="icons-bootstrap.html">
-              <i class="bi bi-circle"></i><span>Bootstrap Icons</span>
-            </a>
-          </li>
-          <li>
-            <a href="icons-remix.html">
-              <i class="bi bi-circle"></i><span>Remix Icons</span>
-            </a>
-          </li>
-          <li>
-            <a href="icons-boxicons.html">
-              <i class="bi bi-circle"></i><span>Boxicons</span>
-            </a>
-          </li>
-        </ul>
-      </li><!-- End Icons Nav -->
 
       <li class="nav-heading">Pages</li>
 
@@ -502,6 +210,13 @@
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="users.php?part=ugroup">
+          <i class="bi bi-people"></i>
+          <span>Users group</span>
+        </a>
+      </li><!-- End Users group -->
       
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits">
@@ -511,21 +226,9 @@
       </li><!-- End User Group permit -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-person-plus"></i><span>Users</span><i class="bi bi-chevron-down ms-auto"></i>
+        <a class="nav-link active" href="users.php?part=userslist">
+          <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="users.php?part=userslist">
-              <i class="bi bi-circle"></i><span>Users list</span>
-            </a>
-          </li>
-          <li>
-            <a href="forms-usregister.php">
-              <i class="bi bi-circle"></i><span>Add new user</span>
-            </a>
-          </li>
-        </ul>
       </li>  <!-- End Users Nav -->
     </ul>
 
@@ -542,7 +245,7 @@
       <h1>Users Group</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Users Group</li>
         </ol>
@@ -631,7 +334,8 @@
                    <th><b>Group</b>Name</th>
                    <th>Description</th>
                    <th>Status</th>
-                   <th>Action</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
                  </tr>
                 </thead>
                 <tbody>
@@ -650,20 +354,29 @@
      <?php
      if(isset($_GET['part']) && $_GET['part']==='userslist'){
     ?>
-     <section class="section">
+   <section class="section">
+      <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+        <h1>Users</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+            <li class="breadcrumb-item">Tables</li>
+            <li class="breadcrumb-item active">Users List</li>
+          </ol>
+          </nav>
+        </div>
+        <div>
+          <a href="users.php?frm=newuser" class="btn btn-success btn-sm" role="button">
+            <i class="bi bi-plus-circle"></i> Add New User
+          </a>
+        </div>
+      </div><!-- End Page Title - Users list -->
       <div class="row">
         <div class="col-lg-12">
-
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">Users List</h5>
-              <nav>
-                <ol class="breadcrumb">
-                  <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-                  <li class="breadcrumb-item">Tables</li>
-                  <li class="breadcrumb-item active">Users List</li>
-                </ol>
-              </nav>
               <p>ePhytosanitary by Department of Agriculture, MAF - Users list</p>
 
               <!-- Table with stripped rows -->
@@ -676,12 +389,14 @@
                     <th>
                       <b>N</b>ame
                     </th>
-                    <th>Surname</th>
-                    <th>Username</th>
+                    <th>Phone</th>
                     <th>Email</th>
-                    <th>Role</th>
+                    <th>Last login</th>
+                    <th>Group</th>
+                    <th>Location</th>
                     <th>Status</th>
-                    <th>Action</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -696,9 +411,198 @@
       </div>
     </section>
     <?php } ?> <!-- ********* End of if part=userslist ********* -->
+   
+    <!-- =======**************** Users Add/Updates - Form ************* ======= -->
+    <?php
+     // USERS DELETE ********
+      
+      if (isset($_GET['frm']) && $_GET['frm'] === 'userdelete') {
+        if (isset($_GET['uid']) && !empty($_GET['uid'])) {
+            $duid = htmlspecialchars($_GET['uid']); // Sanitize the input
+            //Deleteuser($duid, $con); // Delete user and back to list
+            // TESTING
+            echo "<script>alert('User ID to delete: " . $duid . "');</script>"; // Debugging line
+            echo "<script>window.location.href = 'users.php?part=userslist';</script>"; // Redirect to users list
+        }
+      }
+     // USERS UPDATE AND ADD new user form - SUBMIT ******
+     if ($_SERVER["REQUEST_METHOD"] == "POST") {  // Form submission for BOTH NEW and UPDATE
+          $huid = htmlspecialchars($_POST['huid']); // Sanitize the input
+          $name = htmlspecialchars($_POST['name']); // Sanitize the input
+          $surname = htmlspecialchars($_POST['surname']);
+          $sex = htmlspecialchars($_POST['gender']);
+          $psw = htmlspecialchars($_POST['password']);
+          $position = htmlspecialchars($_POST['position']);
+          $unit = htmlspecialchars($_POST['workunit']);
+          $phone = htmlspecialchars($_POST['phone']);
+          $email = htmlspecialchars($_POST['email']);
+          $groupid = htmlspecialchars($_POST['usergroup']);
+          $location = htmlspecialchars($_POST['location']);
+          
+        if(isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'submit') { // New user submission
+            $sbupdate = 'submit'; // Set submit button value
+            Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con);
+           // echo "<script>alert('Submit button clicked- New User');</script>"; // Debugging line
+
+        } elseif (isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'update') { // Update user submission
+            $sbupdate = 'update'; // Set update button value
+            UpdateuserSubmit($huid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con);
+        }    
+
+     }
+     // FIRST LINK - add or update user 
+     if((isset($_GET['frm']) && ($_GET['frm']==='userupdate' || $_GET['frm']==='newuser'))){
+       // Update user
+        if((isset($_GET['uid']) && !empty($_GET['uid']))){
+            $sbupdate = 'update'; 
+            $uid = htmlspecialchars($_GET['uid']); // Sanitize the input
+           /*
+            echo "<script>
+                   var uid = '" . $uid . "';
+                    document.getElementById('huid').value = uid; 
+                  </script>"; 
+            */
+            list($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $status) = Updateuser_values($uid,$con); // Get user data for update
+            $key = '1234567890abcdef'; // Make xampp happy.
+            $iv = 'abcdef1234567890';
+            $psw = openssl_decrypt($psw, 'AES-128-CTR', $key, 0, $iv); // Decrypt the password
+
+        // New user
+        } else { 
+            $uid = '';
+            $name = $surname = $sex = $psw = $position = $unit = $phone = $email = $groupid = $location = $status = '';
+        } // end of if uid
+      
+    ?>
+      <div class="pagetitle">
+        <h1>Add/Update Users</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item">Forms</li>
+            <li class="breadcrumb-item active">Users</li>
+          </ol>
+        </nav>
+      </div>
+      <section class="section">
+      <div class="row">
+        <div class="col-lg-6" style="width: 80%;"> <!-- Pk-Update: style -->
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title"><?php echo (isset($_GET['frm']) && $_GET['frm'] == 'userupdate') ? 'Users Update' : 'New Users'; ?></h5>
+              <!-- Users Form -->
+              <form action="users.php?part=userslist" method="POST">
+                <!-- Hidden input for uid : User ID -->
+                <input type="hidden" id="huid" name="huid" value="<?php echo isset($uid) ? $uid : ''; ?>">
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Name</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Surname</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="surname" class="form-control" value="<?php echo isset($surname) ? $surname : ''; ?>">
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Gender</label>
+                  <div class="col-sm-5">
+                    <select class="form-select" name="gender" aria-label="Default select example">
+                      <option selected>*** Please select one ***</option>
+                      <option value="m" <?php echo (isset($sex) && $sex == 'm') ? 'selected' : ''; ?>>ຊາຍ</option>
+                      <option value="f" <?php echo (isset($sex) && $sex == 'f') ? 'selected' : ''; ?>>ຍິງ</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputPassword" class="col-sm-2 col-form-label">Password</label>
+                  <div class="col-sm-5">
+                    <input type="password" name="password" class="form-control" value="<?php echo isset($psw) ? htmlspecialchars($psw) : ''; ?>">
+                  </div>
+                </div>
+                
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Phone</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="phone" class="form-control" value="<?php echo isset($phone) ? $phone : ''; ?>">
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputEmail" class="col-sm-2 col-form-label">Email</label>
+                  <div class="col-sm-10">
+                    <input type="email" name="email" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Position</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="position" class="form-control me-2" value="<?php echo isset($position) ? $position : ''; ?>"><span id="usermiss"><?php if(!empty($cfuser)){ echo "Already exists";} ?></span>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputPassword" class="col-sm-2 col-form-label">Work Unit</label>
+                  <div class="col-sm-10">
+                    <textarea class="form-control" name="workunit" style="height: 100px"><?php echo isset($unit) ? $unit : ''; ?></textarea>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Location</label>
+                  <div class="col-sm-10">
+                    <select class="form-select" name="location" aria-label="Default select example">
+                     <option value="">*** Please select one ***</option>
+                      <?php SelectLocation($location, $con); ?>
+                    </select>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Group</label>
+                  <div class="col-sm-5">
+                    <select class="form-select" name="usergroup" aria-label="Default select example">
+                      <option value="">*** Please select one ***</option>
+                      <?php SelectUsergroup($groupid, $con); ?>
+                    </select>
+                  </div>
+                </div>
+              
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">&nbsp;</label> 
+                  <div class="col-sm-10">
+                    <button type="submit" name="btnsubuser" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate) ? 'Update' : 'Submit'; ?></button>
+                  </div>
+                </div>
+              <!-- PHP testing - PK -->
+                    <div class="col-12">
+                      <?php if (!empty($message)): ?>
+                      <div class="alert alert-info" role="alert">
+                        <?php echo $message; ?>
+                      </div>
+                      <?php endif; ?>
+                    </div>
+              </form><!-- End General Form Elements -->
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+      <!-- Set focus on the name input field when the page loads -->
+       <script>
+          document.addEventListener('DOMContentLoaded', function() {
+          var nameInput = document.getElementById('name');
+            if (nameInput) {
+              nameInput.focus();
+            }
+          });
+        </script>
+     <?php } ?>
+    <!-- End Users Updates - Form -->
   </main><!-- End #main -->
  
- <!-- End User Groups -->
+ <!-- End User -->
  
   <!-- ======= Footer ======= -->
   <!--  PK: No need for footer in this page
@@ -734,7 +638,7 @@
         // Get the button that triggered the modal
         var button = event.relatedTarget;
 
-        // Extract the group ID from the data-gid attribute
+        // Extract the group ID from the data-gid attribute - MODAL FORM
         var gId = button.getAttribute('data-gid');
         var gName = button.getAttribute('data-gname');
         var gDesc = button.getAttribute('data-gdesc'); 
@@ -761,13 +665,19 @@
             if(modalTitle) modalTitle.textContent = 'Add New Group';
         }    
     });
-    // Set focus after modal is fully shown
+    // Set focus after modal is fully shown - MODAL FORM
         addGroupModal.addEventListener('shown.bs.modal', function () {
           var groupNameInput = addGroupModal.querySelector('#groupName');
         if (groupNameInput) groupNameInput.focus();
         });
     /* ----===== End of Users and Usersgroup =====----  */ 
-    
+    // Set focus name input in FORM - Add New User
+    var nameInput = document.getElementById('name');
+    if (nameInput) {
+      nameInput.addEventListener('focus', function() {
+        this.select();
+      });
+    }
   </script>
   
 </body>

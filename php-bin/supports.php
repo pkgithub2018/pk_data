@@ -7,6 +7,7 @@ function Grouplist($con){
     $result = pg_query($con,$sqlgroup) or die(pg_last_error());
     $i = 0;
     if(pg_num_rows($result) > 0) {
+       $nrows = pg_num_rows($result);
        while($row = pg_fetch_array($result)){
             $i++;
             $gid = $row['id'];
@@ -14,29 +15,21 @@ function Grouplist($con){
             $gdesc = $row['desc'];
             $gstatus = $row['enabled'];
             // Add checkbox for $gstatus
-            /*
-            $checkbox = ($gstatus === 'yes') 
-            ? "<div class='form-check form-switch'>
-                  <input class='form-check-input' role='switch' type='checkbox' id='flexSwitchCheckChecked$i' checked disabled>
-                </div>"
-            : "<div class='form-check form-switch'>
-                  <input class='form-check-input' role='switch' type='checkbox' id='flexSwitchCheckChecked$i' disabled>
-              </div>";
-            */
-            print "<tr>
-                    <td>$i</td>
-                    <td>$gname</td>
-                    <td>$gdesc</td>
-                    <td>";
-                      if($gstatus==='yes'){
-                        print "<div class='form-check form-switch'>
-                                  <input class='form-check-input' role='switch' type='checkbox' id='flexSwitchCheckChecked$i'>
-                              </div>";
-                      }
-            print "</td>
-                    <td><a href='forms-usgroup.php?ug=$gid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td><a href='deleteuser.php?ug=$gid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
-                  </tr>";
+            // handleCheckboxChange function in users-validate.js
+          print "<tr>
+                  <td>$i</td>
+                  <td>$gname</td>
+                  <td>$gdesc</td>
+                  <td>
+                    <div class='form-check form-switch'>
+                      <input class='form-check-input' role='switch' type='checkbox' id='$gid' data-nrows='$nrows' " . ($gstatus === 'yes' ? 'checked' : '') . " onchange='handleCheckboxChange(this)'>
+                    </div>
+                  </td>
+                  <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addGroupModal' data-gid='$gid' data-gname='" . htmlspecialchars($gname, ENT_QUOTES) . "' data-gdesc='" . htmlspecialchars($gdesc, ENT_QUOTES) . "''>
+                      <i class='bi bi-pencil-square table-icon'></i></button>
+                  </td>
+                  <td><a href='tables-usergroups.php?part=ugroup&ug=del&ugid=$gid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                </tr>";     
        } // end of while loop     
     }
 }
@@ -62,13 +55,45 @@ function Groupnew($gname,$gdesc,$con){
         if ($result) {
           // Get the last inserted ID
             $last_id = pg_fetch_result($result, 0, 'id');
-          // Prepare the message
-          $message = "Group added successfully. Group ID: " . $last_id;
-          echo "<script>alert('" . $message . "');</script>";
         } else {
           // Handle error if insertion fails
           echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
         } 
+    }
+}
+/*
+  Groupdelete: Delete group from tbusergroup table
+*/
+function Groupdelete($gid,$con){
+    $sqlgroup = "DELETE FROM tbusergroup WHERE id='".$gid."'";
+    $result = pg_query($con,$sqlgroup) or die(pg_last_error());
+    if($result){
+        echo "<script>alert('Group deleted successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'tables-usergroups.php?part=ugroup';</script>";
+    } else {
+        echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+  Groupupdate: Update group from tbusergroup table 
+  VIA FUNCTION: handleCheckboxChange in users-validate.js and users_dataprocess.php
+*/
+ function Groupupdate($gid,$gname,$gdesc,$con){
+    $gid = pg_escape_string($con, $gid);
+    $gname = pg_escape_string($con, $gname);
+    $gdesc = pg_escape_string($con, $gdesc);
+    
+    // Update the group information
+    // \"desc\"='".$gdesc."' - \"desc\" is a reserved word in PostgreSQL
+    $sqlupdategroup = "UPDATE tbusergroup SET title='".$gname."', \"desc\"='".$gdesc."' WHERE id='".$gid."'";
+    $result = pg_query($con, $sqlupdategroup) or die(pg_last_error());
+    if ($result) {
+        //echo "<script>alert('Group updated successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'users.php?part=ugroup';</script>";
+    } else {
+        echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
     }
 }
 /*
@@ -88,37 +113,52 @@ function Userpermit($userlogin,$con){ // userlogin is the email
 /*
   Addnewuser: Add new users into tbusers table
 */
-function Addusers($name,$surname,$sex,$uname,$psw,$phone,$email,$workplace,$utype,$status,$con){
- 	// Check if the username already exists
- 	$sqluser = "SELECT username FROM tbusers WHERE username='".$uname."'";
- 	$result = mysqli_query($con,$sqluser) or die(mysqli_connect_error());
-    $exuser = "";
-    if(mysqli_num_rows($result) > 0) {
+
+function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con) {
+    // Escape all inputs
+    $name = pg_escape_string($con, $name);
+    $surname = pg_escape_string($con, $surname);
+    $sex = pg_escape_string($con, $sex);
+    $psw = pg_escape_string($con, $psw);
+    $position = pg_escape_string($con, $position);
+    $unit = pg_escape_string($con, $unit);
+    
+    $phone = pg_escape_string($con, $phone);
+    $email = pg_escape_string($con, $email);
+    $lastlogin = pg_escape_string($con, date('Y-m-d H:i:s'));
+    $groupid = pg_escape_string($con, $groupid);
+    $location = pg_escape_string($con, $location);
+    $status = pg_escape_string($con, 'yes');
+
+    // Check if the email already exists
+    $sqluser = "SELECT email FROM tbusers WHERE email='$email'";
+    $result = pg_query($con, $sqluser) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
         echo "<script>alert('Username already exists. Please choose a different username.');</script>";
-        $exuser = "yes";
-        return $exuser;
+        return "yes";
     } else {
-	
- 	$sqladduser="INSERT INTO `tbusers`(`name`,`surname`,`sex`,`username`, `passw`, `phone`, `email`, `workplace`, `usertype`,`status`) 
-    VALUES('".$name."','".$surname."','".$sex."','".$uname."','".$psw."','".$phone."','".$email."','".$workplace."','".$utype."','$status')"; 
- 	   if(mysqli_query($con,$sqladduser)){ // return true;
-              // Get the last inserted ID
-              $last_id = mysqli_insert_id($con);
-              // Prepare the message
-              $message = "User added successfully. User ID: " . $last_id;
-              echo "<script>alert('" . $message . "');</script>";
-         } else {
-              // Handle error if insertion fails
-              echo "<script>alert('Error: " . mysqli_error($con) . "');</script>";
-        } 
-       
+        // Insert user, set last_login to NULL, group_admin to 'no' by default
+        $sqladduser = "INSERT INTO \"tbusers\" 
+            (\"name\", \"surname\", \"sex\", \"psw\", \"position\", \"unit\", \"phone\", \"email\", \"last_login\", \"group_id\", \"group_admin\", \"location_id\", \"enabled\") 
+            VALUES 
+            ('$name', '$surname', '$sex', '$psw', '$position', '$unit', '$phone', '$email', '$lastlogin', '$groupid', 'no', '$location', '$status') RETURNING id";
+        $result = pg_query($con, $sqladduser);
+        if ($result) {
+            $last_id = pg_fetch_result($result, 0, 'id');
+            //$message = "User added successfully. User ID: " . $last_id;
+           // echo "<script>alert('" . $message . "');</script>";
+            // Redirect to the user list page
+            echo "<script>window.location.href = 'users.php?part=userslist';</script>";
+        } else {
+            echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
+        }
     }
 }
 /*
   Userlist: List all users from tbusers table
 */
 function Userlist($con){
-    $sqluserlist="SELECT * FROM tbusers ORDER BY id ASC";
+    $sqluserlist="SELECT * FROM tbusers ORDER BY id DESC"; // Order by ID in descending order
     $result = pg_query($con,$sqluserlist) or die(pg_last_error());
     $i = 0;
     if(pg_num_rows($result) > 0) {
@@ -127,55 +167,61 @@ function Userlist($con){
             $i++;
             $uid = $row['id'];
             $name = $row['name'];
-            $surname = $row['surname'];
+            $surname = $row['surname']; // Not used in the table
             //$position = $row['position']; 
-            $unit = $row['unit'];
+            $unit = $row['unit']; // Not used in the table
             $phone = $row['phone'];
             $email = $row['email'];
             $lastlogin = $row['last_login']; 
             $usergroup = $row['group_id']; 
-            $groupadmin = $row['group_admin'];
+            $usergroup = Groupname($usergroup, $con); // Get group name from tbusergroup table
+            //$groupadmin = $row['group_admin'];
             $location = $row['location_id'];
+            $location = Locationname($location, $con); // Get location name from tblocations table
+            $status = $row['enabled'];
             print "<tr>
                     <td>$i</td>
                     <td>$name</td>
-                    <td>$surname</td>
-                    <td>$unit</td>
                     <td>$phone</td>
                     <td>$email</td>
                     <td>$lastlogin</td>  
                     <td>$usergroup</td>
-                    <td>$groupadmin</td>
                     <td>$location</td>
-                    <td><a href='forms-usregister.php?us=$uid' class='btn btn-primary'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td><a href='deleteuser.php?uid=$uid' class='btn btn-danger'><i class='bi bi-x-square table-icon'></i></a></td>  
+                    <td>
+                     <div class='form-check form-switch'>
+                      <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleUserCheckboxChange(this)'>
+                    </div>
+                    </td>
+                    <td><a href='users.php?frm=userupdate&uid=$uid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td><a href='users.php?frm=userdelete&uid=$uid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
                   </tr>";
        } // end of while loop     
     }
 }
 /*
-  Updateuser: Update user from tbusers table
+  Updateuser_values: Update user from tbusers table
 */
-function Updateuser($uname,$con){
-  $uid = htmlspecialchars($_GET['uid']); // Sanitize the input
-  $sql = "SELECT * FROM tbusers WHERE username = '$uname'";
-  $result = mysqli_query($con, $sql);
+function Updateuser_values($uid,$con){
+  
+  $sql = "SELECT * FROM tbusers WHERE id = '$uid'"; // Use the sanitized input in the query
+  $result = pg_query($con, $sql) or die(pg_last_error());
 
-  if ($result && mysqli_num_rows($result) > 0) {
-      $user = mysqli_fetch_assoc($result);
+  if ($result && pg_num_rows($result) > 0) {
+      $user = pg_fetch_array($result);
 
       // Pre-fill the form fields with user data
       $name = $user['name'];
       $surname = $user['surname'];
-      $uname = $user['username'];
       $sex = $user['sex'];
-      $psw = $user['passw'];
+      $psw = $user['psw'];
+      $position = $user['position'];
+      $unit = $user['unit'];
       $phone = $user['phone'];
       $email = $user['email'];
-      $workplace = $user['workplace'];
-      $utype = $user['usertype'];
-      $status = $user['status'];
-      return array($name, $surname, $uname, $sex, $psw, $phone, $email, $workplace, $utype, $status);
+      $groupid = $user['group_id']; 
+      $location = $user['location_id'];
+      $status = $user['enabled'];
+      return array($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $status);
   } else {
       echo "<script>alert('User not found.');</script>";
   }
@@ -184,13 +230,344 @@ function Updateuser($uname,$con){
 /*
   Updateuser-submit: Submit the updates on users from data form into tbusers table
 */
-function UpdateuserSubmit($name,$surname,$sex,$uname,$psw,$phone,$email,$workplace,$utype,$status,$con){
-    $sqlolduser = "SELECT username FROM tbusers WHERE username='".$uname."'";
-    $result = mysqli_query($con,$sqlolduser) or die(mysqli_connect_error());    
-    $exuser = "";
-    if(mysqli_num_rows($result) > 0) {
-        //echo "<script>alert('Username already exists. Please choose a different username.');</script>";
-        
-    } 
+
+function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con) {
+    // Fetch current user data
+    $sqlolduser = "SELECT * FROM tbusers WHERE id='$uid'";
+    $result = pg_query($con, $sqlolduser) or die(pg_last_error($con));
+
+    if ($result && pg_num_rows($result) > 0) {
+        $user = pg_fetch_assoc($result);
+
+        // Check if any field has changed
+        if (
+            $user['name']      !== $name ||
+            $user['surname']   !== $surname ||
+            $user['sex']       !== $sex ||
+            $user['psw']       !== $psw ||
+            $user['position']  !== $position ||
+            $user['unit']      !== $unit ||
+            $user['phone']     !== $phone ||
+            $user['email']     !== $email ||
+            $user['group_id']  !== $groupid ||
+            $user['location_id'] !== $location ||
+            $user['enabled']   !== $status
+        ) {
+            // At least one field has changed, so update
+            $sqlupdate = "UPDATE tbusers SET 
+                name='$name',
+                surname='$surname',
+                sex='$sex',
+                psw='$psw',
+                position='$position',
+                unit='$unit',
+                phone='$phone',
+                email='$email',
+                group_id='$groupid',
+                location_id='$location',
+                enabled='$status'
+                WHERE id='$uid'";
+            $updateresult = pg_query($con, $sqlupdate);
+
+            if ($updateresult) {
+                echo "<script>window.location.href='users.php?part=userslist';</script>";
+            } else {
+                echo "<script>alert('Error updating user: " . pg_last_error($con) . "');</script>";
+            }
+        } else {
+            // No changes detected
+            echo "<script>alert('No changes detected.');window.location.href='users.php?part=userslist';</script>";
+        }
+    } else {
+        echo "<script>alert('User not found.');</script>";
+    }
+  }
+
+/*
+ SelectLocation: Select location from tbusers table
+*/
+ function SelectLocation($locid, $con){
+      // Check if the location ID is set
+       // Fetch all locations
+    $sql = "SELECT id, name_eng FROM tblocations ORDER BY name_eng ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($locid !== null && $locid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['name_eng']}</option>";
+        }
+    }
+ }
+
+ /*
+ SelectLocationtype: Select location from tblocationtype table
+*/
+function SelectLocationType($ltype, $con){
+    // Check if the location type ID is set
+    $sql = "SELECT id, title FROM tblocationtype ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($ltype !== null && $ltype == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+ }
+
+ /*
+ SelectUsergroup: Select user group from tbusergroup table
+*/
+ function SelectUsergroup($groupid, $con){
+    // Check if the group ID is set
+    $sql = "SELECT id, title FROM tbusergroup ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($groupid !== null && $groupid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+ }
+
+/*
+  Groupname: Get group name from tbusergroup table
+*/
+function Groupname($gid, $con) {
+    $sql = "SELECT title FROM tbusergroup WHERE id = '$gid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['title'];
+    } else {
+        return null; // Return null if no group found
+    }
 }
-?>
+
+/*
+ Locationlist: List all locations from tblocations table
+*/
+function Locationlist($con) {
+    $sqllocation = "SELECT * FROM tblocations ORDER BY id ASC";
+    $result = pg_query($con, $sqllocation) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $locid = $row['id'];
+            //$lcode = $row['lid'];
+            $locname_eng = $row['name_eng'];
+            $locname_lao = $row['name_lao'];
+            $ltype = $row['location_type'];
+            $ltype = Locationtype($ltype, $con); // Get location type from tblocationtype table
+            $pid = $row['pid'];
+            $pid = Provincename($pid, $con); // Get province name from tbprovinces table
+            $did = $row['did'];
+            $did = Districtname($did, $con); // Get district name from tbdistrict table
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$locname_eng</td>
+                    <td>$locname_lao</td>
+                    <td>$ltype</td>
+                    <td>$did</td>
+                    <td>$pid</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                       <input class='form-check-input' role='switch' type='checkbox' id='$locid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleLocationCheckboxChange(this)'>
+                     </div>
+                    </td>
+                    <td><a href='masterdata.php?loc=edit&id=$locid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td><a href='masterdata.php?loc=del&id=$locid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                  </tr>";
+        } // end of while loop     
+       
+    }
+} 
+
+/*
+ Addlocation: Add locations into tblocations table
+*/
+function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
+    // Escape all inputs
+    $locid = pg_escape_string($con, $locid);
+    $nameeng = pg_escape_string($con, $nameeng);
+    $namelao = pg_escape_string($con, $namelao);
+    $loctype = pg_escape_string($con, $loctype);
+    $pid = pg_escape_string($con, $pid);
+    $did = pg_escape_string($con, $did);
+
+    // Check if the location name already exists
+    $sqllocation = "SELECT lid, name_eng, name_lao FROM tblocations 
+                    WHERE lid='$locid' 
+                    AND name_eng='$nameeng' 
+                    AND name_lao='$namelao'";
+    $result = pg_query($con, $sqllocation) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Location name already exists. Please choose a different location name.');</script>";
+        return "yes"; // Indicate that the location already exists
+    } else {
+        // Insert new location
+        $sqladdlocation = "INSERT INTO \"tblocations\" (\"lid\",\"name_eng\", \"name_lao\", \"location_type\", \"pid\", \"did\", \"enabled\") 
+                           VALUES ('".$locid."','".$nameeng."', '".$namelao."', '$loctype', '".$pid."', '".$did."','yes') RETURNING id";
+        
+        $result = pg_query($con, $sqladdlocation) or die(pg_last_error($con));
+        if ($result) {
+            // Redirect back to the table
+            echo "<script>alert('Location added successfully.');</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=locations';</script>";
+        } else {
+            echo "<script>alert('Error adding location: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+
+/*
+ Locationupdate: Update locations from tblocations table
+*/
+function Locationupdate($id,$nameeng, $namelao, $loctype,$pid, $did, $con) {
+   // NOT UPDATE FOR LOCATION ID
+   $sql = "UPDATE tblocations SET 
+            name_eng='$nameeng',
+            name_lao='$namelao', 
+            location_type='$loctype',
+            pid='$pid', 
+            did='$did'
+            WHERE id = '$id'";
+     $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=locations';</script>";
+    } else {
+        echo "<script>alert('Error updating location: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+  Locationname: Get name of locations from tblocations table
+*/
+function Locationname($locid, $con) {
+    $sql = "SELECT name_lao FROM tblocations WHERE id = '$locid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['name_lao'];
+    } else {
+        return null; // Return null if no location found
+    }
+}
+
+/*
+  Locationtype: Get type of locations from tblocationtype table
+*/
+function Locationtype($ltype, $con) {
+    $sql = "SELECT title FROM tblocationtype WHERE id = '$ltype'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['title'];
+    } else {
+        return null; // Return null if no location type found
+    }
+}
+/*
+  Locationvariables: Return variables from tblocations table
+*/
+function Locationvariables($locid, $con) {
+    $sql = "SELECT * FROM tblocations WHERE id = '$locid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // Return null if no location found
+    }
+}
+/*
+  Provincename: Get province name from tbprovinces table
+*/
+function Provincename($pid, $con) {
+    $sql = "SELECT pname FROM tbprovinces WHERE id = '$pid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['pname'];
+    } else {
+        return null; // Return null if no province found
+    }
+}
+
+/*
+  Districtname: Get district name from tbdistrict table
+*/
+function Districtname($did, $con) {
+    $sql = "SELECT dname FROM tbdistricts WHERE id = '$did'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['dname'];
+    } else {
+        return null; // Return null if no district found
+    }
+}
+/*
+ SelectProvinces: Select provinces from tbprovinces table
+*/
+function SelectProvinces($pid, $con) {
+    // Check if the province ID is set
+    $sql = "SELECT id, pname FROM tbprovinces ORDER BY pname ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($pid !== null && $pid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['pname']}</option>";
+        }
+    }
+}
+/*
+ SelectDistricts: Select districts from tbdistricts table
+*/
+function SelectDistricts($did, $pid, $con) {
+    // Check if the district ID is set
+    $sql = "SELECT id, dname FROM tbdistricts WHERE pid='$pid' ORDER BY dname ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($did !== null && $did == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['dname']}</option>";
+        }
+    }
+}
+/*
+ Countrylist: Select from tbcountries table
+*/
+function Countrylist($con) {
+    $sqlcountry = "SELECT * FROM tbcountries ORDER BY id ASC";
+    $result = pg_query($con, $sqlcountry) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $cid = $row['id'];
+            $cname = $row['title'];
+            $alcode = $row['alphacode'];
+            $numcode = $row['numcode'];
+            $desc = $row['desc'];
+            $currency = $row['currency'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$cname</td>
+                    <td>$alcode</td>
+                    <td>$numcode</td>
+                    <td>$currency</td>
+                    <td>$status</td>
+                    <td>
+                    <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addCountryModal' data-cid='$cid' data-cname='" . htmlspecialchars($cname, ENT_QUOTES) . "' data-alcode='" . htmlspecialchars($alcode, ENT_QUOTES) . "' data-numcode='" . htmlspecialchars($numcode, ENT_QUOTES) . "' data-currency='" . htmlspecialchars($currency, ENT_QUOTES) . "' data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i>
+                    </button>
+                   </td>
+                    <td><a href='masterdata.php?part=countries&cid=$cid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                  </tr>";
+        } // end of while loop     
+    }
+}
+?> 

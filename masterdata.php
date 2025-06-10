@@ -157,7 +157,7 @@
         </a>
       </li><!-- End Dashboard Nav -->
        <?php
-          $masterParts = ['countries', 'locations', 'provinces']; // Add all relevant parts here
+          $masterParts = ['countries', 'locations', 'provinces','product']; // Add all relevant parts here
           $isMasterActive = (isset($_GET['part']) && in_array($_GET['part'], $masterParts));
       ?>
       <li class="nav-item">
@@ -172,8 +172,8 @@
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Commodities</span>
+            <a href="masterdata.php?part=product" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'product') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
@@ -484,7 +484,7 @@
       
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
-          <i class="bi bi-plus-circle"></i> Add New Country
+          <i class="bi bi-plus-circle"></i>Add New Country
         </button>
       </div> 
     </div><!-- End Page Title -->
@@ -514,16 +514,16 @@
                 </div>
                 <div class="mb-3">
                   <label for="currency" class="form-label">Currency</label>
-                  <input type="text" class="form-control" id="currency" name="currency" required>
+                  <input type="text" class="form-control" id="currency" name="currency">
                 </div>
                 <div class="mb-3">
                   <label for="countryDescription" class="form-label">Description</label>
-                  <textarea class="form-control" id="countryDescription" name="countryDescription" rows="3" required></textarea>
+                  <textarea class="form-control" id="countryDescription" name="countryDescription" rows="3"></textarea>
                 </div>
               </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" id="submitGroup" name="submitGroup" class="btn btn-success">Submit</button>
+              <button type="submit" id="submitCountry" name="submitCountry" class="btn btn-success">Submit</button>
             </div>
             </form>
           </div>
@@ -570,6 +570,165 @@
     </section> <!-- End Data Table countries -->
       
    <?php  } ?> <!-- ********* End of if part=countries ********* -->
+    <?php
+    // Countries form processing/submission - MODAL form
+    if(isset($_POST['submitCountry'])) {
+        // Process the form submission for adding/updating countries
+        $cid = $_POST['countryId']; // Hidden input for ID
+        $alcode = $_POST['alphaCode'];
+        $numcode = $_POST['numCode'];
+        $cname = $_POST['countrypName'];
+        $description = $_POST['countryDescription'];
+        $currency = $_POST['currency'];
+        
+        if($cid === 'new') {
+            // Add new country
+            AddCountry($alcode, $numcode,$cname, $description,$currency, $con); // Function to add new country
+            echo "<script>alert('New country added-Done');</script>"; // Debugging line
+        } else {
+            // Update existing country
+            echo "<script>alert('Country with ID: " . $cid . " updated.');</script>"; // Debugging line
+            UpdateCountry($cid, $alcode, $numcode, $cname, $description, $currency, $con); // Function to update country
+           
+        }
+    } // End of if submitCountry
+
+    if(isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['cid']) && !empty($_GET['cid'])) {
+            $countryId = $_GET['cid']; // Country ID to delete
+            // Call the function to delete country
+            DeleteCountry($countryId, $con); // Function to delete country 
+            echo "<script>alert('Country with ID: " . $countryId . " deleted.');</script>"; // Debugging line
+            echo "<script>window.location.href='masterdata.php?part=countries';</script>"; // Redirect to countries page
+    }
+  }
+  ?>
+   <!-- ======= *************** Product ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='product') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Product</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup">Product Group</a></li>
+          <li class="breadcrumb-item">Product Unit</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
+          <i class="bi bi-plus-circle"></i>Add New Product
+        </button>
+      </div> 
+    </div><!-- End Page Title -->
+      <section class="section"> <!-- DATA TABLE - Product -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Product</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Product</p>
+
+              <!-- Table with stripped rows -->
+               
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Scientific Name</th>
+                   <th>HS Code</th>
+                   <th>Product Group</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    ProductList($con); // List of Product
+                  ?>
+                </tbody>
+              </table>
+              
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Product -->
+    <?php
+     }
+    ?>
+    <!-- ======= *************** Product Group ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='productgroup') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Product Group</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li> 
+          <li class="breadcrumb-item active">Product Group</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
+          <i class="bi bi-plus-circle"></i>Add New Product Group
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+      <section class="section"> <!-- DATA TABLE - Product Group -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Product Group</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Product Group</p> 
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    //ProductGroupList($con); // List of Product Group
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Product Group -->
+    <?php
+     }
+    ?>
  </main><!-- End #main -->
  
  <!-- End User -->
@@ -625,6 +784,8 @@
       var numCodeInput = modal.find('#numCode');
       var currencyInput = modal.find('#currency');
       var countryDescriptionInput = modal.find('#countryDescription');
+      var submitButton = modal.find('#submitCountry');
+      
 
       modal.find('#countryId').val(cid); // Set the hidden input value
       if (cid === 'new') {
@@ -634,14 +795,14 @@
         currencyInput.val('');
         countryDescriptionInput.val('');
         modal.find('.modal-title').text('Add New Country');
-        modal.find('#submitGroup').text('Submit');
+        submitButton.text('Submit');
       } else {
         countryNameInput.val(button.data('cname')); // Set the country name
         alphaCodeInput.val(button.data('alcode')); // Set the alpha code from data-alcode attribute
         numCodeInput.val(button.data('numcode')); // Set the numeric code from data-numcode attribute
         currencyInput.val(button.data('currency')); // Set the currency from data-currency attribute
         modal.find('.modal-title').text('Edit Country');
-        modal.find('#submitGroup').text('Update');
+        submitButton.text('Update');
       }
     });
     // PK: Focus on locationid input field in data form when the page loads

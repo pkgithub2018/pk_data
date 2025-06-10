@@ -65,6 +65,17 @@ CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbdistricts" (
     "dname" TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS "public"."tbproduct" (
+    id SERIAL PRIMARY KEY,
+    code text NOT NULL,
+    name text NOT NULL,
+    name_scientific text NOT NULL, -- scientific name
+    description text, -- was "desc" - avoid using reserved keywords
+    hscode text, -- Harmonized System Code
+    productgroup text, -- 1=plant, 2=animal, 3=other
+    enabled text NOT NULL -- yes/no
+);
+
 CREATE TABLE IF NOT EXISTS "public"."tbcountry" (
    id SERIAL PRIMARY KEY,
     country_eng text NOT NULL,
@@ -96,13 +107,6 @@ CREATE TABLE IF NOT EXISTS "public"."tbcompany" (
     phone text,
     email text)
 
-CREATE TABLE IF NOT EXISTS "public"."tbproduct" (
-    id SERIAL PRIMARY KEY,
-    product_eng text NOT NULL,
-    product_lao text NOT NULL,
-    product_type INTEGER NOT NULL /* 1=plant, 2=animal, 3=fish, 4=other */
-   
-)
 
 CREATE TABLE IF NOT EXISTS "public"."tbproduct_unit" (
     id SERIAL PRIMARY KEY,

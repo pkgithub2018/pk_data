@@ -155,6 +155,18 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
     }
 }
 /*
+ Deleteuser: Delete users from tbusers
+*/
+function Deleteuser($uid,$con){
+    $sql = "DELETE FROM tbusers WHERE id='$uid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'users.php?part=userslist';</script>";
+    } else {
+        echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
   Userlist: List all users from tbusers table
 */
 function Userlist($con){
@@ -559,7 +571,11 @@ function Countrylist($con) {
                     <td>$alcode</td>
                     <td>$numcode</td>
                     <td>$currency</td>
-                    <td>$status</td>
+                    <td>
+                     <div class='form-check form-switch'>
+                       <input class='form-check-input' role='switch' type='checkbox' id='$cid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleCountryCheckboxChange(this)'>
+                     </div>
+                    </td>
                     <td>
                     <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addCountryModal' data-cid='$cid' data-cname='" . htmlspecialchars($cname, ENT_QUOTES) . "' data-alcode='" . htmlspecialchars($alcode, ENT_QUOTES) . "' data-numcode='" . htmlspecialchars($numcode, ENT_QUOTES) . "' data-currency='" . htmlspecialchars($currency, ENT_QUOTES) . "' data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
                       <i class='bi bi-pencil-square table-icon'></i>
@@ -570,4 +586,171 @@ function Countrylist($con) {
         } // end of while loop     
     }
 }
+/*
+  AddCountry: Add new country into tbcountries table
+*/
+function AddCountry($alphacode, $numcode,$cname, $desc,$currency, $con){
+    
+    $alphacode = pg_escape_string($con, $alphacode); // Escape the alpha code
+    $numcode = pg_escape_string($con, $numcode); // Escape the numeric code
+    $cname = pg_escape_string($con, $cname); // Escape the country name
+    $desc = pg_escape_string($con, $desc); // Escape the description
+    $currency = pg_escape_string($con, $currency); // Escape the currency
+    
+    // Check if the country name already exists
+    $sqlcountry = "SELECT title FROM tbcountries WHERE title='$cname'";
+    $result = pg_query($con, $sqlcountry) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Country name already exists. Please choose a different country name.');</script>";
+        return "yes"; // Indicate that the country already exists
+    } else {
+        // Insert new country
+        $sqladdcountry = "INSERT INTO \"tbcountries\" (\"alphacode\", \"numcode\", \"title\", \"desc\", \"currency\", \"enabled\") VALUES ('".$alphacode."','".$numcode."','".$cname."','".$desc."', '".$currency."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdcountry) or die(pg_last_error($con));
+        if ($result) {
+            // Redirect back to the table
+           // echo "<script>alert('Country added successfully.');</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=countries';</script>";
+        } else {
+            echo "<script>alert('Error adding country: " . pg_last_error($con) . "');</script>";
+        }
+    }    
+}
+/*
+  UpdateCountry: Update country from tbcountries table
+*/
+function UpdateCountry($cid, $alphacode, $numcode, $cname, $desc, $currency, $con) {
+    // Escape all inputs
+    $cid = pg_escape_string($con, $cid);
+    $alphacode = pg_escape_string($con, $alphacode);
+    $numcode = pg_escape_string($con, $numcode);
+    $cname = pg_escape_string($con, $cname);
+    $desc = pg_escape_string($con, $desc);
+    $currency = pg_escape_string($con, $currency);
+
+    // Update the country information
+    $sqlupdatecountry = "UPDATE tbcountries SET alphacode='$alphacode', numcode='$numcode', title='$cname', \"desc\"='$desc', currency='$currency' WHERE id='$cid'";
+    $result = pg_query($con, $sqlupdatecountry) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+       // echo "<script>alert('Country updated successfully.');</script>";
+        echo "<script>window.location.href = 'masterdata.php?part=countries';</script>";
+    } else {
+        echo "<script>alert('Error updating country: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ DeleteCountry: Delete country from tbcountries table
+*/
+function DeleteCountry($cid, $con) {
+    $sqlcountry = "DELETE FROM tbcountries WHERE id='$cid'";
+    $result = pg_query($con, $sqlcountry) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>alert('Country deleted successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=countries';</script>";
+    } else {
+        echo "<script>alert('Error deleting country: " . pg_last_error($con) . "');</script>";
+    }
+}   
+/* 
+  ProductList: List all product  from tbproduct table
+*/
+function ProductList($con) {
+    $sqlproduct = "SELECT * FROM tbproduct ORDER BY id ASC";
+    $result = pg_query($con, $sqlproduct) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];   
+            $pname = $row['name'];
+            $scientname = $row['name_scientific'];
+            $desc = $row['desc'];
+            $hscode = $row['hscode'];
+            $producgroup = $row['productgroup'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$pname</td>
+                    <td>$scientname</td>
+                    <td>$hscode</td>
+                    <td>$producgroup</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleProductCheckboxChange(this)'>
+                      </div>        
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductModal' data-pid='$id' data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "' data-code='" . htmlspecialchars($code, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>
+                    </td>
+                    <td><a href='masterdata.php?part=products&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                    </tr>"; 
+        } // end of while loop
+    }
+}      
+
+/*
+ ProductgroupList: Show list of product groups from tbproductgroup table
+*/
+function ProductgroupList($con) {
+    $sqlgroup = "SELECT * FROM tbproduct_group ORDER BY id ASC";
+    $result = pg_query($con, $sqlgroup) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $gid = $row['id'];
+            $gname = $row['title'];
+            $gdesc = $row['desc'];
+            $gstatus = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$gname</td>
+                    <td>$gdesc</td>
+                    <td>
+                    </tr>";
+        }
+    }
+}
+/*
+ AddProductgroup: Add new product group into tbproductgroup table
+*/
+function AddProductgroup($gname, $gdesc, $con) {
+    $gname = pg_escape_string($con, $gname);
+    $gdesc = pg_escape_string($con, $gdesc);
+    
+    // Check if the product group name already exists
+    $sqlgroup = "SELECT title FROM tbproduct_group WHERE title='$gname'";
+    $result = pg_query($con, $sqlgroup) or die(pg_last_error());
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Product group name already exists. Please choose a different product group name.');</script>";
+        return "yes"; // Indicate that the product group already exists
+    } else {
+        // Insert new product group
+        $sqladdgroup = "INSERT INTO \"tbproduct_group\" (\"title\", \"desc\", \"enabled\") VALUES ('".$gname."', '".$gdesc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdgroup) or die(pg_last_error());
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=productgroups';</script>";
+        } else {
+            echo "<script>alert('Error adding product group: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}   
+/*
+ SelectProductgroup: Get list of product group for select option in product form
+*/     
+function SelectProductgroup($pgid, $con) {
+    // Check if the product group ID is set
+    $sql = "SELECT id, title FROM tbproduct_group ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($pgid !== null && $pgid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+}        
 ?> 

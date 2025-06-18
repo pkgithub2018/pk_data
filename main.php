@@ -21,13 +21,17 @@ if (file_exists($langFile)) {
 }
 // connection to database
  require("php-bin/connection.php"); 
+
  $uslogin = $_SESSION["username"]; // use email as username
+ $groupid = $_SESSION["groupid"]; // use group_id for user group
+
  $_SESSION['uname'] = "";
  if(isset($_GET['us'])){
     $unamelogin = $_GET['us'];
     $_SESSION['uname'] = $unamelogin;
   }
   $_SESSION['uname'] = isset($_SESSION['uname']) ? $_SESSION['uname'] : '';
+  echo "<script>alert('Group id logged in: " . $groupid . "');</script>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -223,13 +227,13 @@ if (file_exists($langFile)) {
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Commodities</span>
+            <a href="masterdata.php?part=product">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Conveyence</span>
+            <a href="masterdata.php?part=conveyance">
+              <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
@@ -242,7 +246,11 @@ if (file_exists($langFile)) {
               <i class="bi bi-circle"></i><span>Districts</span>
             </a>
           </li>
-          
+          <li>
+            <a href="masterdata.php?part=inspectionmethod">
+              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            </a>
+          </li>
           <li>
             <a href="masterdata.php?part=locations">
               <i class="bi bi-circle"></i><span>Locations</span>

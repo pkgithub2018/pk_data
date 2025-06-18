@@ -76,6 +76,22 @@ CREATE TABLE IF NOT EXISTS "public"."tbproduct" (
     enabled text NOT NULL -- yes/no
 );
 
+CREATE TABLE IF NOT EXISTS "public"."tbproduct_group" (
+    id SERIAL PRIMARY KEY,
+    code text NOT NULL,
+    title text NOT NULL,
+    description text, -- was "desc" - avoid using reserved keywords
+    enabled text NOT NULL -- yes/no
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbinspection_method" (
+    id SERIAL PRIMARY KEY,
+    code TEXT NOT NULL,
+    title TEXT NOT NULL, 
+    description TEXT NULL, 
+    enabled TEXT NOT NULL -- yes/no 
+);
+
 CREATE TABLE IF NOT EXISTS "public"."tbcountry" (
    id SERIAL PRIMARY KEY,
     country_eng text NOT NULL,
@@ -83,7 +99,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbcountry" (
     continent text NOT NULL,
     region text)
 
-CREATE TABLE IF NOT EXISTS "public"."tbrequestor" (
+CREATE TABLE IF NOT EXISTS "public"."tbrequest" (
    id SERIAL PRIMARY KEY,
    request_id INTEGER NOT NULL, /* 000000 + id + / date/location, Example, 000001/20250417/DOA */
    request_date date NOT NULL,
@@ -115,7 +131,10 @@ CREATE TABLE IF NOT EXISTS "public"."tbproduct_unit" (
 
 CREATE TABLE IF NOT EXISTS "public"."tbconveyance" (
     id SERIAL PRIMARY KEY,
-    conveyance text NOT NULL /* 1= byland (truck and train), 2=bysea, 3=byair */
+    code text NOT NULL, 
+    conveytype text NOT NULL, /* 1= byland (truck and train), 2=bysea, 3=byair */
+    description text, /* was "desc" - avoid using reserved keywords */
+    enabled text NOT NULL /* yes/no */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (
@@ -134,14 +153,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (
     destination_id INTEGER NOT NULL /* company_id */
 )
 
-CREATE TABLE IF NOT EXISTS "public"."tbinspection" (
-    id SERIAL PRIMARY KEY,
-    transaction_id INTEGER NOT NULL,
-    confirm INTEGER NOT NULL, /* 1= yes, 2=No inspection */
-    inspection_date date NOT NULL, /* In case of inspection */
-    sample_id INTEGER NOT NULL, /* sample.id from tbsample */
-    inspected_by text NOT NULL /* Person who does the Lab */
-)
+
 
 CREATE TABLE IF NOT EXISTS "public"."tbsamples" (
     id SERIAL PRIMARY KEY,
@@ -176,7 +188,3 @@ CREATE TABLE IF NOT EXISTS "public"."tbmethod_chemical" (
     chinspected_by text NOT NULL /* Person who inspects sample for chemical purpose */
 )
 
-CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbinspection" (  
-   "id" SERIAL PRIMARY KEY,
-    chemical_name text NOT NULL 
-);

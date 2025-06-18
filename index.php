@@ -8,52 +8,40 @@
   $message = "";
     // Check if the form is submitted
   if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = isset($_POST['username']) ? htmlspecialchars($_POST['username']) : '';
+    $email = isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '';
     $password = isset($_POST['password']) ? htmlspecialchars($_POST['password']) : '';
 
+   // $message = "Hi, Login: " . $email . "<br>Your password is: " . $password;
     // Destroy session variables
-    $_SESSION["username"] = ""; // Use email as username
+   
     $_SESSION["email"] = "";
     $_SESSION["passw"] = "";
+    $_SESSION["groupid"] = "";
 
     // IN CASE OF SUBMISSION THROUGH FORM
-  if(!empty($username) && !empty($password)){
-    $_SESSION["username"] = $username;
-    $_SESSION["email"] = $username; // Use email as username
-    $_SESSION["passw"] = $password;
-     /* 
-    $sqlchuser = "SELECT username, passw, email, usertype FROM tbusers 
-              WHERE email = '".$_SESSION["username"]."' AND passw = '".$_SESSION["passw"]."'";
-    $result = mysqli_query($con, $sqlchuser) or die(mysqli_connect_error());
-    if (mysqli_num_rows($result) == 0) {
-      $message = "Incorrect username or password. Please try again.";
-    } else {
-      list($unamelogin, $pswlogin, $emaillogin, $usertype) = mysqli_fetch_array($result); 
-      // Prepare the message
-      //$message = "Hello, Login: " . $unamelogin . "<br>Your password is: " . $pswlogin;
-      echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin';</script>";
-      exit();
-    }  
-    */
-    $sqlchuser = "SELECT name, psw, email, group_id FROM tbusers 
-              WHERE email = '" . pg_escape_string($con, $_SESSION["username"]) . "' 
-              AND psw = crypt('" . pg_escape_string($con, $_SESSION["passw"]) . "', psw)";
-    $result = pg_query($con, $sqlchuser) or die(pg_last_error($con));
+  if (!empty($email) && !empty($password)) {
+    $sql = "SELECT name, psw, email, group_id FROM tbusers WHERE email = '$email' AND enabled = 'yes'";
+    $result = pg_query($con, $sql) or die(pg_last_error());
 
-    if (pg_num_rows($result) == 0) {
-    $message = "Incorrect username or password. Please try again.";
+    //$row = pg_fetch_array($result)
+    if ($row = pg_fetch_array($result)) {
+        // If passwords are hashed, use password_verify
+        if ($password === $row['psw']) { // Replace with password_verify($password, $row['psw']) if hashed
+            $_SESSION["username"] = $row['name'];
+            $_SESSION["email"] = $row['email'];
+            $_SESSION["groupid"] = $row['group_id'];
+            echo "<script type='text/javascript'>window.location.href = 'main.php?us=" . urlencode($row['name']) . "';</script>";
+            exit();
+        } else {
+            $message = "Incorrect username or password.";
+        }
     } else {
-    list($unamelogin, $pswlogin, $emaillogin, $groupid) = pg_fetch_array($result);
-    // Prepare the message
-    $message = "Hello, Login: " . $unamelogin . "<br>Your password is: " . $pswlogin;
-    echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin';</script>";
-    exit();
+        $message = "Incorrect username or password.";
+    }
 }
-}
-// IN CASE OF SUBMISSION THROUGH LINKS
-// ***
-// CHECK IF THE USER IS LOGGED IN WITH tbusers
-  }
+  
+ } // if-post 
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -126,7 +114,7 @@
                       <label for="yourUsername" class="form-label">Username</label>
                       <div class="input-group has-validation">
                         <span class="input-group-text" id="inputGroupPrepend">@</span>
-                        <input type="text" name="username" class="form-control" id="yourUsername" required>
+                        <input type="text" name="email" class="form-control" id="yourUsername" required>
                         <div class="invalid-feedback">Please enter your username.</div>
                       </div>
                     </div>

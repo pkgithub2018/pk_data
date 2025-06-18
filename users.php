@@ -169,13 +169,13 @@
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Commodities</span>
+            <a href="masterdata.php?part=product">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Conveyence</span>
+            <a href="masterdata.php?part=conveyance">
+              <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
@@ -188,7 +188,11 @@
               <i class="bi bi-circle"></i><span>Districts</span>
             </a>
           </li>
-          
+          <li>
+            <a href="masterdata.php?part=inspectionmethod">
+              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            </a>
+          </li>
           <li>
             <a href="masterdata.php?part=locations">
               <i class="bi bi-circle"></i><span>Locations</span>
@@ -422,7 +426,8 @@
             //Deleteuser($duid, $con); // Delete user and back to list
             // TESTING
             echo "<script>alert('User ID to delete: " . $duid . "');</script>"; // Debugging line
-            echo "<script>window.location.href = 'users.php?part=userslist';</script>"; // Redirect to users list
+            Deleteuser($duid,$con);
+            //echo "<script>window.location.href = 'users.php?part=userslist';</script>"; // Redirect to users list
         }
       }
      // USERS UPDATE AND ADD new user form - SUBMIT ******
@@ -437,16 +442,17 @@
           $phone = htmlspecialchars($_POST['phone']);
           $email = htmlspecialchars($_POST['email']);
           $groupid = htmlspecialchars($_POST['usergroup']);
+          $admingroup = isset($_POST['admingroup']) ? htmlspecialchars($_POST['admingroup']) : 'no'; // Admin group
           $location = htmlspecialchars($_POST['location']);
           
         if(isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'submit') { // New user submission
             $sbupdate = 'submit'; // Set submit button value
-            Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con);
+            Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con);
            // echo "<script>alert('Submit button clicked- New User');</script>"; // Debugging line
 
         } elseif (isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'update') { // Update user submission
             $sbupdate = 'update'; // Set update button value
-            UpdateuserSubmit($huid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con);
+            UpdateuserSubmit($huid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con);
         }    
 
      }
@@ -462,7 +468,7 @@
                     document.getElementById('huid').value = uid; 
                   </script>"; 
             */
-            list($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $status) = Updateuser_values($uid,$con); // Get user data for update
+            list($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $status) = Updateuser_values($uid,$con); // Get user data for update
             $key = '1234567890abcdef'; // Make xampp happy.
             $iv = 'abcdef1234567890';
             $psw = openssl_decrypt($psw, 'AES-128-CTR', $key, 0, $iv); // Decrypt the password
@@ -470,7 +476,8 @@
         // New user
         } else { 
             $uid = '';
-            $name = $surname = $sex = $psw = $position = $unit = $phone = $email = $groupid = $location = $status = '';
+            // Initialize variables for new user
+            $name = $surname = $sex = $psw = $position = $unit = $phone = $email = $groupid = $admingroup = $location = $status = '';
         } // end of if uid
       
     ?>
@@ -565,7 +572,16 @@
                     </select>
                   </div>
                 </div>
-              
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Admin Group</label>
+                  <div class="col-sm-5">
+                    <select class="form-select" name="admingroup" aria-label="Default select example">
+                      <option selected>*** Please select one ***</option>
+                      <option value="yes" <?php echo (isset($admingroup) && $admingroup == 'yes') ? 'selected' : ''; ?>>Yes</option>
+                      <option value="no" <?php echo (isset($admingroup) && $admingroup == 'no') ? 'selected' : ''; ?>>No</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10">

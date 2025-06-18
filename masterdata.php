@@ -157,7 +157,7 @@
         </a>
       </li><!-- End Dashboard Nav -->
        <?php
-          $masterParts = ['countries', 'locations', 'provinces','product']; // Add all relevant parts here
+          $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod']; // Add all relevant parts here
           $isMasterActive = (isset($_GET['part']) && in_array($_GET['part'], $masterParts));
       ?>
       <li class="nav-item">
@@ -172,13 +172,13 @@
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=product" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'product') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=product" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Conveyence</span>
+            <a href="masterdata.php?part=conveyance" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
@@ -191,7 +191,11 @@
               <i class="bi bi-circle"></i><span>Districts</span>
             </a>
           </li>
-          
+          <li>
+            <a href="masterdata.php?part=inspectionmethod" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'inspectionmethod') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            </a>
+          </li>
           <li>
             <a href="masterdata.php?part=locations" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
@@ -569,7 +573,8 @@
       </div>
     </section> <!-- End Data Table countries -->
       
-   <?php  } ?> <!-- ********* End of if part=countries ********* -->
+   <?php  } ?> 
+   <!-- ********* End of if part=countries ********* -->
     <?php
     // Countries form processing/submission - MODAL form
     if(isset($_POST['submitCountry'])) {
@@ -593,7 +598,7 @@
         }
     } // End of if submitCountry
 
-    if(isset($_GET['del']) && $_GET['del'] === 'yes') {
+    if((isset($_GET['part']) && $_GET['part']==='countries') && (isset($_GET['del']) && $_GET['del'] === 'yes')) {
         if(isset($_GET['cid']) && !empty($_GET['cid'])) {
             $countryId = $_GET['cid']; // Country ID to delete
             // Call the function to delete country
@@ -617,16 +622,67 @@
           <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup">Product Group</a></li>
-          <li class="breadcrumb-item">Product Unit</li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productunit">Product Unit</a></li>
         </ol>
       </nav>
       </div>
       <div>
-        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal" data-pid="new">
           <i class="bi bi-plus-circle"></i>Add New Product
         </button>
       </div> 
     </div><!-- End Page Title -->
+     <!-- == Modal form - Product == -->
+      <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addProductModalLabel"><b>Add New Product</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for cid -->
+                <input type="hidden" id="productId" name="productId">
+                <div class="mb-3">
+                  <label for="productCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="productCode" name="productCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="productName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="productName" name="productName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="scientName" class="form-label">Scientific Name</label>
+                  <input type="text" class="form-control" id="scientName" name="scientName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="hsCode" class="form-label">HS Code</label>
+                  <input type="text" class="form-control" id="hsCode" name="hsCode">
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-8 col-form-label">Product Group</label>
+                  <div class="col-sm-15">
+                    <select class="form-select" name="productGroup" id="productGroup" aria-label="Default select example" onchange="SelectProvinceOnChange(this)">
+                     <option value="">*** Please select one ***</option>
+                      <?php SelectProductgroup($pgid, $con); ?>
+                    </select>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="description" class="form-label">Description</label>
+                  <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitProduct" name="submitProduct" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
       <section class="section"> <!-- DATA TABLE - Product -->
       <div class="row">
         <div class="col-lg-12">
@@ -669,6 +725,40 @@
     <?php
      }
     ?>
+    <!-- Product form processing/submission - MODAL form -->
+    <?php 
+    if(isset($_POST['submitProduct'])) {  // ADD/UPDATE Product
+        // Process the form submission for adding/updating product
+        $pid = $_POST['productId']; // Hidden input for ID
+        $pcode = $_POST['productCode'];
+        $pname = $_POST['productName'];
+        $scientname = $_POST['scientName'];
+        $hsCode = $_POST['hsCode'];
+        $productgroup = $_POST['productGroup'];
+        $description = $_POST['description'];
+        
+        if($pid === 'new') {
+            // Add new product
+           // AddProduct($pcode, $pname, $scientName, $hsCode, $pgid, $description, $con); // Function to add new product
+           AddProduct($pcode, $pname, $scientname, $description, $hsCode, $productgroup, $con);
+        //   echo "<script>alert('New product added-Done');</script>"; // Debugging line
+          
+        } else {
+            // Update existing product
+          //  echo "<script>alert('Product with ID: " . $pid . " updated.');</script>"; // Debugging line
+           UpdateProduct($pid, $pcode, $pname, $scientname, $description, $hsCode, $productgroup, $con); // Function to update product
+           
+        }
+    } // End of if submitProduct
+    // DELETE product
+    if(isset($_GET['part']) && $_GET['part']==='product' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['pid']) && !empty($_GET['pid'])) {
+            $productId = $_GET['pid']; // Product ID to delete
+            // Call the function to delete product
+            DeleteProduct($productId, $con); // Function to delete product    
+        }
+    }
+    ?>
     <!-- ======= *************** Product Group ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='productgroup') {
@@ -681,17 +771,47 @@
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li> 
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product">Product</a></li> 
           <li class="breadcrumb-item active">Product Group</li>
         </ol>
       </nav>
       </div>
       <div>
-        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductGroupModal" data-pgroupid="new">
           <i class="bi bi-plus-circle"></i>Add New Product Group
         </button>
       </div>
     </div><!-- End Page Title -->
+    <!-- == Modal form - Product Group == -->
+      <div class="modal fade" id="addProductGroupModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addProductGroupModalLabel"><b>Add New Product Group</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for cid -->
+                <input type="hidden" id="productGroupId" name="productGroupId">
+                <div class="mb-3">
+                  <label for="productGroupName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="productGroupName" name="productGroupName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="productGroupDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="productGroupDescription" name="productGroupDescription" rows="3"></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitProductGroup" name="submitProductGroup" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
       <section class="section"> <!-- DATA TABLE - Product Group -->
       <div class="row">
         <div class="col-lg-12">
@@ -706,7 +826,6 @@
                 <thead>
                   <tr>
                    <th><b>N</b>o</th>
-                   <th>Code</th>
                    <th>Name</th>
                    <th>Description</th>
                    <th>Status</th>
@@ -716,7 +835,7 @@
                 </thead>
                 <tbody>
                   <?php
-                    //ProductGroupList($con); // List of Product Group
+                    ProductgroupList($con); // List of Product Group
                   ?>
                 </tbody>
               </table>
@@ -729,6 +848,406 @@
     <?php
      }
     ?>
+    <!-- Product Group form processing/submission - MODAL form -->
+    <?php
+    if(isset($_POST['submitProductGroup'])) {  // ADD/UPDATE Product Group
+        // Process the form submission for adding/updating product group
+        $pgid = $_POST['productGroupId']; // Hidden input for ID
+        $pgname = $_POST['productGroupName'];
+        $pgdescription = $_POST['productGroupDescription'];
+        
+        if($pgid === 'new') {
+            // Add new product group
+           // echo "<script>alert('New product group added-Done');</script>"; // Debugging line
+            AddProductgroup($pgname, $pgdescription, $con); // Function to add new product group
+            
+        } else {
+            // Update existing product group
+            echo "<script>alert('Product group with ID: " . $pgid . " updated.');</script>"; // Debugging line
+            UpdateProductgroup($pgid, $pgname, $pgdescription, $con); // Function to update product group
+           
+        }
+    } // End of if submitProductGroup
+    // DELETE product group
+    if(isset($_GET['part']) && $_GET['part']==='productgroup' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['gid']) && !empty($_GET['gid'])) {
+            $productGroupId = $_GET['gid']; // Product Group ID to delete
+            // Call the function to delete product group
+            DeleteProductgroup($productGroupId, $con); // Function to delete product group    
+        }
+    }
+    ?>
+    <!-- ======= *************** Product Unit ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='productunit') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Product Unit</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product">Product</a></li>
+          <li class="breadcrumb-item active">Product Unit</li>
+        </ol>
+      </nav>
+      </div>  
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductUnitModal" data-punitid="new">
+          <i class="bi bi-plus-circle"></i>Add New Product Unit
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Product Unit == -->
+      <div class="modal fade" id="addProductUnitModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addProductUnitModalLabel"><b>Add New Product Unit</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for cid -->
+                <input type="hidden" id="productUnitId" name="productUnitId">
+                <div class="mb-3">
+                  <label for="productUnitCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="productUnitCode" name="productUnitCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="productUnitName" class="form-label">Symbol</label>
+                  <input type="text" class="form-control" id="productUnitSymbol" name="productUnitSymbol" required>
+                </div>
+                <div class="mb-3">
+                  <label for="productUnitName" class="form-label">Title</label>
+                  <input type="text" class="form-control" id="productUnitTitle" name="productUnitTitle" required>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitProductUnit" name="submitProductUnit" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+      <section class="section"> <!-- DATA TABLE - Product Unit -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Product Unit</h5>
+       
+              <p>ePhytosanitary by Department of Agriculture, MAF - Product Unit</p>
+              <!-- Table with stripped rows --> 
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Symbol</th>
+                   <th>Title</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    ProductunitList($con); // List of Product Unit
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Product Unit -->
+    <?php
+     }
+    ?>
+    <?php 
+    // Product Unit form processing/submission - MODAL form 
+    if(isset($_POST['submitProductUnit'])) {  // ADD/UPDATE Product Unit
+        // Process the form submission for adding/updating product unit
+        $punitid = $_POST['productUnitId']; // Hidden input for ID 
+        $code = $_POST['productUnitCode'];
+        $symb = $_POST['productUnitSymbol'];
+        $title = $_POST['productUnitTitle'];
+        
+        if($punitid === 'new') {
+            // Add new product unit
+           // echo "<script>alert('New product unit added-Done');</script>"; // Debugging line
+            AddProductunit($code, $symb, $title, $con); // Function to add new product unit 
+        } else {
+            // Update existing product unit
+            //echo "<script>alert('Product unit with ID: " . $punitid . " updated.');</script>"; // Debugging line
+            UpdateProductunit($punitid, $code, $symb, $title, $con); // Function to update product unit
+           
+        }
+    } // End of if submitProductUnit
+
+    // DELETE product unit
+    if(isset($_GET['part']) && $_GET['part']==='productunit' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['uid']) && !empty($_GET['uid'])) {
+            $productUnitId = $_GET['uid']; // Product Unit ID to delete
+            // Call the function to delete product unit
+            DeleteProductunit($productUnitId, $con); // Function to delete product unit    
+        }
+    }
+  ?>
+  <!-- ======= *************** Conveyance ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='conveyance') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Conveyance</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Conveyance</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addConveyenceModal" data-cid="new">
+          <i class="bi bi-plus-circle"></i>Add New Conveyance
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Conveyance == -->
+      <div class="modal fade" id="addConveyenceModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addConveyenceModalLabel"><b>Add New Conveyance</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for cid -->
+                <input type="hidden" id="conveyanceId" name="conveyanceId">
+                <div class="mb-3">
+                  <label for="conveyanceCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="conveyanceCode" name="conveyanceCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="conveyanceType" class="form-label">Conveyance Type</label>
+                  <input type="text" class="form-control" id="conveyanceType" name="conveyanceType" required>
+                </div>
+                <div class="mb-3">
+                  <label for="conveyanceDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="conveyanceDescription" name="conveyanceDescription" rows="3"></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitConveyance" name="submitConveyance" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Conveyance -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Conveyance</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Conveyance</p>
+
+              <!-- Table with stripped rows -->
+               
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Conveyance Type</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    Conveyancelist($con); // List of Conveyance
+                  ?>
+                </tbody>
+              </table>
+              
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Conveyance -->
+    <?php
+     }
+    ?>
+    <!-- Conveyance form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitConveyance'])) {  // ADD/UPDATE Conveyance
+        // Process the form submission for adding/updating conveyance
+        $cid = $_POST['conveyanceId']; // Hidden input for ID
+        $cCode = $_POST['conveyanceCode'];
+        $cType = $_POST['conveyanceType'];
+        $cDescription = $_POST['conveyanceDescription'];
+        
+        if($cid === 'new') {
+            // Add new conveyance
+            AddConveyance($cCode, $cType, $cDescription, $con); // Function to add new conveyance
+            echo "<script>alert('New conveyance added-Done');</script>"; // Debugging line
+        } else {
+            // Update existing conveyance
+            echo "<script>alert('Conveyance with ID: " . $cid . " updated.');</script>"; // Debugging line
+            UpdateConveyance($cid, $cCode, $cType, $cDescription, $con); // Function to update conveyance
+           
+        }
+      } // End of if submitConveyance
+
+      // DELETE conveyance
+      if(isset($_GET['part']) && $_GET['part']==='conveyance' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+          if(isset($_GET['cid']) && !empty($_GET['cid'])) {
+              $conveyanceId = $_GET['cid']; // Conveyance ID to delete
+              // Call the function to delete conveyance
+              DeleteConveyance($conveyanceId, $con); // Function to delete conveyance    
+          }
+      }
+    ?>
+    <!--============= Inspection methods =============-->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='inspectionmethod') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Inspection Method</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Inspection Method</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addInspectionMethodModal" data-imid="new">
+          <i class="bi bi-plus-circle"></i>Add New Inspection Method
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Inspection Method == -->
+      <div class="modal fade" id="addInspectionMethodModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addInspectionMethodModalLabel"><b>Add New Inspection Method</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for imid -->
+                <input type="hidden" id="inspectionMethodId" name="inspectionMethodId">
+                <div class="mb-3">
+                  <label for="inspectionMethodCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="inspectionMethodCode" name="inspectionMethodCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="inspectionMethodName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="inspectionMethodName" name="inspectionMethodName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="inspectionMethodDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="inspectionMethodDescription" name="inspectionMethodDescription" rows="3"></textarea> 
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitInspectionMethod" name="submitInspectionMethod" class="btn btn-success">Submit</button> 
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Inspection Method -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Inspection Method</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Inspection Method</p>
+
+              <!-- Table with stripped rows -->
+               
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                   // InspectionMethodList($con); // List of Inspection Method
+                  ?>
+                </tbody>
+              </table>
+              
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Inspection Method -->
+    <?php
+     }
+    ?>
+    <!-- Inspection Method form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitInspectionMethod'])) {  // ADD/UPDATE Inspection Method
+        // Process the form submission for adding/updating inspection method
+        $imid = $_POST['inspectionMethodId']; // Hidden input for ID
+        $imCode = $_POST['inspectionMethodCode'];
+        $imName = $_POST['inspectionMethodName'];
+        $imDescription = $_POST['inspectionMethodDescription'];
+        
+        if($imid === 'new') {
+            // Add new inspection method
+            AddInspectionMethod($imCode, $imName, $imDescription, $con); // Function to add new inspection method
+            echo "<script>alert('New inspection method added-Done');</script>"; // Debugging line
+        } else {
+            // Update existing inspection method
+            echo "<script>alert('Inspection method with ID: " . $imid . " updated.');</script>"; // Debugging line
+            UpdateInspectionMethod($imid, $imCode, $imName, $imDescription, $con); // Function to update inspection method
+           
+        }
+      } // End of if submitInspectionMethod
+?>
+      
  </main><!-- End #main -->
  
  <!-- End User -->
@@ -759,21 +1278,8 @@
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
   
-  <script>
-    //  Modal form - Countries 
-    // 1) Set focus on the country name input field when the modal is shown
-    document.addEventListener('DOMContentLoaded', function() {
-    var addCountryModal = document.getElementById('addCountryModal');
-      if (addCountryModal) {
-          addCountryModal.addEventListener('shown.bs.modal', function () {
-          var countryNameInput = document.getElementById('countryName');
-      if (countryNameInput) {
-        countryNameInput.focus();
-        countryNameInput.select();
-      }
-      });
-    }
-    });
+<script>
+  
     // 2) Check if new or edit country modal is opened
     $('#addCountryModal').on('show.bs.modal', function (event) {
       var button = $(event.relatedTarget); // Button that triggered the modal
@@ -805,14 +1311,178 @@
         submitButton.text('Update');
       }
     });
-    // PK: Focus on locationid input field in data form when the page loads
+    // 3) process the form submission for adding/updating products
+    $('#addProductModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var pid = button.data('pid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var productCodeInput = modal.find('#productCode');
+      var productNameInput = modal.find('#productName');
+      var scientNameInput = modal.find('#scientName');
+      var hsCodeInput = modal.find('#hsCode');
+      var productGroupSelect = modal.find('#productGroup');
+      var descriptionInput = modal.find('#description');
+      var submitButton = modal.find('#submitProduct');
+
+      modal.find('#productId').val(pid); // Set the hidden input value
+      if (pid === 'new') {
+        productCodeInput.val(''); // Clear inputs
+        productNameInput.val('');
+        scientNameInput.val('');
+        hsCodeInput.val('');
+        descriptionInput.val('');
+        productGroupSelect.val(''); // Reset product group selection
+        modal.find('.modal-title').text('Add New Product');
+        submitButton.text('Submit');
+      } else {
+        productCodeInput.val(button.data('code')); // Set the product code
+        productNameInput.val(button.data('pname')); // Set the product name
+        scientNameInput.val(button.data('scientname')); // Set the scientific name
+        hsCodeInput.val(button.data('hscode')); // Set the HS code
+        descriptionInput.val(button.data('desc')); // Set the description
+        productGroupSelect.val(button.data('productgroup')); // Set the product group ID
+        modal.find('.modal-title').text('Edit Product');
+        submitButton.text('Update');
+      }
+    });
+   // 4) process the form submission for adding/updating product groups
+    $('#addProductGroupModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var pgroupid = button.data('pgroupid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var productGroupNameInput = modal.find('#productGroupName');
+      var productGroupDescriptionInput = modal.find('#productGroupDescription');
+      var submitButton = modal.find('#submitProductGroup');
+
+      modal.find('#productGroupId').val(pgroupid); // Set the hidden input value
+      if (pgroupid === 'new') {
+        productGroupNameInput.val(''); // Clear inputs
+        productGroupDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Product Group');
+        submitButton.text('Submit');
+      } else {
+        productGroupNameInput.val(button.data('gname')); // Set the product group name
+        productGroupDescriptionInput.val(button.data('gdesc')); // Set the product group description
+        modal.find('.modal-title').text('Edit Product Group');
+        submitButton.text('Update');
+      }
+    });
+
+    // 5) process the form submission for adding/updating product units
+    $('#addProductUnitModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var punitid = button.data('punitid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var productUnitCodeInput = modal.find('#productUnitCode');
+      var productUnitSymbolInput = modal.find('#productUnitSymbol');
+      var productUnitTitleInput = modal.find('#productUnitTitle');
+      var submitButton = modal.find('#submitProductUnit');
+
+      modal.find('#productUnitId').val(punitid); // Set the hidden input value
+      if (punitid === 'new') {
+        productUnitCodeInput.val(''); // Clear inputs
+        productUnitSymbolInput.val('');
+        productUnitTitleInput.val('');
+        modal.find('.modal-title').text('Add New Product Unit');
+        submitButton.text('Submit');
+      } else {
+        productUnitCodeInput.val(button.data('code')); // Set the product unit name
+        productUnitSymbolInput.val(button.data('symb')); // Set the product unit symbol
+        productUnitTitleInput.val(button.data('title')); // Set the product unit title
+        modal.find('.modal-title').text('Edit Product Unit');
+        submitButton.text('Update');
+      }
+    });
+    // 6) process the form submission for adding/updating conveyance
+    $('#addConveyenceModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var cid = button.data('cid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var conveyanceCodeInput = modal.find('#conveyanceCode');
+      var conveyanceTypeInput = modal.find('#conveyanceType');
+      var conveyanceDescriptionInput = modal.find('#conveyanceDescription');
+      var submitButton = modal.find('#submitConveyance');
+
+      modal.find('#conveyanceId').val(cid); // Set the hidden input value
+      if (cid === 'new') {
+        conveyanceCodeInput.val(''); // Clear inputs
+        conveyanceTypeInput.val('');
+        conveyanceDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Conveyance');
+        submitButton.text('Submit');
+      } else {
+        conveyanceCodeInput.val(button.data('code')); // Set the conveyance code
+        conveyanceTypeInput.val(button.data('cvtype')); // Set the conveyance type
+        conveyanceDescriptionInput.val(button.data('desc')); // Set the description
+        modal.find('.modal-title').text('Edit Conveyance');
+        submitButton.text('Update');
+      }
+    });
+
+    // SET FOCUS on input fields in data form when the page loads
     window.addEventListener('DOMContentLoaded', function() {
-    var nameInput = document.getElementById('locationid');
+     // Countries form
+      var addCountryModal = document.getElementById('addCountryModal');
+      if (addCountryModal) {
+          addCountryModal.addEventListener('shown.bs.modal', function () {
+            var countryNameInput = document.getElementById('countryName');
+            if (countryNameInput) {
+                  countryNameInput.focus();
+                  countryNameInput.select();
+            }
+          });
+      } // End of if addCountryModal
+      
+      // Product Group form
+      var productGroupNameInput = document.getElementById('productGroupName');
+      if (productGroupNameInput) {
+        productGroupNameInput.focus();
+        productGroupNameInput.select();
+      } // End of if productGroupName
+      
+     // Location form
+      var nameInput = document.getElementById('locationid');
         if (nameInput) {
             nameInput.focus();
             nameInput.select();
+      } // End of if locationid
+
+     // Product form
+      var addProductModal = document.getElementById('addProductModal');
+      if (addProductModal) {
+        addProductModal.addEventListener('shown.bs.modal', function () {
+        var productCodeInput = document.getElementById('productCode');
+          if (productCodeInput) {
+            productCodeInput.focus();
+            productCodeInput.select();
+          }
+        });
       }
-    });
+      // Product Group form
+      var addProductGroupModal = document.getElementById('addProductGroupModal');
+          if (addProductGroupModal) {
+              addProductGroupModal.addEventListener('shown.bs.modal', function () {
+                var productGroupNameInput = document.getElementById('productGroupName');
+                if (productGroupNameInput) {
+                    productGroupNameInput.focus();
+                    productGroupNameInput.select();
+                }
+              });
+          } // End of product group -addProductGroupModal
+
+      // Product Unit form
+      var addProductUnitModal = document.getElementById('addProductUnitModal');
+          if (addProductUnitModal) {
+              addProductUnitModal.addEventListener('shown.bs.modal', function () {
+                var productUnitCodeInput = document.getElementById('productUnitCode');
+                if (productUnitCodeInput) {
+                    productUnitCodeInput.focus();
+                    productUnitCodeInput.select();
+                }
+              });
+          } // End of product unit -addProductUnitModal
+    }); // End of Window DOMContentLoaded
+
     // Search box for ALL THE DATA TABLES in this file - automatically submit the form on input
     window.addEventListener('DOMContentLoaded', function() {
     var searchInput = document.getElementById('search-query');

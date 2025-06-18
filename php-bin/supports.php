@@ -114,7 +114,7 @@ function Userpermit($userlogin,$con){ // userlogin is the email
   Addnewuser: Add new users into tbusers table
 */
 
-function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con) {
+function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con) {
     // Escape all inputs
     $name = pg_escape_string($con, $name);
     $surname = pg_escape_string($con, $surname);
@@ -127,6 +127,7 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
     $email = pg_escape_string($con, $email);
     $lastlogin = pg_escape_string($con, date('Y-m-d H:i:s'));
     $groupid = pg_escape_string($con, $groupid);
+    $admingroup = pg_escape_string($con, $admingroup);
     $location = pg_escape_string($con, $location);
     $status = pg_escape_string($con, 'yes');
 
@@ -141,7 +142,7 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
         $sqladduser = "INSERT INTO \"tbusers\" 
             (\"name\", \"surname\", \"sex\", \"psw\", \"position\", \"unit\", \"phone\", \"email\", \"last_login\", \"group_id\", \"group_admin\", \"location_id\", \"enabled\") 
             VALUES 
-            ('$name', '$surname', '$sex', '$psw', '$position', '$unit', '$phone', '$email', '$lastlogin', '$groupid', 'no', '$location', '$status') RETURNING id";
+            ('$name', '$surname', '$sex', '$psw', '$position', '$unit', '$phone', '$email', '$lastlogin', '$groupid', '$admingroup', '$location', '$status') RETURNING id";
         $result = pg_query($con, $sqladduser);
         if ($result) {
             $last_id = pg_fetch_result($result, 0, 'id');
@@ -231,9 +232,10 @@ function Updateuser_values($uid,$con){
       $phone = $user['phone'];
       $email = $user['email'];
       $groupid = $user['group_id']; 
+      $admingroup = $user['group_admin']; // Assuming this is the admin group field
       $location = $user['location_id'];
       $status = $user['enabled'];
-      return array($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $status);
+      return array($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $status);
   } else {
       echo "<script>alert('User not found.');</script>";
   }
@@ -243,7 +245,7 @@ function Updateuser_values($uid,$con){
   Updateuser-submit: Submit the updates on users from data form into tbusers table
 */
 
-function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $location, $con) {
+function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con) {
     // Fetch current user data
     $sqlolduser = "SELECT * FROM tbusers WHERE id='$uid'";
     $result = pg_query($con, $sqlolduser) or die(pg_last_error($con));
@@ -262,6 +264,7 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
             $user['phone']     !== $phone ||
             $user['email']     !== $email ||
             $user['group_id']  !== $groupid ||
+            $user['group_admin'] !== $admingroup ||
             $user['location_id'] !== $location ||
             $user['enabled']   !== $status
         ) {
@@ -276,6 +279,7 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
                 phone='$phone',
                 email='$email',
                 group_id='$groupid',
+                group_admin='$admingroup',
                 location_id='$location',
                 enabled='$status'
                 WHERE id='$uid'";
@@ -683,15 +687,89 @@ function ProductList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleProductCheckboxChange(this)'>
                       </div>        
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductModal' data-pid='$id' data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "' data-code='" . htmlspecialchars($code, ENT_QUOTES) . "'>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductModal' 
+                         data-pid='$id' 
+                         data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "'
+                         data-scientname='" . htmlspecialchars($scientname, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "' 
+                         data-hscode='" . htmlspecialchars($hscode, ENT_QUOTES) . "'
+                         data-productgroup='" . htmlspecialchars($producgroup, ENT_QUOTES) . "'>
                       <i class='bi bi-pencil-square table-icon'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=products&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                    <td><a href='masterdata.php?part=product&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
                     </tr>"; 
         } // end of while loop
     }
-}      
+}  
+/*
+ AddProduct: Add new product into tbproduct table
+*/
+function AddProduct($code, $pname, $scientname, $desc, $hscode, $productgroup, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $pname = pg_escape_string($con, $pname);
+    $scientname = pg_escape_string($con, $scientname);
+    $desc = pg_escape_string($con, $desc);
+    $hscode = pg_escape_string($con, $hscode);
+    $productgroup = pg_escape_string($con, $productgroup);
 
+    // Check if the product code already exists
+    $sqlproduct = "SELECT code FROM tbproduct WHERE code='$code'";
+    $result = pg_query($con, $sqlproduct) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Product code already exists. Please choose a different product code.');</script>";
+        return "yes"; // Indicate that the product already exists
+    } else {
+        // Insert new product
+        $sqladdproduct = "INSERT INTO \"tbproduct\" (\"code\", \"name\", \"name_scientific\", \"desc\", \"hscode\", \"productgroup\", \"enabled\") 
+                          VALUES ('".$code."', '".$pname."', '".$scientname."', '".$desc."', '".$hscode."', '".$productgroup."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdproduct) or die(pg_last_error($con));
+        if ($result) {
+            // Redirect back to the table
+            echo "<script>window.location.href = 'masterdata.php?part=product';</script>";
+        } else {
+            echo "<script>alert('Error adding product: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}    
+
+/*
+ UpdateProduct: Update product from tbproduct table
+*/
+function UpdateProduct($pid, $code, $pname, $scientname, $desc, $hscode, $productgroup, $con) {
+    // Escape all inputs
+    $pid = pg_escape_string($con, $pid); // Get product ID from POST data
+    $code = pg_escape_string($con, $code);
+    $pname = pg_escape_string($con, $pname);
+    $scientname = pg_escape_string($con, $scientname);
+    $desc = pg_escape_string($con, $desc);
+    $hscode = pg_escape_string($con, $hscode);
+    $productgroup = pg_escape_string($con, $productgroup);
+
+    // Update the product information
+    $sqlupdateproduct = "UPDATE tbproduct SET code='$code', name='$pname', name_scientific='$scientname', \"desc\"='$desc', hscode='$hscode', productgroup='$productgroup' WHERE id='$pid'";
+    $result = pg_query($con, $sqlupdateproduct) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=product';</script>";
+    } else {
+        echo "<script>alert('Error updating product: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ DeleteProduct: Delete product from tbproduct table
+*/
+function DeleteProduct($pid, $con) {
+    $sqlproduct = "DELETE FROM tbproduct WHERE id='$pid'";
+    $result = pg_query($con, $sqlproduct) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=product';</script>";
+    } else {
+        echo "<script>alert('Error deleting product: " . pg_last_error($con) . "');</script>";
+    }
+}
 /*
  ProductgroupList: Show list of product groups from tbproductgroup table
 */
@@ -704,17 +782,46 @@ function ProductgroupList($con) {
             $i++;
             $gid = $row['id'];
             $gname = $row['title'];
-            $gdesc = $row['desc'];
+            $gdesc = $row['description'];
             $gstatus = $row['enabled'];
             print "<tr>
                     <td>$i</td>
                     <td>$gname</td>
                     <td>$gdesc</td>
                     <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$gid' " . ($gstatus === 'yes' ? 'checked' : '') . " onchange='handleProductGroupCheckboxChange(this)'>
+                      </div>    
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductGroupModal' 
+                         data-pgroupid='$gid' 
+                         data-gname='" . htmlspecialchars($gname, ENT_QUOTES) . "' 
+                         data-gdesc='" . htmlspecialchars($gdesc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                    </td>
+                    <td>
+                     <a href='masterdata.php?part=productgroup&gid=$gid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a>
+                    </td>
                     </tr>";
         }
     }
 }
+
+/*
+ SelectProductgroup: Get list of product group for select option in product form
+*/     
+function SelectProductgroup($pgid, $con) {
+    // Check if the product group ID is set
+    $sql = "SELECT id, title FROM tbproduct_group ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($pgid !== null && $pgid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+}    
+
 /*
  AddProductgroup: Add new product group into tbproductgroup table
 */
@@ -730,27 +837,247 @@ function AddProductgroup($gname, $gdesc, $con) {
         return "yes"; // Indicate that the product group already exists
     } else {
         // Insert new product group
-        $sqladdgroup = "INSERT INTO \"tbproduct_group\" (\"title\", \"desc\", \"enabled\") VALUES ('".$gname."', '".$gdesc."', 'yes') RETURNING id";
+        $sqladdgroup = "INSERT INTO \"tbproduct_group\" (\"title\", \"description\", \"enabled\") VALUES ('".$gname."', '".$gdesc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdgroup) or die(pg_last_error());
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=productgroups';</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=productgroup';</script>";
         } else {
             echo "<script>alert('Error adding product group: " . pg_last_error($con) . "');</script>";
         }
     }
 }   
+
 /*
- SelectProductgroup: Get list of product group for select option in product form
-*/     
-function SelectProductgroup($pgid, $con) {
-    // Check if the product group ID is set
-    $sql = "SELECT id, title FROM tbproduct_group ORDER BY title ASC";
-    $result = pg_query($con, $sql);
+ UpdateProductgroup: Update product group from tbproductgroup table
+*/
+function UpdateProductgroup($gid, $gname, $gdesc, $con) {
+    // Escape all inputs
+    $gid = pg_escape_string($con, $gid);
+    $gname = pg_escape_string($con, $gname);
+    $gdesc = pg_escape_string($con, $gdesc);
+
+    // Update the product group information
+    $sqlupdategroup = "UPDATE tbproduct_group SET title='".$gname."', description='".$gdesc."' WHERE id='$gid'";
+    $result = pg_query($con, $sqlupdategroup) or die(pg_last_error($con));
     if ($result) {
-        while ($row = pg_fetch_assoc($result)) {
-            $selected = ($pgid !== null && $pgid == $row['id']) ? 'selected' : '';
-            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        echo "<script>window.location.href = 'masterdata.php?part=productgroup';</script>";
+    } else {
+        echo "<script>alert('Error updating product group: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ DeleteProductgroup: Delete product group from tbproductgroup table
+*/
+function DeleteProductgroup($gid, $con) {
+    $sqlgroup = "DELETE FROM tbproduct_group WHERE id='$gid'";
+    $result = pg_query($con, $sqlgroup) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>alert('Product group deleted successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=productgroup';</script>";
+    } else {
+        echo "<script>alert('Error deleting product group: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ ProductunitList: Show list of product units from tbproductunit table
+*/
+function ProductunitList($con) {
+    $sqlunit = "SELECT * FROM tbproduct_unit ORDER BY id ASC";
+    $result = pg_query($con, $sqlunit) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $uid = $row['id'];
+            $code = $row['code'];
+            $symb = $row['symb'];
+            $title = $row['title'];
+            $ustatus = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$symb</td>
+                    <td>$title</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($ustatus === 'yes' ? 'checked' : '') . " onchange='handleProductUnitCheckboxChange(this)'>
+                      </div>    
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductUnitModal' 
+                         data-punitid='$uid' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-symb='" . htmlspecialchars($symb, ENT_QUOTES) . "'
+                         data-title='" . htmlspecialchars($title, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                    </td>
+                    <td>
+                     <a href='masterdata.php?part=productunit&uid=$uid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a>    
+                    </td>
+                  </tr>";   
+        } // end of while loop
+    }   
+}
+
+/*
+    AddProductunit: Add new product unit into tbproductunit table
+*/
+function AddProductunit($code, $symb, $title, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $symb = pg_escape_string($con, $symb);
+    $title = pg_escape_string($con, $title);
+
+    // Check if the product unit code already exists
+    $sqlunit = "SELECT code FROM tbproduct_unit WHERE code='$code'";
+    $result = pg_query($con, $sqlunit) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Product unit code already exists. Please choose a different product unit code.');</script>";
+        return "yes"; // Indicate that the product unit already exists
+    } else {
+        // Insert new product unit
+        $sqladdunit = "INSERT INTO \"tbproduct_unit\" (\"code\", \"symb\", \"title\", \"enabled\") 
+                       VALUES ('".$code."', '".$symb."', '".$title."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdunit) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=productunit';</script>";
+        } else {
+            echo "<script>alert('Error adding product unit: " . pg_last_error($con) . "');</script>";
         }
     }
-}        
+} 
+/*
+ UpdateProductunit: Update product unit from tbproductunit table 
+*/ 
+function UpdateProductunit($uid, $code, $symb, $title, $con) {
+    // Escape all inputs
+   $uid = pg_escape_string($con, $uid); // Get product unit ID from POST data
+    $code = pg_escape_string($con, $code);
+    $symb = pg_escape_string($con, $symb);
+    $title = pg_escape_string($con, $title);
+
+    // Update the product unit information
+    $sqlupdateunit = "UPDATE tbproduct_unit SET code='$code', symb='$symb', title='$title' WHERE id='$uid'";
+    $result = pg_query($con, $sqlupdateunit) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=productunit';</script>";
+    } else {
+        echo "<script>alert('Error updating product unit: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ DeleteProductunit: Delete product unit from tbproductunit table 
+*/
+function DeleteProductunit($uid, $con) {
+    $sqlunit = "DELETE FROM tbproduct_unit WHERE id='$uid'";
+    $result = pg_query($con, $sqlunit) or die(pg_last_error($con));
+    if ($result) {
+       // echo "<script>alert('Product unit deleted successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=productunit';</script>";
+    } else {
+        echo "<script>alert('Error deleting product unit: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ Conveyancelist: Show list of conveyance from tbconveyance table
+*/
+function Conveyancelist($con) {
+    $sqlconveyance = "SELECT * FROM tbconveyance ORDER BY id ASC";
+    $result = pg_query($con, $sqlconveyance) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];
+            $conveyance = $row['conveytype'];
+            $desc = $row['description'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$conveyance</td>
+                    <td>$desc</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleConveyanceCheckboxChange(this)'>
+                      </div>    
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addConveyenceModal' 
+                         data-cid='$id' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-cvtype='" . htmlspecialchars($conveyance, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                    </td>
+                    <td><a href='masterdata.php?part=conveyance&cid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+
+/*
+ AddConveyance: Add new conveyance into tbconveyance table
+*/
+function AddConveyance($code, $conveytype, $desc, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $conveytype = pg_escape_string($con, $conveytype);
+    $desc = pg_escape_string($con, $desc);
+
+    // Check if the conveyance code already exists
+    $sqlconveyance = "SELECT code FROM tbconveyance WHERE code='$code'";
+    $result = pg_query($con, $sqlconveyance) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Conveyance code already exists. Please choose a different conveyance code.');</script>";
+        return "yes"; // Indicate that the conveyance already exists
+    } else {
+        // Insert new conveyance
+        $sqladdconveyance = "INSERT INTO \"tbconveyance\" (\"code\", \"conveytype\", \"description\", \"enabled\") 
+                             VALUES ('".$code."', '".$conveytype."', '".$desc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdconveyance) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=conveyance';</script>";
+        } else {
+            echo "<script>alert('Error adding conveyance: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}  
+/*
+ UpdateConveyance: Update conveyance from tbconveyance table 
+*/
+function UpdateConveyance($cid, $code, $conveytype, $desc, $con) {
+    // Escape all inputs
+    $cid = pg_escape_string($con, $cid); // Get conveyance ID from POST data
+    $code = pg_escape_string($con, $code);
+    $conveytype = pg_escape_string($con, $conveytype);
+    $desc = pg_escape_string($con, $desc);
+
+    // Update the conveyance information
+    $sqlupdateconveyance = "UPDATE tbconveyance SET code='$code', conveytype='$conveytype', description='$desc' WHERE id='$cid'";
+    $result = pg_query($con, $sqlupdateconveyance) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=conveyance';</script>";
+    } else {
+        echo "<script>alert('Error updating conveyance: " . pg_last_error($con) . "');</script>";
+    }
+} 
+
+/*
+ DeleteConveyance: Delete conveyance from tbconveyance table 
+*/
+function DeleteConveyance($cid, $con) {
+    $sqlconveyance = "DELETE FROM tbconveyance WHERE id='$cid'";
+    $result = pg_query($con, $sqlconveyance) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=conveyance';</script>";
+    } else {
+        echo "<script>alert('Error deleting conveyance: " . pg_last_error($con) . "');</script>";
+    }
+}
 ?> 

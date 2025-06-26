@@ -27,16 +27,17 @@ CREATE TABLE IF NOT EXISTS "public"."tbgrouppermits" (
     "id" SERIAL PRIMARY KEY,
     "gid" INTEGER NOT NULL,  /* Group id - foreign key will be added later*/
     "mid" INTEGER NOT NULL,  /* module id - foreign key */
-    "read" TEXT NOT NULL,  /* yes/no */
-    "write" TEXT NOT NULL, /* yes/no */ 
-    "update" TEXT NOT NULL, /* yes/no */
-    "delete" TEXT NOT NULL, /* yes/no */
+    "pread" TEXT NOT NULL,  /* yes/no */
+    "padd" TEXT NOT NULL, /* yes/no */ 
+    "pupdate" TEXT NOT NULL, /* yes/no */
+    "pdelete" TEXT NOT NULL, /* yes/no */
     CONSTRAINT fk_gid FOREIGN KEY ("gid") REFERENCES "public"."tbusergroup"("id"),
     CONSTRAINT fk_mid FOREIGN KEY ("mid") REFERENCES "public"."tbmodules"("id")
 );
 
 CREATE TABLE IF NOT EXISTS "public"."tbmodules" (
     "id" SERIAL PRIMARY KEY,
+    "code" TEXT NOT NULL,  
     "name" TEXT NOT NULL,  
     "desc" TEXT,
     enabled text NOT NULL /* yes/no */
@@ -85,6 +86,22 @@ CREATE TABLE IF NOT EXISTS "public"."tbproduct_group" (
 );
 
 CREATE TABLE IF NOT EXISTS "public"."tbinspection_method" (
+    id SERIAL PRIMARY KEY,
+    code TEXT NOT NULL,
+    title TEXT NOT NULL, 
+    description TEXT NULL, 
+    enabled TEXT NOT NULL -- yes/no 
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbtreatment_method" (
+    id SERIAL PRIMARY KEY,
+    code TEXT NOT NULL,
+    title TEXT NOT NULL, 
+    description TEXT NULL, 
+    enabled TEXT NOT NULL -- yes/no 
+);
+
+CREATE TABLE IF NOT EXISTS "public"."entity_type" (
     id SERIAL PRIMARY KEY,
     code TEXT NOT NULL,
     title TEXT NOT NULL, 

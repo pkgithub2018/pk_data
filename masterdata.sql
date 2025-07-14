@@ -192,8 +192,8 @@ CREATE TABLE IF NOT EXISTS "public"."tbinspection" (
     compliant text NOT NULL, /* pass/fail */
     internal_note text, /* Internal notes for inspection */
     datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
-    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP /* Date and time of last update */
-    update_by INTEGER NOT NULL, /* User ID who updated the record */
+    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
+    updated_by INTEGER NOT NULL, /* User ID who updated the record */
     inpected_by INTEGER NOT NULL, /* User ID who performed the inspection */
     enabled text NOT NULL /* yes/no */
 

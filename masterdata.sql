@@ -23,6 +23,19 @@ CREATE TABLE IF NOT EXISTS "public"."tbusergroup" (
     enabled text NOT NULL /* yes/no */
 );
 
+CREATE TABLE IF NOT EXISTS "public"."tbprofile" (
+    "id" SERIAL PRIMARY KEY,
+    "uid" INTEGER NOT NULL, /* user id - foreign key will be added later */
+    "description" TEXT,  /* Profile description */
+    "address" TEXT,
+    "twitter" TEXT, /* Twitter handle */
+    "facebook" TEXT, /* Facebook handle */
+    "linkedin" TEXT, /* LinkedIn handle */
+    "instagram" TEXT, /* Instagram handle */
+    "imgfilename" TEXT, /* Image filename */
+    "imgfilepath" TEXT /* Image file path */
+);
+
 CREATE TABLE IF NOT EXISTS "public"."tbgrouppermits" (
     "id" SERIAL PRIMARY KEY,
     "gid" INTEGER NOT NULL,  /* Group id - foreign key will be added later*/
@@ -60,7 +73,7 @@ CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbbordertype" (
     "bordertype" TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbdistricts" (
+CREATE TABLE IF NOT EXISTS "public"."tbdistricts" (
     "id" SERIAL PRIMARY KEY,
     "pid" TEXT NOT NULL,
     "dname" TEXT NOT NULL
@@ -129,17 +142,124 @@ CREATE TABLE IF NOT EXISTS "public"."tbrequest" (
    country_id INTEGER NOT NULL /* country_id from tbcountry */
    )
 
-CREATE TABLE IF NOT EXISTS "public"."tbcompany" (
+CREATE TABLE IF NOT EXISTS "public"."tbentity" (
     id SERIAL PRIMARY KEY,
-    cname_eng text NOT NULL,
-    cname_lao text NOT NULL,
+    business_type INTEGER NOT NULL,
+    entity_type INTEGER NOT NULL,
+    title text NOT NULL, /* Company name */
+    address text NOT NULL, /* Address of the company */
+    zipcode text NOT NULL, /* Zip code */ 
+    province text NOT NULL, /* province_id from tbprovinces */
+    district text NOT NULL, /* district_id from tbdistricts */
     country_id INTEGER NOT NULL,
-    province INTEGER NOT NULL,
-    district text NOT NULL, 
-    address text,  
     phone text,
-    email text)
+    email text, /* Email of the company */
+    contact_name text NOT NULL, /* Contact person name */
+    registered text NOT NULL, /* yes/no */
+    registered_date_from date, /* Date of registration */
+    registered_date_to date, /* Date of registration */
+    check_list_registered text, /* yes/no - Checklist registered */
+    license_export text NOT NULL, /* yes/no */
+    gap text NOT NULL, /* yes/no - Good Agricultural Practices */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP /* Date and time of creation */
+)
 
+CREATE TABLE IF NOT EXISTS "public"."tbinspection" (
+    id SERIAL PRIMARY KEY,
+    certificate_id INTEGER NOT NULL,
+    inspection_type INTEGER NOT NULL, /* inspection_method */
+    inspection_date date NOT NULL,
+    fee real NOT NULL, /* Inspection fee */
+    lot_number text NOT NULL, /* Lot number */
+    pest_post_detected text NOT NULL, /* yes/no */
+    lab_analysis text NOT NULL, /* yes/no */
+    treatment text NOT NULL, /* yes/no */
+    treatment_date date NOT NULL, /* Date of treatment */
+    inspection_method INTEGER NOT NULL, /* inspection_method ID*/
+    treatment_method INTEGER NOT NULL, /* treatment_method ID */
+    chemical text NOT NULL, /* Chemical used for treatment */
+    chemical_reason text NOT NULL, /* Reason for using chemical */
+    chemical_treatment text NOT NULL, /* Name of chemical treatment */
+    duration_temp text NOT NULL, /* Duration and temperature of treatment */
+    concentration text NOT NULL, /* Concentration of chemical used */
+    additonal_info text, /* Additional information */
+    post_treatment_information text NOT NULL, /* Details of post treatment, if any */
+    product_id INTEGER NOT NULL, /* product_id from tbproducts */
+    qty real NOT NULL, /* Quantity of product inspected */
+    location_id INTEGER NOT NULL, /* Location where product is inspected */
+    alternate_location text, /* Alternate location if applicable */
+    sample_screening text NOT NULL, /* yes/no */
+    compliant text NOT NULL, /* pass/fail */
+    internal_note text, /* Internal notes for inspection */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP /* Date and time of last update */
+    update_by INTEGER NOT NULL, /* User ID who updated the record */
+    inpected_by INTEGER NOT NULL, /* User ID who performed the inspection */
+    enabled text NOT NULL /* yes/no */
+
+)
+
+
+CREATE TABLE IF NOT EXISTS "public"."tbsample" (
+    id SERIAL PRIMARY KEY,
+    inspection_id INTEGER NOT NULL,
+    sample_type INTEGER NOT NULL, /* ID from tbsample_type */
+    code text NOT NULL, /* receipt number */
+    collected_by text NOT NULL /* User ID-Person who collects sample */,
+    screening_date date NOT NULL,
+    product_id INTEGER NOT NULL, /* product_id from tbproduct */
+    sample_qty  real NOT NULL, /* Quantity of sample collected */
+    sample_unit INTEGER NOT NULL, /* gram, kg, litre, piece, package, box */
+    screened_by INTEGER NOT NULL, /* User ID-Person who screens sample */
+    pest_id INTEGER NOT NULL, /* pest_id from tbpest */
+    picture_file_id text NOT NULL, /* Picture file ID from tbuploads */
+    screening_result INTEGER NOT NULL, /* description of the screening result */
+    compliant text NOT NULL, /* pass/fail */
+    pest_type INTEGER NOT NULL, /* ID from tbpest_type */
+    certificate_id INTEGER NOT NULL, /* certificate_id from tbcertificate */
+    sample_location_id INTEGER NOT NULL, /* Alternate location ID from tblocations */
+    internal_note text, /* Internal notes for sample */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    updated_by INTEGER NOT NULL, /* User ID who updated the record */
+    enabled text NOT NULL /* yes/no */
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbcertificate" (
+    id SERIAL PRIMARY KEY,
+    id_printed INTEGER NOT NULL, /* ID to be printed */
+    id_carbon_paper INTEGER NOT NULL, /* ID from carbon paper */
+    exporter_id INTEGER NOT NULL, /* Exported ID from lao*/
+    importer_id INTEGER NOT NULL, /* Imported ID from overseas */
+    package_qty_unit INTEGER NOT NULL, /* Quantity of packages in unit */
+    marks text NOT NULL, /* Marks on the package */
+    place_of_origin INTEGER NOT NULL, /* Place of origin- Country ID */
+    conveyance_id INTEGER NOT NULL, /* Conveyance ID from tbconveyance */
+    conveyance_sign text, /* Signature of conveyance */
+    purpose_type INTEGER NOT NULL, /* Purpose of certificate (tbpurpose_type-ID) - 1=export, 2=transit, 3=import */
+    place_quarantine INTEGER, /* Place of quarantine - ID */
+    date_quarantine date, /* Date of quarantine */
+    place_treatment INTEGER, /* Place of treatment - ID */
+    no_origin text, /* ??? */
+    no_copy text, /* ??? */
+    location_quarantine_id INTEGER NOT NULL, /* Location ID from tblocations for quarantine */
+    product_id INTEGER NOT NULL, /* Product ID from tbproduct */
+    declaration text NOT NULL, /* Declaration of the certificate */
+    financial_value real NOT NULL, /* Financial value of the product */
+    currency text NOT NULL, /* Currency from tbcountries */
+    certificate_type INTEGER NOT NULL, /* Certificate type from tbcertificate_type */
+    location_id INTEGER NOT NULL, /* Location ID from tblocations - where certificate is issued */
+    alternate_location text, /* Alternate location if applicable */
+    status text NOT NULL, /* Status of the certificate: tbstatus - 1=issued, 2=cancelled, 3=amended, 4= printed, 5=ongoing */
+    internal_note text, /* Internal notes for certificate */
+    inspection text NOT NULL, /* yes/no - if inspection is required */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
+    date_issued date NOT NULL, /* Date of issue */
+    updated_by INTEGER NOT NULL, /* User ID who updated the record */
+    approved_by INTEGER NOT NULL, /* User ID who approved/signed the certificate */
+    printing_template_id INTEGER NOT NULL, /* Printing template ID from tbprinting_template */
+    enabled text NOT NULL /* yes/no */
+)
 
 CREATE TABLE IF NOT EXISTS "public"."tbproduct_unit" (
     id SERIAL PRIMARY KEY,
@@ -170,16 +290,6 @@ CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (
     destination_id INTEGER NOT NULL /* company_id */
 )
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."tbsamples" (
-    id SERIAL PRIMARY KEY,
-    transaction_id INTEGER NOT NULL,
-    collect_date date NOT NULL, 
-    quantity real NOT NULL,
-    sample_unit INTEGER NOT NULL, /* gram, kg, litre, piece, package, box */
-    collected_by text NOT NULL /* Person who collects sample */
-)
 
 CREATE TABLE IF NOT EXISTS "public"."tblabresults" (
     id SERIAL PRIMARY KEY,

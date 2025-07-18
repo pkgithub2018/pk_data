@@ -96,6 +96,19 @@ function Groupdelete($gid,$con){
         echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
     }
 }
+/* 
+ GrouppermitName: Check if the user has permission to access a specific group
+*/
+function GrouppermitName($groupid,$con){ // userlogin is the email
+    $sqlpermit="SELECT title FROM tbusergroup WHERE id='$groupid' AND enabled='yes'";
+    $result = pg_query($con,$sqlpermit) or die(pg_last_error());
+    list($title) = pg_fetch_array($result);  
+    if(!empty($email) && !empty($groupid) && !empty($enable)){ // Admin user
+        return true;
+    } else {
+        return false;
+    }  
+}
 /*
  Userpermit: Check if the user has permission to access a specific page
 */
@@ -147,7 +160,8 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
         if ($result) {
             $last_id = pg_fetch_result($result, 0, 'id');
             //$message = "User added successfully. User ID: " . $last_id;
-           // echo "<script>alert('" . $message . "');</script>";
+            // ADD USER PROFILE with UID
+            InitializeProfile($last_id, $con); // Initialize user profile with default values
             // Redirect to the user list page
             echo "<script>window.location.href = 'users.php?part=userslist';</script>";
         } else {
@@ -211,6 +225,19 @@ function Userlist($con){
        } // end of while loop     
     }
 }
+/*
+  Userdata: Get user data from tbusers table
+*/
+function Userdata($uid, $con) {
+    $sql = "SELECT * FROM tbusers WHERE id='$uid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_array($result);
+    }
+    return null;
+}
+
 /*
   Updateuser_values: Update user from tbusers table
 */
@@ -345,6 +372,112 @@ function SelectLocationType($ltype, $con){
     }
  }
 
+ /*
+ SelectModules: Select modules from tbmodules table
+*/
+function SelectModules($moduleid, $con){
+    // Check if the module ID is set
+    $sql = "SELECT id, title FROM tbmodules ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($moduleid !== null && $moduleid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+ }
+
+ /*
+    InitializeProfile: IT IS USED IN Addusers FUNCTION, when a new user is created. Add user's profile into tbprofile table if it does not exist, 
+ */
+function InitializeProfile($uid,$con) {
+    // Check if the user profile already exists
+
+    $sqlcheck = "SELECT * FROM tbprofile WHERE uid = '$uid'";
+    $resultcheck = pg_query($con, $sqlcheck);
+    if (pg_num_rows($resultcheck) == 0) {
+        $sql = "INSERT INTO tbprofile (uid, description, address, twitter, facebook, linkin, instagram, imgfilename, imgfilepath) 
+        VALUES ('$uid', 'default_profile_data', 'default_address', 'default_twitter', 'default_facebook', 'default_linkin', 'default_instagram', 'default_imgfilename', 'default_imgfilepath') RETURNING id";
+        $result = pg_query($con, $sql);
+        if (!$result) {
+            die(pg_last_error($con));
+        }
+    } else {
+        // echo "<script>Profile already exists for user ID: $uid</script>";
+    }
+}
+/*
+  Profiledata: Get user profile data from tbprofile table
+*/
+function Profiledata($uid, $con) {
+    $sql = "SELECT * FROM tbprofile WHERE uid = '$uid'";
+    $result = pg_query($con, $sql);
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // Return null if no profile found
+    }
+}
+
+/*
+ ProfileImageUpload: Upload user profile image to tbprofile table
+*/
+function ProfileImageUpload($uid, $imgfilename, $imgfilepath, $con) {
+    $sql = "UPDATE tbprofile SET imgfilename = '$imgfilename', imgfilepath = '$imgfilepath' WHERE uid = '$uid'";
+    $result = pg_query($con, $sql);
+    if (!$result) {
+        die(pg_last_error($con));
+    }
+}
+
+/*
+ UpdateProfile: Update user profile data in tbprofile table
+ $userid, $about, $address, $twitter, $facebook, $instagram, $linkedin
+*/
+function UpdateProfile($uid, $about, $address, $twitter, $facebook, $instagram, $linkedin, $position, $workunit, $phone, $email, $con) {
+    require("php-bin/connection.php");
+    $sqlprofile = "UPDATE tbprofile 
+    SET description = '$about', 
+        address = '$address',  
+        twitter = '$twitter', 
+        facebook = '$facebook', 
+        instagram = '$instagram',
+        linkin = '$linkedin'  
+        WHERE uid = '$uid'";
+     pg_query($con, $sqlprofile) or die(pg_last_error($con));
+     
+    // Update tbusers table with position, unit, phone, and email
+    $sqlusers = "UPDATE tbusers SET 
+        position = '$position',
+        unit = '$workunit', 
+        phone = '$phone', 
+        email = '$email' 
+        WHERE id = '$uid'";
+    pg_query($con, $sqlusers) or die(pg_last_error($con));
+    // Redirect to the same page to see the changes
+  echo "<script>window.location.href='users-profile.php';</script>"; // Redirect to the same page
+}
+
+/*
+ UpdateProfileChangePassword: Update user profile password in tbusers table
+*/
+function UpdateProfileChangePassword($uid, $newpassword, $con) {
+    $sql = "UPDATE tbusers SET psw = '$newpassword' WHERE id = '$uid'";
+    pg_query($con, $sql) or die(pg_last_error($con));
+    // Redirect to the same page to see the changes
+    echo "<script>window.location.href='users-profile.php';</script>"; // Redirect to the same page
+}
+
+/*
+ currentPasswordCheck: Check if the current password is correct
+*/
+function currentPasswordCheck($uid, $currentpassword, $con) {
+   // echo "<script>alert('Checking current password for user ID: $uid, password: $currentpassword');</script>";
+    $sql = "SELECT * FROM tbusers WHERE id = '$uid' AND psw = '$currentpassword'";
+    $result = pg_query($con, $sql);
+    return pg_num_rows($result) > 0; // it returns true if the current password is correct
+}
+
 /*
   Groupname: Get group name from tbusergroup table
 */
@@ -357,6 +490,151 @@ function Groupname($gid, $con) {
     } else {
         return null; // Return null if no group found
     }
+}
+
+/*
+  GroupPermitList: List all group permissions from tbgrouppermits table
+*/
+function GroupPermitList($con) {
+    $sqlpermit = "SELECT * FROM tbgrouppermits ORDER BY id ASC";
+    $result = pg_query($con, $sqlpermit) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $gid = $row['gid'];
+            $gname = Groupname($gid, $con); // Get group name from tbusergroup table 
+            $mid = $row['mid'];
+            $mod = ModuleName($mid, $con); // Get module name from tbmodules table
+            
+            print "<tr>
+                    <td>$i</td>
+                    <td>$gname</td>
+                    <td>$mod</td>
+                    <td>
+                     <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($row['pread'] === 'yes' ? 'checked' : '') . " onchange='handlePermitReadCheckboxChange(this)'>
+                      </div>
+                     </td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($row['padd'] === 'yes' ? 'checked' : '') . " onchange='handlePermitAddCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($row['pupdate'] === 'yes' ? 'checked' : '') . " onchange='handlePermitEditCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($row['pdelete'] === 'yes' ? 'checked' : '') . " onchange='handlePermitDeleteCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td>
+                      <a href='users.php?part=upermits&id=$id&epermit=edit' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a>
+                    </td>
+                    <td><a href='users.php?part=upermits&id=$id&dpermit=del' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                  </tr>";
+        } // end of while loop     
+    }
+}
+/*
+ AddGroupPermit: Add group permissions into tbgrouppermit table
+*/
+function AddGroupPermit($groupid, $moduleid, $pread, $padd, $pupdate, $pdelete, $con) {
+    // Escape inputs
+    $groupid = pg_escape_string($con, $groupid);
+    $moduleid = pg_escape_string($con, $moduleid);
+    $pread = pg_escape_string($con, $pread);
+    $padd = pg_escape_string($con, $padd);
+    $pupdate = pg_escape_string($con, $pupdate);
+    $pdelete = pg_escape_string($con, $pdelete);
+
+    // Check if the permission already exists
+    $sqlcheck = "SELECT * FROM tbgrouppermits WHERE gid='$groupid' AND mid='$moduleid'";
+    $result = pg_query($con, $sqlcheck) or die(pg_last_error($con));
+    
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Permission already exists for this group and module.');</script>";
+        return "yes"; // Indicate that the permission already exists
+    } else {
+        // Insert new permission
+        $sqladdpermit = "INSERT INTO tbgrouppermits (gid, mid, pread, padd, pupdate, pdelete) VALUES ('$groupid', '$moduleid', '$pread', '$padd', '$pupdate', '$pdelete') RETURNING id";
+        $result = pg_query($con, $sqladdpermit) or die(pg_last_error($con));
+        
+        if ($result) {
+            //echo "<script>alert('Permission added successfully.');</script>";
+            echo "<script>window.location.href = 'users.php?part=upermits';</script>";
+        } else {
+            echo "<script>alert('Error adding permission: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+/*
+  UpdateGroupPermit: Update permit in tbgrouppermit
+*/
+function UpdateGroupPermit($pid, $gid, $mid, $pread, $padd, $pupdate, $pdelete, $con){
+  $sqlup = "SELECT * FROM tbgrouppermits WHERE id='$pid'";
+  $result = pg_query($con, $sqlup) or die(pg_last_error($con));
+
+    if ($result && pg_num_rows($result) > 0) {
+        $gpmt = pg_fetch_assoc($result);
+
+        // Check if any field has changed
+        if (
+            $gpmt['gid']      !== $gid ||
+            $gpmt['mid']   !== $mid ||
+            $gpmt['pread']   !== $pread ||
+            $gpmt['padd']   !== $padd ||
+            $gpmt['pupdate']   !== $pupdate ||
+            $gpmt['pdelete']   !== $pdelete
+        ) {
+             $sqlupdate = "UPDATE tbgrouppermits SET 
+                gid='$gid',
+                mid='$mid',
+                pread='$pread',
+                padd='$padd',
+                pupdate='$pupdate',
+                pdelete='$pdelete'
+                WHERE id='$pid'";
+            $upresult = pg_query($con, $sqlupdate);
+
+            if ($upresult) {
+                echo "<script>window.location.href='users.php?part=upermits';</script>";
+            } else {
+                echo "<script>alert('Error updating user: " . pg_last_error($con) . "');</script>";
+            }
+       }
+    }
+}
+/*
+  DeleteGroupPermit: Delete permit from tbgrouppermits
+*/
+function DeleteGroupPermit($pid,$con){
+    $sqldel = "DELETE FROM tbgrouppermits WHERE id='$pid'";
+    $result = pg_query($con,$sqldel);
+    if($result){
+      echo "<script>window.location.href='users.php?part=upermits';</script>";
+     } else {
+      echo "<script>alert('Error updating user: " . pg_last_error($con) . "');</script>";
+    }
+}  
+
+/*
+  GrouppermitVariables: return variables from tbgrouppermits table
+*/
+function GrouppermitVariables($pid, $con){
+ $sql= "SELECT gid, mid, pread, padd, pupdate, pdelete FROM tbgrouppermits WHERE id='$pid'";
+ $result = pg_query($con, $sql) or die(pg_last_error());
+    if ($result && pg_num_rows($result) > 0) {
+           list($gpId, $mpId, $pRead, $pAdd, $pUpdate, $pDelete) = pg_fetch_array($result);
+           return array($gpId, $mpId, $pRead, $pAdd, $pUpdate, $pDelete);
+        } else {
+            return null; // Return null if no group permits found
+        }
+
 }
 
 /*
@@ -1078,6 +1356,399 @@ function DeleteConveyance($cid, $con) {
         echo "<script>window.location.href = 'masterdata.php?part=conveyance';</script>";
     } else {
         echo "<script>alert('Error deleting conveyance: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ InspectionMethodList: Show list of inspection methods from tbinspectionmethod table
+*/
+function InspectionMethodList($con) {
+    $sqlmethod = "SELECT * FROM tbinspection_method ORDER BY id ASC";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];
+            $method = $row['title'];
+            $desc = $row['description'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$method</td>
+                    <td>$desc</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleInspectionMethodCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addInspectionMethodModal' 
+                         data-imid='$id' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-name='" . htmlspecialchars($method, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                    </td>
+                    <td><a href='masterdata.php?part=inspectionmethod&mid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+
+/*
+ AddInspectionMethod: Add new inspection method into tbinspectionmethod table 
+*/
+function AddInspectionMethod($code, $method, $desc, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $method = pg_escape_string($con, $method);
+    $desc = pg_escape_string($con, $desc);
+
+    // Check if the inspection method code already exists
+    $sqlmethod = "SELECT code FROM tbinspection_method WHERE code='$code'";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Inspection method code already exists. Please choose a different inspection method code.');</script>";
+        return "yes"; // Indicate that the inspection method already exists
+    } else {
+        // Insert new inspection method
+        $sqladdmethod = "INSERT INTO \"tbinspection_method\" (\"code\", \"title\", \"description\", \"enabled\") 
+                         VALUES ('".$code."', '".$method."', '".$desc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdmethod) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod';</script>";
+        } else {
+            echo "<script>alert('Error adding inspection method: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+/*
+ UpdateInspectionMethod: Update inspection method from tbinspectionmethod table 
+*/
+function UpdateInspectionMethod($mid, $code, $method, $desc, $con) {
+    // Escape all inputs
+    $mid = pg_escape_string($con, $mid); // Get inspection method ID from POST data
+    $code = pg_escape_string($con, $code);
+    $method = pg_escape_string($con, $method);
+    $desc = pg_escape_string($con, $desc);
+
+    // Update the inspection method information
+    $sqlupdatemethod = "UPDATE tbinspection_method SET code='$code', title='$method', description='$desc' WHERE id='$mid'";
+    $result = pg_query($con, $sqlupdatemethod) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod';</script>";
+    } else {
+        echo "<script>alert('Error updating inspection method: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+  TreatmentMethodList($con): Show list of treatment methods from tbtreatmentmethod table
+*/
+function TreatmentMethodList($con) {
+    $sqlmethod = "SELECT * FROM tbtreatment_method ORDER BY id ASC";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];
+            $method = $row['title'];
+            $desc = $row['description'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$method</td>
+                    <td>$desc</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleTreatmentMethodCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addTreatmentMethodModal' 
+                         data-tmid='$id' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-name='" . htmlspecialchars($method, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                    </td>
+                    <td><a href='masterdata.php?part=treatmentmethod&tmid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+/*
+ AddTreatmentMethod: Add new treatment method into tbtreatmentmethod table 
+*/
+function AddTreatmentMethod($code, $method, $desc, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $method = pg_escape_string($con, $method);
+    $desc = pg_escape_string($con, $desc);
+
+    // Check if the treatment method code already exists
+    $sqlmethod = "SELECT code FROM tbtreatment_method WHERE code='$code'";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Treatment method code already exists. Please choose a different treatment method code.');</script>";
+        return "yes"; // Indicate that the treatment method already exists
+    } else {
+        // Insert new treatment method
+        $sqladdmethod = "INSERT INTO \"tbtreatment_method\" (\"code\", \"title\", \"description\", \"enabled\") 
+                         VALUES ('".$code."', '".$method."', '".$desc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdmethod) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod';</script>";
+        } else {
+            echo "<script>alert('Error adding treatment method: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+/*
+ UpdateTreatmentMethod: Update treatment method from tbtreatmentmethod table 
+*/
+function UpdateTreatmentMethod($tmid, $code, $method, $desc, $con) {
+    // Escape all inputs
+    $tmid = pg_escape_string($con, $tmid); // Get treatment method ID from POST data
+    $code = pg_escape_string($con, $code);
+    $method = pg_escape_string($con, $method);
+    $desc = pg_escape_string($con, $desc);
+
+    // Update the treatment method information
+    $sqlupdatemethod = "UPDATE tbtreatment_method SET code='$code', title='$method', description='$desc' WHERE id='$tmid'";
+    $result = pg_query($con, $sqlupdatemethod) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod';</script>";
+    } else {
+        echo "<script>alert('Error updating treatment method: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ DeleteTreatmentMethod: Delete treatment method from tbtreatmentmethod table 
+*/
+function DeleteTreatmentMethod($tmid, $con) {
+    $sqlmethod = "DELETE FROM tbtreatment_method WHERE id='$tmid'";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod';</script>";
+    } else {
+        echo "<script>alert('Error deleting treatment method: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ EntityTypeList: Show list of entity types from tbentitytype table
+*/
+function EntityTypeList($con) {
+    $sqltype = "SELECT * FROM tbentity_type ORDER BY id ASC";
+    $result = pg_query($con, $sqltype) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];
+            $type = $row['title'];
+            $desc = $row['description'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$type</td>
+                    <td>$desc</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleEntityTypeCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addEntityTypeModal' 
+                         data-etid='$id' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-name='" . htmlspecialchars($type, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>
+                    </td>
+                    <td><a href='masterdata.php?part=entitytype&etid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+/*
+ AddEntityType: Add new entity type into tbentitytype table 
+*/
+function AddEntityType($code, $type, $desc, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $type = pg_escape_string($con, $type);
+    $desc = pg_escape_string($con, $desc);
+
+    // Check if the entity type code already exists
+    $sqltype = "SELECT code FROM tbentity_type WHERE code='$code'";
+    $result = pg_query($con, $sqltype) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Entity type code already exists. Please choose a different entity type code.');</script>";
+        return "yes"; // Indicate that the entity type already exists
+    } else {
+        // Insert new entity type
+        $sqladdtype = "INSERT INTO \"tbentity_type\" (\"code\", \"title\", \"description\", \"enabled\") 
+                       VALUES ('".$code."', '".$type."', '".$desc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdtype) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=entitytype';</script>";
+        } else {
+            echo "<script>alert('Error adding entity type: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+/*
+ UpdateEntityType: Update entity type from tbentitytype table 
+*/
+function UpdateEntityType($etid, $code, $type, $desc, $con) {
+    // Escape all inputs
+    $etid = pg_escape_string($con, $etid); // Get entity type ID from POST data
+    $code = pg_escape_string($con, $code);
+    $type = pg_escape_string($con, $type);
+    $desc = pg_escape_string($con, $desc);
+
+    // Update the entity type information
+    $sqlupdatetype = "UPDATE tbentity_type SET code='$code', title='$type', description='$desc' WHERE id='$etid'";
+    $result = pg_query($con, $sqlupdatetype) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=entitytype';</script>";
+    } else {
+        echo "<script>alert('Error updating entity type: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ DeleteEntityType: Delete entity type from tbentitytype table 
+*/
+function DeleteEntityType($etid, $con) {
+    $sqltype = "DELETE FROM tbentity_type WHERE id='$etid'";
+    $result = pg_query($con, $sqltype) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=entitytype';</script>";
+    } else {
+        echo "<script>alert('Error deleting entity type: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ ModuleList($con): Show list of modules from tbmodules table
+*/
+function ModuleList($con) {
+    $sqlmodule = "SELECT * FROM tbmodules ORDER BY id ASC";
+    $result = pg_query($con, $sqlmodule) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $code = $row['code'];
+            $name = $row['title'];
+            $desc = $row['desc'];
+            $status = $row['enabled'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$code</td>
+                    <td>$name</td>
+                    <td>$desc</td>
+                    <td>
+                      <div class='form-check form-switch'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleModuleCheckboxChange(this)'>
+                      </div>
+                    </td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addModuleModal' 
+                         data-mid='$id' 
+                         data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
+                         data-name='" . htmlspecialchars($name, ENT_QUOTES) . "'
+                         data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>
+                    </td>
+                    <td><a href='masterdata.php?part=modules&mid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+/*
+ AddModule: Add new module into tbmodules table 
+*/
+function AddModule($code, $name, $desc, $con) {
+    // Escape all inputs
+    $code = pg_escape_string($con, $code);
+    $name = pg_escape_string($con, $name);
+    $desc = pg_escape_string($con, $desc);
+
+    // Check if the module code already exists
+    $sqlmodule = "SELECT code FROM tbmodules WHERE code='$code'";
+    $result = pg_query($con, $sqlmodule) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Module code already exists. Please choose a different module code.');</script>";
+        return "yes"; // Indicate that the module already exists
+    } else {
+        // Insert new module
+        $sqladdmodule = "INSERT INTO \"tbmodules\" (\"code\", \"title\", \"desc\", \"enabled\") 
+                          VALUES ('".$code."', '".$name."', '".$desc."', 'yes') RETURNING id";
+        $result = pg_query($con, $sqladdmodule) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+        } else {
+            echo "<script>alert('Error adding module: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+/*
+ UpdateModule: Update module from tbmodules table 
+*/
+function UpdateModule($mid, $code, $name, $desc, $con) {
+    // Escape all inputs
+    $mid = pg_escape_string($con, $mid); // Get module ID from POST data
+    $code = pg_escape_string($con, $code);
+    $name = pg_escape_string($con, $name);
+    $desc = pg_escape_string($con, $desc);
+
+    // Update the module information
+    $sqlupdatemodule = "UPDATE tbmodules SET code='$code', title='$name', \"desc\"='$desc' WHERE id='$mid'";
+    $result = pg_query($con, $sqlupdatemodule) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+    } else {
+        echo "<script>alert('Error updating module: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ DeleteModule: Delete module from tbmodules table 
+*/
+function DeleteModule($mid, $con) {
+    $sqlmodule = "DELETE FROM tbmodules WHERE id='$mid'";
+    $result = pg_query($con, $sqlmodule) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>alert('Module deleted successfully.');</script>";
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+    } else {
+        echo "<script>alert('Error deleting module: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ ModuleName: Get module name by id
+*/
+function ModuleName($mid, $con) {
+    $sqlmodule = "SELECT title FROM tbmodules WHERE id='$mid'";
+    $result = pg_query($con, $sqlmodule) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['title'];
+    } else {
+        return "Unknown Module";
     }
 }
 ?> 

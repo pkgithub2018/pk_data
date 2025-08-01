@@ -719,9 +719,10 @@ function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
 /*
  Locationupdate: Update locations from tblocations table
 */
-function Locationupdate($id,$nameeng, $namelao, $loctype,$pid, $did, $con) {
+function Locationupdate($id, $locid, $nameeng, $namelao, $loctype,$pid, $did, $con) {
    // NOT UPDATE FOR LOCATION ID
    $sql = "UPDATE tblocations SET 
+            lid='$locid',
             name_eng='$nameeng',
             name_lao='$namelao', 
             location_type='$loctype',
@@ -830,6 +831,21 @@ function SelectDistricts($did, $pid, $con) {
         }
     }
 }
+
+/*
+  SelectEntitytype: Select entity type from tbentitytype table
+*/
+function SelectEntitytype($etype, $con) {
+    $sql = "SELECT id, title FROM tbentity_type ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($etype !== null && $etype == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+}
+
 /*
  Countrylist: Select from tbcountries table
 */
@@ -1639,6 +1655,151 @@ function DeleteEntityType($etid, $con) {
 }
 
 /*
+ EntityExportList($con): Show list of entities from tbentity table
+*/
+function EntityExportList($con) {
+    $sqle = "SELECT * FROM tbentity_export ORDER BY id ASC";
+    $result = pg_query($con, $sqle) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $title = $row['title'];
+            $address = $row['address'];
+            $province = Provincename($row['province'], $con);
+            //$district = $row['district'];
+            $phone = $row['phone'];
+            $email = $row['email'];
+            $contactperson = $row['contact_name'];
+
+            print "<tr>
+                    <td>$i</td>
+                    <td>$title</td>
+                    <td>$address</td>
+                    <td>$contactperson</td>
+                    <td>$phone</td>
+                    <td>$email</td>
+                    <td>$province</td>
+                    <td><a href='entity.php?part=entity&frm=editEntity_export&id=$id' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td align='center'><a href='transaction.php?part=application&id=$id' class='btn btn-danger btn-sm'><i class='bi bi-caret-right-square-fill table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+
+
+/*
+ AddEntityExport: Add new entity export into tbentity_export table
+ 
+*/
+function AddEntityExport($bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $con) {
+    // Escape all inputs
+    $bstype = pg_escape_string($con, $bstype);
+    $enttype = pg_escape_string($con, $enttype);
+    $title = pg_escape_string($con, $title);
+    $address = pg_escape_string($con, $address);
+    $zipcode = pg_escape_string($con, $zipcode);
+    $province = pg_escape_string($con, $pid);
+    $district = pg_escape_string($con, $did);
+    $country = pg_escape_string($con, '123'); // Assuming country_id is always 123 for Lao PDR
+    $phone = pg_escape_string($con, $phone);
+    $email = pg_escape_string($con, $email);
+    $contactperson = pg_escape_string($con, $contactperson);
+   
+    $isregister = pg_escape_string($con, $isregister);
+    $regdate1 = pg_escape_string($con, $regdate1);
+    $regdate2 = pg_escape_string($con, $regdate2);
+    $checkreg = pg_escape_string($con, $checkreg);
+    $gap = pg_escape_string($con, $gap);
+    $license_export = pg_escape_string($con, $license_export);
+    $created_date = pg_escape_string($con, $created_date);
+
+    // Insert new entity export
+    $sqladdentity = "INSERT INTO \"tbentity_export\" (\"business_type\", \"entity_type\", \"title\", \"address\", \"zipcode\", \"province\",  \"district\", \"country_id\", \"phone\", \"email\", \"contact_name\", \"registered\", \"registered_date_from\", \"registered_date_to\", \"check_list_registered\", \"license_export\", \"gap\", \"datetime_created\") 
+                     VALUES ('$bstype', '$enttype', '".$title."', '".$address."', '".$zipcode."', '".$province."', '".$district."', '".$country."', '".$phone."', '".$email."', '".$contactperson."', '".$isregister."', '".$regdate1."', '".$regdate2."', '".$checkreg."', '".$license_export."', '".$gap."', '".$created_date."') RETURNING id";
+    $result = pg_query($con, $sqladdentity) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'entity.php?entity=export';</script>";
+    } else {
+        echo "<script>alert('Error adding entity export: " . pg_last_error($con) . "');</script>";
+    }
+} 
+
+/*
+  GetEntityExport: Get entity export by ID
+*/
+function GetEntityExport($id, $con) {
+    $sql = "SELECT * FROM tbentity_export WHERE id='$id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // No entity found with the given ID
+    }
+}
+
+/*
+  UpdateEntityExport: Update entity export by ID
+*/
+ function UpdateEntityExport($id, $bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $con) {
+    // Escape all inputs
+    $id = pg_escape_string($con, $id);
+    $bstype = pg_escape_string($con, $bstype);
+    $enttype = pg_escape_string($con, $enttype);
+    $title = pg_escape_string($con, $title);
+    $address = pg_escape_string($con, $address);
+    $zipcode = pg_escape_string($con, $zipcode);
+    $province = pg_escape_string($con, $pid);
+    $district = pg_escape_string($con, $did);
+    $country = pg_escape_string($con, '123'); // Assuming country_id is always 123 for Lao PDR
+    $phone = pg_escape_string($con, $phone);
+    $email = pg_escape_string($con, $email);
+    $contactperson = pg_escape_string($con, $contactperson);
+   
+    // Handle registration details
+   /*
+    if ($isregister === 'yes') {
+        // If registered
+        if (empty($regdate1) || empty($regdate2)) {
+            echo "<script>alert('Please provide both registration dates.');</script>";
+            return;
+        }
+        // Escape registration dates
+        $regdate1 = pg_escape_string($con, date('Y-m-d', strtotime($regdate1)));
+        $regdate2 = pg_escape_string($con, date('Y-m-d', strtotime($regdate2)));
+        // Check if the registration dates are valid
+        if ($regdate1 > date('Y-m-d') || ($regdate2 && ($regdate2 < date('Y-m-d') || strtotime($regdate2) < strtotime($regdate1)))) {
+            echo "<script>alert('Invalid registration dates. Please check the dates.');</script>";
+            return;
+        }
+    } else {
+        // If not registered
+        if (!empty($regdate1) || !empty($regdate2)) {
+            echo "<script>alert('Registration dates should be empty if not registered.');</script>";
+            return;
+        }
+    }
+*/
+    $isregister = pg_escape_string($con, $isregister);
+    $regdate1 = pg_escape_string($con, $regdate1);
+    $regdate2 = pg_escape_string($con, $regdate2);
+    $checkreg = pg_escape_string($con, $checkreg);
+    $gap = pg_escape_string($con, $gap);
+    $license_export = pg_escape_string($con, $license_export);
+   
+    // Update the entity export information
+    $sqlupdateentity = "UPDATE tbentity_export SET business_type='$bstype', entity_type='$enttype', title='$title', address='$address', zipcode='$zipcode', province='$province', district='$district', phone='$phone', email='$email', contact_name='$contactperson', registered='$isregister', registered_date_from='$regdate1', registered_date_to='$regdate2', check_list_registered='$checkreg', license_export='$license_export', gap='$gap' WHERE id='$id'";
+
+    $result = pg_query($con, $sqlupdateentity) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'entity.php?entity=export';</script>";
+    } else {
+        echo "<script>alert('Error updating entity export: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
  ModuleList($con): Show list of modules from tbmodules table
 */
 function ModuleList($con) {
@@ -1751,4 +1912,50 @@ function ModuleName($mid, $con) {
         return "Unknown Module";
     }
 }
-?> 
+
+/*
+  ApplicationNo: Generate application number: 00000+id+2 digits of current year + 2 digits of provinces
+  In case of certificate, that is issused by pass-border, application number will be added with location code
+  Example: 0000012401/LA
+  For DOA, last two digits of year will be placed with 00
+*/
+function ApplicationNo($exporter_id, $uid, $con) {
+    // Add user ID into tbapplication table first to get running number-id
+    $sqlappuser = "INSERT INTO tbapplication (uid, application_id, application_date, company_id, reg_no, export_point, contact_person, address_person, phone, country_import, import_point, certificate_type, multi_item, print_support, commodity_id, name_oncertificate, name_scientific, commodity_description, quantity_net, quantity_gross, unit_id, marks_item, place_origin, conveyance_id, conveyance_sign, address_exporter, address_importer, purpose, place_quarantine, place_treatment, date_certificate) 
+                    VALUES ('$uid', '', NULL, NULL, '', NULL, '', '', '', NULL, NULL, '', '', '', NULL, '', '', '', NULL, NULL, NULL, '', NULL, NULL, '', '', '', '', NULL, NULL, NULL) RETURNING id";
+    $result = pg_query($con, $sqlappuser) or die(pg_last_error($con));
+    if ($result) {
+        $row = pg_fetch_assoc($result);
+        $id = $row['id']; // Get the last inserted ID
+        //$appno = "00000".$id;
+        // date("y") will return the last two digits of the current year
+        list ($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $loct_id, $status) = Updateuser_values($uid,$con);
+        $rowl= Locationvariables($loct_id, $con);
+        $loct_code = $rowl['lid']; // Get location code from Locationvariables function
+        $loct_type = $rowl['location_type']; 
+        $pid = $rowl['pid'];
+        
+        echo "<script>alert('Location Code: $loct_code, Location Type: $loct_type, Province ID: $pid');</script>";
+       
+        if(strlen($pid) === 1) {
+            $pid = '0'.$pid; // Ensure province code is always two digits
+        }
+         // 1- DOA and 2 - PAFO
+        if ($loct_code === "DOA") {
+            $province_code = '00'; // if DOA's user, use 00 for province code
+        } 
+        if( $loct_type === "2") {
+            $province_code = $pid; // NOT CORRECT -if PAFO's user, use 01 for province code
+        } 
+        $appno = str_pad($id, 5, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Get only 5 digits,
+        return $appno; // Append current year (last two digits) and province code (01 for Vientiane Capital)
+        //$currentYear = date("y");
+    } else {
+        echo "<script>alert('Error inserting application user: " . pg_last_error($con) . "');</script>";
+        return;
+    }
+
+   
+   
+}
+?>

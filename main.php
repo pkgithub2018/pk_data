@@ -21,17 +21,18 @@ if (file_exists($langFile)) {
 }
 // connection to database
  require("php-bin/connection.php"); 
+ $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // use user id
+ if(empty($userid)){
+    // If user ID is not set, redirect to login page
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>";
+    
+ } else {
+    // If user ID is set, continue with the rest of the code
+   // echo "<script>alert('Welcome back!- Userid: " . $_SESSION['uid'] . "');</script>";
+ }
+ //echo "<script>console.log('User ID: " . $userid . "');</script>";
 
- $uslogin = $_SESSION["username"]; // use email as username
- $groupid = $_SESSION["groupid"]; // use group_id for user group
-
- $_SESSION['uname'] = "";
- if(isset($_GET['us'])){
-    $unamelogin = $_GET['us'];
-    $_SESSION['uname'] = $unamelogin;
-  }
-  $_SESSION['uname'] = isset($_SESSION['uname']) ? $_SESSION['uname'] : '';
-  echo "<script>alert('Group id logged in: " . $groupid . "');</script>";
+ // echo "<script>alert('Group name: " . $_SESSION["groupname"] . "');</script>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -116,21 +117,21 @@ if (file_exists($langFile)) {
         <li class="nav-item dropdown pe-3">
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['uname']; ?></span>
+            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION["username"]; ?></span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6>Kevin Anderson</h6>
-              <span>Web Designer</span>
+              <h6><?php echo $_SESSION['username']; ?></h6>
+              <span><?php echo $_SESSION["position"]; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -140,7 +141,7 @@ if (file_exists($langFile)) {
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -185,47 +186,81 @@ if (file_exists($langFile)) {
           <span><?php echo $translations['Dashboard']; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
-
-    <!-- Form Nav -->
+    
       <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span><?php echo $translations['e-Phytosanitary']; ?></span><i class="bi bi-chevron-down ms-auto"></i>
+        <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-folder"></i>
+          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+        <ul id="transaction-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
           <li>
-            <a href="forms-elements.html">
-              <i class="bi bi-circle"></i><span>Request</span>
+            <a href="transaction.php?part=application_list">
+              <i class="bi bi-circle"></i><span>Application</span>
             </a>
           </li>
           <li>
-            <a href="forms-layouts.html">
+            <a href="transaction.php?part=inspection">
+              <i class="bi bi-circle"></i><span>Inspection's results</span>
+            </a>
+          </li>
+        </ul>
+      </li><!-- End Transaction Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=export" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span>Export entity</span>
+        </a>
+      </li><!-- End Export Entity Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span>Import entity</span>
+        </a>
+      </li><!-- End Import Entity/Company form Nav -->
+    <!-- Module Nav -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-journal-text"></i><span><?php echo $translations['modules']; ?></span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="modules.php?part=entity">
+              <i class="bi bi-circle"></i><span>Entity/Company</span> <!-- Not used yet -->
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=inspection">
               <i class="bi bi-circle"></i><span>Inspection</span>
             </a>
           </li>
           <li>
-            <a href="forms-editors.html">
+            <a href="modules.php?part=sample">
+              <i class="bi bi-circle"></i><span>Sample</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=certificate">
               <i class="bi bi-circle"></i><span>Certificate</span>
             </a>
           </li>
           <li>
-            <a href="forms-validation.html">
+            <a href="modules.php?part=printing">
               <i class="bi bi-circle"></i><span>Printing</span>
             </a>
           </li>
         </ul>
       </li><!-- End Forms Nav -->
 
+      <?php if($_SESSION["groupname"] == "admin"){ ?><!-- Admin group check -->
+
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          
-          <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Companies/Entities</span>
-            </a>
-          </li>
+         
           <li>
             <a href="masterdata.php?part=product">
               <i class="bi bi-circle"></i><span>Product</span>
@@ -247,6 +282,11 @@ if (file_exists($langFile)) {
             </a>
           </li>
           <li>
+            <a href="masterdata.php?part=entitytype">
+              <i class="bi bi-circle"></i><span>Entity_type</span>
+            </a>
+          </li>
+          <li>
             <a href="masterdata.php?part=inspectionmethod">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
@@ -257,18 +297,29 @@ if (file_exists($langFile)) {
             </a>
           </li>
           <li>
+            <a href="masterdata.php?part=modules">
+              <i class="bi bi-circle"></i><span>Module List</span>
+            </a>
+          </li>
+          <li>
             <a href="masterdata.php?part=provinces">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
-          
+          <li>
+            <a href="masterdata.php?part=treatmentmethod">
+              <i class="bi bi-circle"></i><span>Treatment Method</span>
+            </a>
+          </li>
         </ul>
-      </li><!-- End Tables Nav -->
+      </li><!-- End Master Data Nav -->
 
-      <li class="nav-heading">Pages</li>
+      <?php } // End of Admin group check ?>
+
+      <li class="nav-heading">Users' Management</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.html">
+        <a class="nav-link collapsed" href="users-profile.php">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
@@ -304,7 +355,7 @@ if (file_exists($langFile)) {
       <h1>Dashboard</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+          <li class="breadcrumb-item"><a href="#">Home</a></li>
           <li class="breadcrumb-item active">Dashboard</li>
         </ol>
       </nav>
@@ -326,13 +377,13 @@ if (file_exists($langFile)) {
                   <table class="table table-borderless datatable">
                     <thead>
                       <tr>
-                        <th scope="col">ID</th>
+                        <th scope="col">Application No</th>
                         <th scope="col">Exporters</th>
                         <th scope="col">Submission date</th>
-                        <th scope="col">Request</th>
+                        <th scope="col">Application</th>
                         <th scope="col">Inspection</th>
-                        <th scope="col">Treatment</th>
-                        <th scope="col">Cerificates</th>
+                        <th scope="col">Certificate</th>
+                        <th scope="col">Printing/Issuing</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -340,7 +391,7 @@ if (file_exists($langFile)) {
                         <th scope="row"><a href="#">#2457</a></th>
                         <td>ລາວຈີນເຕີຢວນ ເຕັກໂນໂລຊີກະສິກຳ</td>
                         <td>01 May 2025</td>
-                        <td><a href="#" class="text-primary">Completed</a></td>
+                        <td><a href="transaction.php?part=application" class="text-primary">Pending</a></td>
                         <td class="badge bg-warning">Pending</td>
                         <td><span class="badge bg-success"></span></td>
                         <td><span class="badge bg-success"></span></td>

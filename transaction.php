@@ -180,9 +180,10 @@ $guid = $_SESSION["groupid"];
         </a>
       </li><!-- End Dashboard Nav -->
          <?php
-          $activeParts = ['application', 'application_list', 'inspection']; // Add all relevant parts here
-          $isPartActive = (isset($_GET['part']) && in_array($_GET['part'], $activeParts));
+         // $activeParts = ['application', 'application_list', 'inspection']; // Add all relevant parts here
+         // $isPartActive = (isset($_GET['part']) && in_array($_GET['part'], $activeParts));
          ?>
+     <!--    
       <li class="nav-item">
         <a class="nav-link <?php echo $isPartActive ? '' : 'collapsed'; ?>" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-folder"></i>
@@ -190,7 +191,7 @@ $guid = $_SESSION["groupid"];
         </a>
         <ul id="transaction-nav" class="nav-content collapse <?php echo $isPartActive ? 'show' : ''; ?>" data-bs-parent="#sidebar-nav">
           <li>
-            <a href="transaction.php?part=application" class="<?php echo isset($_GET['part']) && ($_GET['part'] === 'application' || $_GET['part'] === 'application_list') ? 'active' : ''; ?>">
+            <a href="transaction.php?part=application" class="<?php echo isset($_GET['part']) && ($_GET['part'] === 'application' || $_GET['part'] === 'exportentity_list') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Application</span>
             </a>
           </li>
@@ -200,7 +201,9 @@ $guid = $_SESSION["groupid"];
             </a>
           </li>
         </ul>
-      </li><!-- End Transaction Nav -->
+      </li>
+      -->
+      <!-- End Transaction Nav -->
 
       <li class="nav-item">
         <a class="nav-link" href="entity.php?entity=export" >
@@ -311,8 +314,8 @@ $guid = $_SESSION["groupid"];
 
   <main id="main" class="main">
    <?php 
-     // Application list  *******************
-    if(isset($_GET['part']) && $_GET['part'] === 'application_list') {
+     // Export entity list  *******************
+    if(isset($_GET['part']) && $_GET['part'] === 'exportentity_list') {
       echo "<script>document.title = 'Application';</script>";
     ?>
      <section class="section">
@@ -378,44 +381,118 @@ $guid = $_SESSION["groupid"];
    <?php
    // EXPORT ENTITY/COMPANY-FORM  *******************
      if (isset($_GET['part']) && $_GET['part'] === 'application') {
-      if( isset($_GET['id']) && !empty($_GET['id'])) {
-        //$_GET['id'] is exporter ID
-        $uid = $userid;
-       // $app_no = $_GET['id']."-".$uid;
-       $app_no = ApplicationNo($_GET['id'], $uid, $con);
+          if( isset($_GET['id']) && !empty($_GET['id'])) { // ExporterID -link <a> from Export entity form
+            //$_GET['id'] is exporter ID
+            $uid = $userid;  // from $_SESSION
+            $guidLogin = $guid; // from $_SESSION
+          
+            // Application Number will generated in FUNCTION: ApplicationNo
+            // Application ID (id - auto_increment ($app_id)) along with USER'S ID, are INSERTED INTO tbapplication
+            // $app_no - FULL APPLICATION NUMBER
+          list($app_id, $app_no) = ApplicationNo($_GET['id'], $uid, $con);
+        // }
+
+          // Application information
+          // $_GET['id'] is exporter ID from URL in function: EntityExportList() in supports.php
+          //if(isset($_GET['id']) && !empty($_GET['id'])) {
+            $exporter_id = $_GET['id'];
+            $appdate = date('Y-m-d');  // initial application date
+            // UPDATE tbapplication with exporter ID
+            $sqlupdate = "UPDATE tbapplication SET company_id = '$exporter_id', application_id = '$app_no', application_date = '$appdate', guid = '$guidLogin' WHERE id = '$app_id'";
+            pg_query($con, $sqlupdate) or die(pg_last_error($con));
+
+            $app_info = ApplicantInfo_Export($exporter_id, $con);
+            if($app_info) {  
+              $address = isset($app_info['address']) ? $app_info['address'] : '';
+              $contact_person = isset($app_info['contact_name']) ? $app_info['contact_name'] : '';
+              $phone = isset($app_info['phone']) ? $app_info['phone'] : '';
+            }
+          }
+
+          // Product/Commodity ID - this is the product ID from Modal form- the URL: in ApplicationProductList($con)
+          if(isset($_GET['comd_id']) && !empty($_GET['comd_id'])) {
+            $pid = $_GET['comd_id'];
+            $proData = ProductInfo($pid, $con);
+            if($proData) {
+              $proName = isset($proData['name']) ? $proData['name'] : '';
+              $product_type = isset($proData['product_type']) ? $proData['product_type'] : '';
+            }
+          }
+
+      // Set Application date ****
+      if (!isset($date) || empty($date)) {
+          $date = date('Y-m-d'); // Store as Y-m-d: for display only
       }
 
-      // Application information
-      // $_GET['id'] is exporter ID from URL in function: EntityExportList() in supports.php
-      if(isset($_GET['id']) && !empty($_GET['id'])) {
-        echo "<script>document.title = 'Application - " . htmlspecialchars($_GET['id'], ENT_QUOTES) . "';</script>";
-        $app_info = ApplicantInfo_Export($_GET['id'], $con);
-        if($app_info) {  
-          $address = isset($app_info['address']) ? $app_info['address'] : '';
-          $contact_person = isset($app_info['contact_name']) ? $app_info['contact_name'] : '';
-          $phone = isset($app_info['phone']) ? $app_info['phone'] : '';
-        }
-      }
-      // Product/Commodity ID - this is the product ID from Modal form- the URL: in ApplicationProductList($con)
-      if(isset($_GET['comd_id']) && !empty($_GET['comd_id'])) {
-        $pid = $_GET['comd_id'];
-        $proData = ProductInfo($pid, $con);
-        if($proData) {
-          $proName = isset($proData['name']) ? $proData['name'] : '';
-          $product_type = isset($proData['product_type']) ? $proData['product_type'] : '';
-        }
-      }
+      // EDIT/UPDATE Application *********
+        if(isset($_GET['appid_edit'])) {  // from ApplicationList function in supports.php
+         // echo "Editing Application ID: " . htmlspecialchars($_GET['appid_edit']);
+          $btnSubmit = "update";
+          $appEdit_id = is_numeric($_GET['appid_edit']) && $_GET['appid_edit'] > 0 ? (int)$_GET['appid_edit'] : null;  // Integer - From function: ApplicationList
+
+          $app_rows = null;
+          if($appEdit_id !== null) {
+              $app_rows = ApplicationInfo($appEdit_id, $con);
+              if ($app_rows) {
+                  // Populate form fields with existing application data
+                  $app_no = isset($app_rows['application_id']) ? $app_rows['application_id'] : '';  // application No, not ID
+                  $date = isset($app_rows['application_date']) ? $app_rows['application_date'] : '';
+                  $reg_no = isset($app_rows['reg_no']) ? $app_rows['reg_no'] : '';
+                  $contact_person = isset($app_rows['contact_person']) ? $app_rows['contact_person'] : '';
+                  $address = isset($app_rows['address_person']) ? $app_rows['address_person'] : '';
+                  $phone = isset($app_rows['phone']) ? $app_rows['phone'] : '';
+                  $locid = isset($app_rows['export_point']) ? $app_rows['export_point'] : '';
+                  $countryid = isset($app_rows['country_import']) ? $app_rows['country_import'] : '';
+                  $import_point = isset($app_rows['import_point']) ? $app_rows['import_point'] : '';
+                  $certificate_type = isset($app_rows['certificate_type']) ? $app_rows['certificate_type'] : '';
+                  if($certificate_type == 'export') {
+                      $export_certificate = true;
+                      $transit_certificate = false;
+                  } else if($certificate_type == 'transit') {
+                      $export_certificate = false;
+                      $transit_certificate = true;
+                  }
+                  $multiple_commodities = isset($app_rows['multi_item']) ? $app_rows['multi_item'] : 0;
+                  $support_document = isset($app_rows['print_support']) ? $app_rows['print_support'] : 0;
+                  $product_id = isset($app_rows['commodity_id']) ? $app_rows['commodity_id'] : '';
+                  $prorows = ProductInfo($product_id, $con);
+                  $proName = isset($prorows['name']) ? $prorows['name'] : '';
+                  $scientific_name = isset($app_rows['name_scientific']) ? $app_rows['name_scientific'] : '';
+                  $number_description = isset($app_rows['commodity_description']) ? $app_rows['commodity_description'] : '';
+                  $nquantity = isset($app_rows['quantity_net']) ? $app_rows['quantity_net'] : '';
+                  $gquantity = isset($app_rows['quantity_gross']) ? $app_rows['quantity_gross'] : '';
+                  $unitid = isset($app_rows['unit_id']) ? $app_rows['unit_id'] : '';
+                  $distinguishing_marks = isset($app_rows['marks_item']) ? $app_rows['marks_item'] : '';
+                  $countryid_origin = isset($app_rows['place_origin']) ? $app_rows['place_origin'] : '';
+                  $conveyanceid = isset($app_rows['conveyance_id']) ? $app_rows['conveyance_id'] : '';
+                  $conveyance_sign = isset($app_rows['conveyance_sign']) ? $app_rows['conveyance_sign'] : '';
+                  $exporter_address = isset($app_rows['address_exporter']) ? $app_rows['address_exporter'] : '';
+                  $importer_address = isset($app_rows['address_importer']) ? $app_rows['address_importer'] : '';
+                  $purposeid = isset($app_rows['purpose']) ? $app_rows['purpose'] : '';
+                  $provinceid_quarantine = isset($app_rows['place_quarantine']) ? $app_rows['place_quarantine'] : '';
+                  $provinceid_treatment = isset($app_rows['place_treatment']) ? $app_rows['place_treatment'] : '';
+                  $place_of_quarantine_other = isset($app_rows['place_quarantine_other']) ? $app_rows['place_quarantine_other'] : '';
+                  $place_of_treatment_other = isset($app_rows['place_treatment_other']) ? $app_rows['place_treatment_other'] : '';
+                  $certificate_date = isset($app_rows['date_certificate']) ? $app_rows['date_certificate'] : '';
+
+              }
+          } // End of if - check Null
+        }   // END of EDIT/UPDATE Application- isset($_GET['appid_edit'])   
+      
     ?>
-    <div class="pagetitle">
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
       <h1>Application</h1>
-      <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item"><a href="transaction.php?part=application_list">Application List</a></li>
+          <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
           <li class="breadcrumb-item active">Application</li>
         </ol>
+        </div>
+         <a href="main.php?btn=cancelApp&appid=<?php echo isset($app_id) ? $app_id : ''; ?>" class="btn btn-secondary btn-sm ms-3<?php echo (isset($btnSubmit) && $btnSubmit === 'update') ? ' disabled' : ''; ?>"
+   <?php if (isset($btnSubmit) && $btnSubmit === 'update') echo 'tabindex="-1" aria-disabled="true" onclick="return false;"'; ?>>Cancel</a>
       </nav>
-    </div><!-- End Page Title -->
+    </div><!-- End Application -->
 
     <section class="section">
       <div class="row">
@@ -425,17 +502,27 @@ $guid = $_SESSION["groupid"];
             <div class="card-body">
               <h5 class="card-title">Application Form</h5>
                <!-- FORM: Entity/Company Form -->
-              <form action="" method="POST">
+              <form action="main.php" method="POST">
+                <!-- Hidden input to store application ID -->
+                <input type="hidden" name="app_id" value="<?php             
+                                          if (!empty($app_id)) {
+                                              echo $app_id;
+                                          } elseif (isset($_GET['appid_edit']) && is_numeric($_GET['appid_edit']) && $_GET['appid_edit'] > 0) {
+                                              echo (int)$_GET['appid_edit'];
+                                          } else {
+                                              echo '';
+                                          } 
+                                          ?>">
                 <div class="row mb-3 align-items-center">
                   <!-- Application No -->
                   <label class="col-sm-2 col-form-label">Application No</label>
                   <div class="col-sm-3">
-                    <input type="text" name="application_no" id="application_no" class="form-control" value="<?php echo isset($app_no) ? $app_no : ''; ?>">
+                    <input type="text" name="application_no" id="application_no" class="form-control" value="<?php echo isset($app_no) ? $app_no : ''; ?>" readonly>
                   </div>
                   <!-- Application Date -->
                   <label class="col-sm-1 col-form-label">Date</label>
                   <div class="col-sm-3">
-                    <input type="date" name="app_date" class="form-control" value="<?php echo isset($date) ? $date : ''; ?>">
+                    <input type="text" name="app_date" class="form-control" value="<?php echo date('d/m/Y', strtotime($date)); ?>" readonly>
                   </div>
                   <!-- Reg No -->
                   <label class="col-sm-1 col-form-label">Reg No</label>
@@ -478,29 +565,26 @@ $guid = $_SESSION["groupid"];
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">Import country</label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="country" aria-label="Default select example">
+                    <select class="form-select" name="import_country" aria-label="Default select example">
                       <option selected></option>
                       <?php SelectCountry($countryid, $con); ?>
                     </select>
                   </div>
                   <label class="col-sm-2 col-form-label">Import entry point</label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="import_entry_point" aria-label="Default select example">
-                      <option selected></option>
-                      <?php SelectEntitytype($enttype, $con); ?>
-                    </select>
-                  </div> 
+  <textarea class="form-control" name="import_point" rows="2" placeholder="Enter import entry point"><?php echo isset($import_point) ? $import_point : ''; ?></textarea>
+</div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Export certificate</label>
                   <div class="col-sm-2 d-flex align-items-center">
-                    <input type="checkbox" name="export_certificate" id="export_certificate" value="1" <?php echo (isset($dynamic_option1) && $dynamic_option1) ? 'checked' : ''; ?>>
+                    <input type="checkbox" name="export_certificate" id="export_certificate" value="1" <?php echo (isset($export_certificate) && $export_certificate) ? 'checked' : ''; ?>>
                     <label for="export_certificate" class="ms-2 mb-0">Yes (<i class="bi bi-check-lg"></i>)</label>
                   </div>
                   <label class="col-sm-2 col-form-label">Transit certificate</label>
                   <div class="col-sm-2 d-flex align-items-center">
-                    <input type="checkbox" name="transit_certificate" id="transit_certificate" value="1" <?php echo (isset($dynamic_option2) && $dynamic_option2) ? 'checked' : ''; ?>>
+                    <input type="checkbox" name="transit_certificate" id="transit_certificate" value="1" <?php echo (isset($transit_certificate) && $transit_certificate) ? 'checked' : ''; ?>>
                     <label for="transit_certificate" class="ms-2 mb-0">Yes (<i class="bi bi-check-lg"></i>)</label>
                   </div>
                 </div>
@@ -519,22 +603,22 @@ $guid = $_SESSION["groupid"];
             <div class="col-sm-2 d-flex align-items-center">
               <input type="checkbox" name="support_document" id="support_document" value="1" <?php echo (isset($support_document) && $support_document) ? 'checked' : ''; ?>>
               <a href="#" data-bs-toggle="modal" data-bs-target="#spdocModal">
-      <label for="support_document" class="ms-2 mb-0" style="cursor:pointer;">
-        <i class="bi bi-printer"></i>
-      </label>
-    </a>
+                  <label for="support_document" class="ms-2 mb-0" style="cursor:pointer;">
+                    <i class="bi bi-printer"></i>
+                  </label>
+              </a>
             </div>
           </div>
           <div class="row mb-3 align-items-center">
             <label class="col-sm-2 col-form-label">Commodities</label>
             <div class="col-sm-10 d-flex align-items-center">
              <a href="#" data-bs-toggle="modal" data-bs-target="#commodityModal">
-      <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
-    </a>&nbsp;<input type="text" name="proname" id="proname" class="form-control" value="<?php echo isset($proName) ? $proName : ''; ?>">
-              <input type="hidden" name="proid" id="proid" value="<?php echo isset($pid) ? $pid : ''; ?>">
-              <button type="button" class="btn btn-primary btn-sm ms-1" style="height: 38px;" data-bs-toggle="modal" data-bs-target="#addcommodityModal">
-  <i class="bi bi-plus-circle" style="font-size: 0.9rem;"></i>
-</button>
+                  <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
+                </a>&nbsp;<input type="text" name="proname" id="proname" class="form-control" value="<?php echo isset($proName) ? $proName : ''; ?>">
+                          <input type="hidden" name="proid" id="proid" value="<?php echo isset($pid) ? $pid : ''; ?>">
+                          <button type="button" class="btn btn-primary btn-sm ms-1" style="height: 38px;" data-bs-toggle="modal" data-bs-target="#addcommodityModal">
+              <i class="bi bi-plus-circle" style="font-size: 0.9rem;"></i>
+            </button>
             </div>
           </div>
               
@@ -577,15 +661,15 @@ $guid = $_SESSION["groupid"];
             <div class="row mb-3">
               <label for="inputText" class="col-sm-2 col-form-label">Distinguishing Marks</label>
                <div class="col-sm-10">
-                 <input type="text" name="distinguishing_marks" id="distinguishing_marks" class="form-control" value="<?php echo isset($distinguishing_marks) ? $distinguishing_marks : ''; ?>">
+                 <input type="text" name="marks" id="marks" class="form-control" value="<?php echo isset($distinguishing_marks) ? $distinguishing_marks : ''; ?>">
                </div>
              </div>
              <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Place of origin</label>
                   <div class="col-sm-10">
-                    <select class="form-select" name="place_of_origin" aria-label="Default select example">
+                    <select class="form-select" name="place_origin" aria-label="Default select example">
                       <option selected></option>
-                      <?php SelectCountry($countryid, $con); ?>
+                      <?php SelectCountry($countryid_origin, $con); ?>
                     </select>
                   </div>
                 </div>  
@@ -613,7 +697,7 @@ $guid = $_SESSION["groupid"];
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's name and address</label>
                   <div class="col-sm-4">
-                    <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>&nbsp;<textarea name="importer_address" id="importer_address" class="form-control" rows="5"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                    <textarea name="importer_address" id="importer_address" class="form-control" rows="5"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
                   </div>
             </div>
             
@@ -621,9 +705,9 @@ $guid = $_SESSION["groupid"];
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Purpose</label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="purpose" aria-label="Default select example">
+                    <select class="form-select" name="purpose" id="purpose" aria-label="Default select example">
                       <option selected></option>
-                      <?php SelectEntitytype($enttype, $con); ?>
+                      <?php SelectPurpose($purposeid, $con); ?>
                     </select>
                   </div>
                 </div>
@@ -631,28 +715,28 @@ $guid = $_SESSION["groupid"];
               <div class="row mb-3 align-items-center">
                 <label class="col-sm-2 col-form-label">Place of Quarantine</label>
                 <div class="col-sm-4">
-                  <select class="form-select" name="place_of_quarantine" id="place_of_quarantine" aria-label="Select packaging type">
+                  <select class="form-select" name="place_quarantine" id="place_quarantine" aria-label="Select packaging type">
                     <option value="">Select</option>
-                    <?php SelectProvince($provinceid, $con); ?> 
+                    <?php SelectProvince($provinceid_quarantine, $con); ?> 
                   </select>
                 </div>
                 <label class="col-sm-1 col-form-label">Specify</label>
                 <div class="col-sm-5">
-                  <input type="text" name="place_of_quarantine_other" id="place_of_quarantine_other" class="form-control" value="<?php echo isset($place_of_quarantine_other) ? $place_of_quarantine_other : ''; ?>">
+                  <input type="text" name="place_quarantine_other" id="place_quarantine_other" class="form-control" value="<?php echo isset($place_of_quarantine_other) ? $place_of_quarantine_other : ''; ?>">
                 </div>
             </div>
            
              <div class="row mb-3 align-items-center">
                 <label class="col-sm-2 col-form-label">Place of treatment</label>
                 <div class="col-sm-4">
-                  <select class="form-select" name="place_of_treatment" id="place_of_treatment" aria-label="Select packaging type">
+                  <select class="form-select" name="place_treatment" id="place_treatment" aria-label="Select packaging type">
                     <option value="">Select</option>
-                    <?php SelectProvince($provinceid, $con); ?> 
+                    <?php SelectProvince($provinceid_treatment, $con); ?> 
                   </select>
                 </div>
                 <label class="col-sm-1 col-form-label">Specify</label>
                 <div class="col-sm-5">
-                  <input type="text" name="place_of_treatment_other" id="place_of_treatment_other" class="form-control" value="<?php echo isset($place_of_treatment_other) ? $place_of_treatment_other : ''; ?>">
+                  <input type="text" name="place_treatment_other" id="place_treatment_other" class="form-control" value="<?php echo isset($place_of_treatment_other) ? $place_of_treatment_other : ''; ?>">
                 </div>
             </div>
 
@@ -666,13 +750,13 @@ $guid = $_SESSION["groupid"];
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10 d-flex gap-2">
-                    <button type="submit" name="btnsubApplication_save" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>">
-                      <?php echo isset($sbupdate) ? 'Update' : 'Submit'; ?>
+                    <button type="submit" name="btnsubApplication_save" class="btn btn-primary" value="<?php echo isset($btnSubmit) ? 'update' : 'submit'; ?>">
+                      <?php echo isset($btnSubmit) ? 'Update' : 'Submit'; ?>
                     </button>
-                    <button type="submit" name="btnsubApplication_save_continue" class="btn btn-secondary" value="save_continue">
+                    <button type="submit" name="btnsubApplication_save_continue" class="btn btn-secondary" value="save_continue" <?php echo (isset($btnSubmit) && $btnSubmit === 'update') ? 'disabled' : ''; ?>>
                       Save & continue
                     </button>
-                  </div>
+                   </div>
                 </div>
               </form><!-- End Form for commodity -->
             </div>
@@ -772,13 +856,22 @@ $guid = $_SESSION["groupid"];
         <h5 class="modal-title" id="spdocModalLabel">Supporting Document Preview</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+      <div id="spdocModalBody" class="modal-body">
         <!-- Present data in a word-like document style -->
         <div class="border p-3 bg-white" style="min-height:300px;">
-          <h6 class="text-center" style="white-space: pre-line;">LAO PEOPLE'S DEMOCRATIC REPUBLIC
+          <a href="#" onclick="printSupportDoc('spdocModalBody'); return false;" class="position-absolute" style="top: 10px; right: 15px; color: #333;" title="Print">
+            <i class="bi bi-printer" style="font-size: 1.5rem;"></i>
+          </a>
+           <div class="text-center mb-3">
+            <img src="assets/img/national_logo.jpg" alt="National Logo" style="max-height:80px;">
+          </div>
+          <h6 class="text-center" style="white-space: pre-line;"><b>LAO PEOPLE'S DEMOCRATIC REPUBLIC</b>
             PEACE INDEPENDENCE DEMOCRACY UNITY PROSPERITY
             MINISTRY OF AGRICULTURE AND FORESTRY
-            DEPARTMENT OF AGRICULTURE</h6>
+            DEPARTMENT OF AGRICULTURE
+            LIST OF CONSIGNMENT
+            FOR PHYTOSANITARY CERTIFICATE No: <?php echo isset($certificate_no) ? $certificate_no : ''; ?>
+          </h6>
           <p><strong>Applicant Name:</strong> <?php echo isset($contact_person) ? $contact_person : ''; ?></p>
           <p><strong>Address:</strong> <?php echo isset($address) ? $address : ''; ?></p>
           <p><strong>Phone:</strong> <?php echo isset($phone) ? $phone : ''; ?></p>
@@ -922,10 +1015,21 @@ function selectExporter(info) {
       }
 
   });
-    </script>
-    <?php
-      }  // End of Export Entity Form
-     ?>
+
+  // Print supporting document: DIV id = spdocModalBody
+  function printSupportDoc(divId) {
+    var printContents = document.getElementById(divId).innerHTML;
+    var originalContents = document.body.innerHTML;
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    location.reload(); // Optional: reload to restore JS and events
+  }
+
+</script>
+  <?php
+    }  // End of Export Entity Form - $_GET['part'] === 'application'
+  ?>
     <?php
      // IMPORT ENTITY/COMPANY FORM  *******************
     if(isset($_GET['entity']) && $_GET['entity'] == 'import') {   
@@ -970,6 +1074,250 @@ function selectExporter(info) {
     </section>
     <?php
       }  // End of Import Entity/Company
+     ?>
+     <!-- ***************INSPECTION *************** -->
+     <?php
+      if (isset($_GET['part']) && $_GET['part'] === 'inspection') {
+        // Code for inspection part
+        $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+        $approws = ApplicationInfo($appid_inspection, $con);
+        if ($approws) {
+          $appno_inspection = $approws['application_id']; // Application No, not ID
+          $entity_id = $approws['company_id'];
+          $entity_rows = GetEntityExport($entity_id, $con);
+          $entityexport_name = $entity_rows['title'];
+
+        }
+      ?>
+     <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+        <h1>Inspection</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
+            <li class="breadcrumb-item active">Inspection</li>
+          </ol>
+        </nav>
+      </div>
+    </div><!-- End Page Title -->
+
+<!-- ********* Inspection form *********** -->
+<section class="section">
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Inspection Form</h5>
+          <!-- FORM: Entity/Company Form -->
+          <form action="main.php" method="POST">
+            <!-- Hidden input to store application ID -->
+            <input type="hidden" name="appid" value="<?php echo $appid_inspection; ?>">
+             <div class="row mb-3 align-items-center">
+                  <!-- Application No -->
+                  <label class="col-sm-2 col-form-label">Application No</label>
+                  <div class="col-sm-2">
+                    <input type="text" name="appno_insp" id="appno_insp" class="form-control" style="background-color: #2ec691ff;" value="<?php echo isset($appno_inspection) ? $appno_inspection : ''; ?>" readonly >
+                  </div>
+                  <!-- Entity's name -->
+                  <label class="col-sm-2 col-form-label">Entity's Name</label>
+                  <div class="col-sm-6">
+                    <input type="text" name="entity_name" class="form-control" style="background-color: #f0f0f0;" value="<?php echo isset($entityexport_name) ? $entityexport_name : ''; ?>" readonly >
+                  </div>  
+                </div>
+
+            <div class="row mb-3">
+              <label for="inspection_date" class="col-sm-2 col-form-label">Inspection Date</label>
+              <div class="col-sm-4">
+                <input type="date" class="form-control" id="inspection_date" name="inspection_date" required>
+              </div>
+            </div>
+           
+            <div class="row mb-3 align-items-center">
+                <label for="sampleno" class="col-sm-2 col-form-label">Sample No</label>
+                <div class="col-sm-2">
+                  <input type="text" name="sampleno" id="sampleno" class="form-control" value="<?php echo isset($sampleno) ? $sampleno : ''; ?>">
+                </div>
+                <label for="sample_volume" class="col-sm-2 col-form-label">Sample Volume</label>
+                <div class="col-sm-2">
+                  <input type="number" step="0.01" min="0" name="sample_volume" id="sample_volume" class="form-control" value="<?php echo isset($sample_volume) ? $sample_volume : ''; ?>">
+                </div>
+                <label for="unit" class="col-sm-1 col-form-label">Unit</label>
+                <div class="col-sm-3">
+                  <select name="unit" id="unit" class="form-select">
+                    <option value="">Select</option>
+                    <?php SelectUnit($unitid, $con); ?>
+                    <!-- Add more units as needed -->
+                  </select>
+                </div>
+            </div>
+            <div class="row mb-3">
+              <label for="sample_drawing" class="col-sm-2 col-form-label">Sample drawn by</label>
+               <div class="col-sm-10">
+                 <input type="text" name="sample_drawing" id="sample_drawing" class="form-control" value="<?php echo isset($sample_drawing) ? $sample_drawing : ''; ?>">
+               </div>
+             </div>
+             <div class="row mb-3">
+              <label for="sample_inspected" class="col-sm-2 col-form-label">Inspected by</label>
+               <div class="col-sm-10">
+                 <input type="text" name="sample_inspected" id="sample_inspected" class="form-control" value="<?php echo isset($sample_inspected) ? $sample_inspected : ''; ?>">
+               </div>
+             </div>
+
+             <div class="row mb-3 align-items-center">
+                  <!-- Certificate fee -->
+                  <label class="col-sm-2 col-form-label">Certificate fee</label>
+                  <div class="col-sm-4">
+                    <input type="number" name="cert_fee" id="cert_fee" class="form-control" value="<?php echo isset($cert_fee) ? $cert_fee : ''; ?>" >
+                  </div>
+                  <!-- Receipt No -->
+                  <label class="col-sm-2 col-form-label">Receipt No</label>
+                  <div class="col-sm-4">
+                    <input type="text" name="receipt_no" class="form-control" value="<?php echo isset($receipt_no) ? $receipt_no : ''; ?>" >
+                  </div>  
+              </div>
+
+              <div class="row mb-3 align-items-center">
+                  <!-- Lot Number -->
+                  <label class="col-sm-2 col-form-label">Lot No</label>
+                  <div class="col-sm-2">
+                    <input type="text" name="lot_no" id="lot_no" class="form-control" value="<?php echo isset($lot_no) ? $lot_no : ''; ?>" >
+                  </div>
+              </div>
+
+              <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">Inspection Method</label>
+                  <div class="col-sm-10">
+                    <select class="form-select" name="inspection_method" aria-label="Default select example">
+                      <option selected></option>
+                      <?php SelectInspectionMethod($inspection_method_id, $con); ?>
+                    </select>
+                  </div>
+              </div>  
+
+              <div class="row mb-3 align-items-center">
+                <label class="col-sm-2 col-form-label">Inspection Findings</label>
+                <div class="col-sm-10">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-success bg-success-subtle" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>>
+                    <label class="form-check-label" for="detected_pest">&nbsp;Detected pest</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-warning bg-warning-subtle" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
+                    <label class="form-check-label" for="treatment_ability">&nbsp;Treatment ability</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border-primary bg-primary-subtle" type="checkbox" name="lab_analysis" id="lab_analysis" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($lab_analysis) && $lab_analysis) echo 'checked'; ?>>
+                    <label class="form-check-label" for="lab_analysis">&nbsp;Lab analysis required</label>
+                  </div>
+                </div>
+              </div>
+
+               <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">Treatment Method</label>
+                  <div class="col-sm-10">
+                    <select class="form-select" name="treatment_method" aria-label="Default select example">
+                      <option selected></option>
+                      <?php SelectTreatmentMethod($treatment_method_id, $con); ?>
+                    </select>
+                  </div>
+              </div> 
+              
+              <div class="row mb-3">
+                <label for="treatment_date" class="col-sm-2 col-form-label">Treatment Date</label>
+                <div class="col-sm-4">
+                  <input type="date" class="form-control" id="treatment_date" name="treatment_date"
+                    value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>" required>
+                  <?php if (!empty($treatment_date)) { ?>
+                    <small class="text-muted">Selected: <?php echo date('d/m/Y', strtotime($treatment_date)); ?></small>
+                  <?php } ?>
+                </div>
+            </div>
+
+          <div class="card mb-4">
+          <div class="card-header">
+            <strong>Details of treatment</strong>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3 align-items-center">
+          <label class="col-sm-2 col-form-label">Chemical Used</label>
+          <div class="col-sm-4">
+            <select class="form-select" name="chemical_used" id="chemical_used" required>
+              <option value="">Select</option>
+              <?php //SelectChemical($chemical_id, $con); ?>
+            </select>
+          </div>
+          <label class="col-sm-2 col-form-label">Treated by</label>
+          <div class="col-sm-4">
+            <select class="form-select" name="treated_by" id="treated_by" required>
+              <option value="">Select</option>
+              <?php //SelectTreatedBy($treated_by_id, $con); ?>
+            </select>
+          </div>
+        </div>
+        <div class="row mb-3 align-items-center">
+          <label class="col-sm-2 col-form-label">Duration - Temperature</label>
+          <div class="col-sm-4">
+            <select class="form-select" name="duration_temperature" id="duration_temperature">
+              <option value="">Select</option>
+              <?php //SelectDurationTemperature($duration_temperature_id, $con); ?>
+            </select>
+          </div>
+          <label class="col-sm-2 col-form-label">Concentration</label>
+          <div class="col-sm-4">
+            <select class="form-select" name="concentration" id="concentration">
+              <option value="">Select</option>
+              <?php //SelectConcentration($concentration_id, $con); ?>
+            </select>
+          </div>
+        </div>
+        <div class="row mb-3 align-items-center">
+          <label class="col-sm-2 col-form-label">Sample Inspected by</label>
+          <div class="col-sm-4">
+            <select class="form-select" name="sample_inspected_by" id="sample_inspected_by">
+              <option value="">Select</option>
+              <?php //SelectSampleInspectedBy($sample_inspected_by_id, $con); ?>
+            </select>
+          </div>
+        </div>
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Additional information</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name="additional_info" id="additional_info" placeholder="Enter additional information" value="<?php echo isset($additional_info) ? $additional_info : ''; ?>">
+              </div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Reason</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name="reason" id="reason" placeholder="Enter reason" value="<?php echo isset($reason) ? $reason : ''; ?>">
+              </div>
+            </div>
+            <div class="row mb-3 align-items-center">
+  <label class="col-sm-2 col-form-label">Post Treatment Details</label>
+  <div class="col-sm-10">
+    <textarea class="form-control" name="post_treatment_details" id="post_treatment_details" rows="3" placeholder="Enter post treatment details"><?php echo isset($post_treatment_details) ? htmlspecialchars($post_treatment_details) : ''; ?></textarea>
+  </div>
+</div>
+          </div> <!-- details of treatment -->
+        </div>
+        <div class="row mb-3">
+  <div class="col-sm-10 offset-sm-2 d-flex gap-2">
+    <button type="submit" name="btn_save_inspection" class="btn btn-success">
+      <i class="bi bi-save"></i> Save
+    </button>
+    <a href="transaction.php?part=inspection" class="btn btn-secondary">
+      <i class="bi bi-x-circle"></i> Cancel
+    </a>
+  </div>
+</div>
+        </form> <!-- End Form for Inspection -->
+       </div>
+      </div>
+    </div>
+  </div>
+</section>
+      <?php
+      }  // End of if- Inspection
      ?>
   </main><!-- End #main -->
 

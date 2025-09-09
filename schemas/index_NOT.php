@@ -21,17 +21,17 @@
     $_SESSION["username"] = $username;
     $_SESSION["email"] = $username; // Use email as username
     $_SESSION["passw"] = $password;
-      
-    $sqlchuser = "SELECT username, passw, email, usertype FROM tbusers 
-              WHERE email = '".$_SESSION["username"]."' AND passw = '".$_SESSION["passw"]."'";
+     echo "<script>alert('Hello');</script>"; 
+    $sqlchuser = "SELECT name, psw, email, group_id  FROM tbusers 
+              WHERE email = '".$_SESSION["username"]."' AND psw = '".$_SESSION["passw"]."'";
     $result = mysqli_query($con, $sqlchuser) or die(mysqli_connect_error());
     if (mysqli_num_rows($result) == 0) {
       $message = "Incorrect username or password. Please try again.";
     } else {
-      list($unamelogin, $pswlogin, $emaillogin, $usertype) = mysqli_fetch_array($result); 
+      list($unamelogin, $pswlogin, $emaillogin, $groupid) = mysqli_fetch_array($result); 
       // Prepare the message
       //$message = "Hello, Login: " . $unamelogin . "<br>Your password is: " . $pswlogin;
-      echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin';</script>";
+      echo "<script type='text/javascript'>window.location.href = 'main.php?us=$unamelogin&gid=$groupid';</script>";
       exit();
     }   
 }

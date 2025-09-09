@@ -49,6 +49,7 @@
   <link href="assets/css/style.css" rel="stylesheet">
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
+  <link href="stylecss/dformelement.css" rel="stylesheet">
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -88,12 +89,12 @@
         </li><!-- End Search Icon-->
         <li class="nav-item dropdown pe-3">
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['uname']; ?></span>
+            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
           </a><!-- End Profile Iamge Icon -->
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['uname']; ?></h6>
+              <h6><?php echo $_SESSION['username']; ?></h6>
               <span>National IT Consultant</span>
             </li>
             <li>
@@ -101,7 +102,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -111,7 +112,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -156,8 +157,56 @@
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
+      <li class="nav-item">
+        <a class="nav-link active" href="entity.php?entity=export" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span>Export entity</span>
+        </a>
+      </li><!-- End Export Entity Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span>Import entity</span>
+        </a>
+      </li><!-- End Import Entity Nav -->
+
+      <!-- Module Nav -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-journal-text"></i><span>Modules</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="modules.php?part=entity">
+              <i class="bi bi-circle"></i><span>Entity/Company</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=inspection">
+              <i class="bi bi-circle"></i><span>Inspection</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=sample">
+              <i class="bi bi-circle"></i><span>Sample</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=certificate">
+              <i class="bi bi-circle"></i><span>Certificate</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=printing">
+              <i class="bi bi-circle"></i><span>Printing</span>
+            </a>
+          </li>
+        </ul>
+      </li><!-- End Forms Nav -->
+
        <?php
-          $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod']; // Add all relevant parts here
+          $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod','treatmentmethod', 'entitytype', 'modules']; // Add all relevant parts here
           $isMasterActive = (isset($_GET['part']) && in_array($_GET['part'], $masterParts));
       ?>
       <li class="nav-item">
@@ -166,11 +215,6 @@
         </a>
         <ul id="tables-nav" class="nav-content collapse<?php echo $isMasterActive ? ' show' : ''; ?>" data-bs-parent="#sidebar-nav">
          
-          <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Companies/Entities</span>
-            </a>
-          </li>
           <li>
             <a href="masterdata.php?part=product" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Product</span>
@@ -187,8 +231,13 @@
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
+            <a href="#">
               <i class="bi bi-circle"></i><span>Districts</span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=entitytype" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'entitytype') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
@@ -196,14 +245,24 @@
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
+
           <li>
             <a href="masterdata.php?part=locations" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
+            <a href="masterdata.php?part=modules" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'modules') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Module List</span>
+            </a>  
+          <li>
+            <a href="#">
               <i class="bi bi-circle"></i><span>Provinces</span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=treatmentmethod" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'treatmentmethod') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
         </ul>
@@ -212,7 +271,7 @@
       <li class="nav-heading">Pages</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.html">
+        <a class="nav-link collapsed" href="users-profile.php">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
@@ -256,7 +315,7 @@
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Locations</li>
+          <li class="breadcrumb-item active"><a href="masterdata.php?part=locations">Locations</a></li>
         </ol>
       </nav>
       </div>
@@ -330,10 +389,10 @@
           $did = $_POST['district'];
        if($_POST['btnsublocation'] === 'update') {
            // Update existing location
-          Locationupdate($id,$nameeng, $namelao, $loctype,$pid, $did, $con); // Function to update location
+          Locationupdate($id,$locid, $nameeng, $namelao, $loctype,$pid, $did, $con); // Function to update location
        } else if ($_POST['btnsublocation'] === 'submit') {
            // Add new location
-           echo "<script>alert('Add new location: " . $locid . "');</script>"; // Debugging line
+           //echo "<script>alert('Add new location: " . $locid . "');</script>"; // Debugging line
           Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con); // Function to add new location
        }
        
@@ -1212,7 +1271,7 @@
                 </thead>
                 <tbody>
                   <?php
-                   // InspectionMethodList($con); // List of Inspection Method
+                    InspectionMethodList($con); // List of Inspection Method 
                   ?>
                 </tbody>
               </table>
@@ -1247,8 +1306,380 @@
         }
       } // End of if submitInspectionMethod
 ?>
-      
- </main><!-- End #main -->
+   <!--============= Treatment methods =============-->    
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='treatmentmethod') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Treatment Method</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li> 
+          <li class="breadcrumb-item active">Treatment Method</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addTreatmentMethodModal" data-tmid="new">
+          <i class="bi bi-plus-circle"></i>Add New Treatment Method
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Treatment Method == -->
+      <div class="modal fade" id="addTreatmentMethodModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addTreatmentMethodModalLabel"><b>Add New Treatment Method</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for tmid -->
+                <input type="hidden" id="treatmentMethodId" name="treatmentMethodId">
+                <div class="mb-3">
+                  <label for="treatmentMethodCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="treatmentMethodCode" name="treatmentMethodCode" required> 
+                </div>
+                <div class="mb-3">
+                  <label for="treatmentMethodName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="treatmentMethodName" name="treatmentMethodName" required> 
+                </div>
+                <div class="mb-3">
+                  <label for="treatmentMethodDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="treatmentMethodDescription" name="treatmentMethodDescription" rows="3"></textarea> 
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitTreatmentMethod" name="submitTreatmentMethod" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Treatment Method -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Treatment Method</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Treatment Method</p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    TreatmentMethodList($con); // List of Treatment Method
+                  ?>
+                </tbody>
+              </table>
+            </div>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Treatment Method -->
+    <?php
+     }
+    ?>   
+    <!-- Treatment Method form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitTreatmentMethod'])) {  // ADD/UPDATE Treatment Method
+        // Process the form submission for adding/updating treatment method
+       
+        $tmid = $_POST['treatmentMethodId']; // Hidden input for ID
+        $tmCode = $_POST['treatmentMethodCode'];
+        $tmName = $_POST['treatmentMethodName'];
+        $tmDescription = $_POST['treatmentMethodDescription'];
+        
+        if($tmid === 'new') {
+            // Add new treatment method
+            AddTreatmentMethod($tmCode, $tmName, $tmDescription, $con); // Function to add new treatment method
+            
+        } else {
+            // Update existing treatment method
+           // echo "<script>alert('Treatment method with ID: " . $tmid . " updated.');</script>"; // Debugging line
+            UpdateTreatmentMethod($tmid, $tmCode, $tmName, $tmDescription, $con); // Function to update treatment method
+           
+        }
+      } // End of if submitTreatmentMethod
+
+    // DELETE treatment method
+    if(isset($_GET['part']) && $_GET['part']==='treatmentmethod' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['tmid']) && !empty($_GET['tmid'])) {
+            $treatmentMethodId = $_GET['tmid']; // Treatment Method ID to delete
+            // Call the function to delete treatment method
+            DeleteTreatmentMethod($treatmentMethodId, $con); // Function to delete treatment method    
+        }
+    }
+    ?>
+    <!-- ======= *************** Entity Type ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='entitytype') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Entity Type</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Entity Type</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addEntityTypeModal" data-etid="new">
+          <i class="bi bi-plus-circle"></i>Add New Entity Type
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Entity Type == -->
+      <div class="modal fade" id="addEntityTypeModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addEntityTypeModalLabel"><b>Add New Entity Type</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for etid -->
+                <input type="hidden" id="entityTypeId" name="entityTypeId">
+                <div class="mb-3">
+                  <label for="entityTypeCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="entityTypeCode" name="entityTypeCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="entityTypeName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="entityTypeName" name="entityTypeName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="entityTypeDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="entityTypeDescription" name="entityTypeDescription" rows="3"></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitEntityType" name="submitEntityType" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Entity Type -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Entity Type</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Entity Type</p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    EntityTypeList($con); // List of Entity Type
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+     </div>
+    </section> <!-- End Data Table Entity Type -->
+    <?php
+     }
+    ?>
+    <!-- Entity Type form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitEntityType'])) {  // ADD/UPDATE Entity Type
+        // Process the form submission for adding/updating entity type
+        $etid = $_POST['entityTypeId']; // Hidden input for ID
+        $etCode = $_POST['entityTypeCode'];
+        $etName = $_POST['entityTypeName'];
+        $etDescription = $_POST['entityTypeDescription'];
+        
+        if($etid === 'new') {
+            // Add new entity type
+            AddEntityType($etCode, $etName, $etDescription, $con); // Function to add new entity type
+            
+        } else {
+            // Update existing entity type
+            echo "<script>alert('Entity type with ID: " . $etid . " updated.');</script>"; // Debugging line
+            UpdateEntityType($etid, $etCode, $etName, $etDescription, $con); // Function to update entity type
+           
+        }
+      } // End of if submitEntityType
+    // DELETE entity type
+    if(isset($_GET['part']) && $_GET['part']==='entitytype' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['etid']) && !empty($_GET['etid'])) {
+            $entityTypeId = $_GET['etid']; // Entity Type ID to delete
+            // Call the function to delete entity type
+            DeleteEntityType($entityTypeId, $con); // Function to delete entity type    
+        }
+    }
+    ?>
+   <!-- ======= *************** Modules ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='modules') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Modules</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Modules</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addModuleModal" data-mid="new">
+          <i class="bi bi-plus-circle"></i>Add New Module
+        </button> 
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Module == -->
+      <div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addModuleModalLabel"><b>Add New Module</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for mid -->
+                <input type="hidden" id="moduleId" name="moduleId">
+                <div class="mb-3">
+                  <label for="moduleCode" class="form-label">Code</label>
+                  <input type="text" class="form-control" id="moduleCode" name="moduleCode" required>
+                </div>
+                <div class="mb-3">
+                  <label for="moduleName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="moduleName" name="moduleName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="moduleDescription" class="form-label">Description</label>
+                  <textarea class="form-control" id="moduleDescription" name="moduleDescription" rows="3"></textarea>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitModule" name="submitModule" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Modules -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Modules</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Modules</p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Code</th>
+                   <th>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    ModuleList($con); // List of Modules
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Modules -->
+    <?php
+     }
+    ?>
+    <!-- Module form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitModule'])) {  // ADD/UPDATE Module
+        // Process the form submission for adding/updating module
+        $mid = $_POST['moduleId']; // Hidden input for ID
+        $mCode = $_POST['moduleCode'];
+        $mName = $_POST['moduleName'];
+        $mDescription = $_POST['moduleDescription'];
+        
+        if($mid === 'new') {
+            // Add new module
+            AddModule($mCode, $mName, $mDescription, $con); // Function to add new module
+            
+        } else {
+            // Update existing module
+            echo "<script>alert('Module with ID: " . $mid . " updated.');</script>"; // Debugging line
+            UpdateModule($mid, $mCode, $mName, $mDescription, $con); // Function to update module
+           
+        }
+      } // End of if submitModule
+    // DELETE module
+    if(isset($_GET['part']) && $_GET['part']==='modules' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+        if(isset($_GET['mid']) && !empty($_GET['mid'])) {
+            $moduleId = $_GET['mid']; // Module ID to delete
+            // Call the function to delete module
+            DeleteModule($moduleId, $con); // Function to delete module    
+        }
+    }
+  ?>
+
+ </main> <!-- End #main -->
  
  <!-- End User -->
  
@@ -1419,6 +1850,109 @@
       }
     });
 
+    // 7) process the form submission for adding/updating inspection method
+    $('#addInspectionMethodModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var imid = button.data('imid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var inspectionMethodCodeInput = modal.find('#inspectionMethodCode');
+      var inspectionMethodNameInput = modal.find('#inspectionMethodName');
+      var inspectionMethodDescriptionInput = modal.find('#inspectionMethodDescription');
+      var submitButton = modal.find('#submitInspectionMethod');
+
+      modal.find('#inspectionMethodId').val(imid); // Set the hidden input value
+      if (imid === 'new') {
+        inspectionMethodCodeInput.val(''); // Clear inputs
+        inspectionMethodNameInput.val('');
+        inspectionMethodDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Inspection Method');
+        submitButton.text('Submit');
+      } else {
+        inspectionMethodCodeInput.val(button.data('code')); // Set the inspection method code
+        inspectionMethodNameInput.val(button.data('name')); // Set the inspection method name
+        inspectionMethodDescriptionInput.val(button.data('desc')); // Set the description
+        modal.find('.modal-title').text('Edit Inspection Method');
+        submitButton.text('Update');
+      }
+    });
+
+    // 8) process the form submission for adding/updating treatment method
+    $('#addTreatmentMethodModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var tmid = button.data('tmid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var treatmentMethodCodeInput = modal.find('#treatmentMethodCode');
+      var treatmentMethodNameInput = modal.find('#treatmentMethodName');
+      var treatmentMethodDescriptionInput = modal.find('#treatmentMethodDescription');
+      var submitButton = modal.find('#submitTreatmentMethod');
+
+      modal.find('#treatmentMethodId').val(tmid); // Set the hidden input value
+      if (tmid === 'new') {
+        treatmentMethodCodeInput.val(''); // Clear inputs
+        treatmentMethodNameInput.val('');
+        treatmentMethodDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Treatment Method');
+        submitButton.text('Submit');
+      } else {
+        treatmentMethodCodeInput.val(button.data('code')); // Set the treatment method code
+        treatmentMethodNameInput.val(button.data('name')); // Set the treatment method name
+        treatmentMethodDescriptionInput.val(button.data('desc')); // Set the description
+        modal.find('.modal-title').text('Edit Treatment Method');
+        submitButton.text('Update');
+      }
+    });
+// 9) process the form submission for adding/updating entity type
+    $('#addEntityTypeModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var etid = button.data('etid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var entityTypeCodeInput = modal.find('#entityTypeCode');
+      var entityTypeNameInput = modal.find('#entityTypeName');
+      var entityTypeDescriptionInput = modal.find('#entityTypeDescription');
+      var submitButton = modal.find('#submitEntityType');
+
+      modal.find('#entityTypeId').val(etid); // Set the hidden input value
+      if (etid === 'new') {
+        entityTypeCodeInput.val(''); // Clear inputs
+        entityTypeNameInput.val('');
+        entityTypeDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Entity Type');
+        submitButton.text('Submit');
+      } else {
+        entityTypeCodeInput.val(button.data('code')); // Set the entity type code
+        entityTypeNameInput.val(button.data('name')); // Set the entity type name
+        entityTypeDescriptionInput.val(button.data('desc')); // Set the description
+        modal.find('.modal-title').text('Edit Entity Type');
+        submitButton.text('Update');
+      }
+    });
+
+    //10) process the form submission for adding/updating modules
+    $('#addModuleModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var mid = button.data('mid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var moduleCodeInput = modal.find('#moduleCode');
+      var moduleNameInput = modal.find('#moduleName');
+      var moduleDescriptionInput = modal.find('#moduleDescription');
+      var submitButton = modal.find('#submitModule');
+
+      modal.find('#moduleId').val(mid); // Set the hidden input value
+      if (mid === 'new') {
+        moduleCodeInput.val(''); // Clear inputs
+        moduleNameInput.val('');
+        moduleDescriptionInput.val('');
+        modal.find('.modal-title').text('Add New Module');
+        submitButton.text('Submit');
+      } else {
+        moduleCodeInput.val(button.data('code')); // Set the module code
+        moduleNameInput.val(button.data('name')); // Set the module name
+        moduleDescriptionInput.val(button.data('desc')); // Set the description
+        modal.find('.modal-title').text('Edit Module');
+        submitButton.text('Update');
+      }
+    });
+
     // SET FOCUS on input fields in data form when the page loads
     window.addEventListener('DOMContentLoaded', function() {
      // Countries form
@@ -1481,6 +2015,51 @@
                 }
               });
           } // End of product unit -addProductUnitModal
+      // Conveyance form
+      var addConveyenceModal = document.getElementById('addConveyenceModal');
+          if (addConveyenceModal) {
+              addConveyenceModal.addEventListener('shown.bs.modal', function () {
+                var conveyanceCodeInput = document.getElementById('conveyanceCode');
+                if (conveyanceCodeInput) {
+                    conveyanceCodeInput.focus();
+                    conveyanceCodeInput.select();
+                }
+              });
+          } // End of conveyance -addConveyenceModal
+      // Inspection Method form
+      var addInspectionMethodModal = document.getElementById('addInspectionMethodModal');
+          if (addInspectionMethodModal) {
+              addInspectionMethodModal.addEventListener('shown.bs.modal', function () {
+                var inspectionMethodCodeInput = document.getElementById('inspectionMethodCode');
+                if (inspectionMethodCodeInput) {
+                    inspectionMethodCodeInput.focus();
+                    inspectionMethodCodeInput.select();
+                }
+              });
+          } // End of inspection method -addInspectionMethodModal
+      // Treatment Method form
+      var addTreatmentMethodModal = document.getElementById('addTreatmentMethodModal');
+          if (addTreatmentMethodModal) {
+              addTreatmentMethodModal.addEventListener('shown.bs.modal', function () {
+                var treatmentMethodCodeInput = document.getElementById('treatmentMethodCode');
+                if (treatmentMethodCodeInput) {
+                    treatmentMethodCodeInput.focus();
+                    treatmentMethodCodeInput.select();
+                }
+              });
+          } // End of treatment method -addTreatmentMethodModal
+
+      // Module list form
+      var addModuleModal = document.getElementById('addModuleModal');
+          if (addModuleModal) {
+              addModuleModal.addEventListener('shown.bs.modal', function () {
+                var moduleCodeInput = document.getElementById('moduleCode');
+                if (moduleCodeInput) {
+                    moduleCodeInput.focus();
+                    moduleCodeInput.select();
+                }
+              });
+          } // End of module -addModuleModal
     }); // End of Window DOMContentLoaded
 
     // Search box for ALL THE DATA TABLES in this file - automatically submit the form on input

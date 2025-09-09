@@ -23,12 +23,20 @@ CREATE TABLE IF NOT EXISTS "public"."tbusergroup" (
     enabled text NOT NULL /* yes/no */
 );
 
-CREATE TABLE IF NOT EXISTS "sch_ephyto"."tblocation" (
+CREATE TABLE IF NOT EXISTS "public"."tblocations" (
     "id" SERIAL PRIMARY KEY,
+    "lid" TEXT NOT NULL,  /* Locaiton ID:  */
     "bordername_eng" TEXT NOT NULL,
     "bordername_lao" TEXT NOT NULL,
-    "location" TEXT NOT NULL,
-    "border_type" INTEGER /* 1=traditional, 2=local, 3=International */
+    "location_type" INTEGER NOT NULL, /* 1=DOA, 2=PAFO, 3=Border point, 4= PPC, 5=ATC, 6= Post-Entry Quarantine Station (PEQS) */
+    enabled text NOT NULL /* yes/no */ 
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tblocationtype" (
+    "id" SERIAL PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "desc" TEXT NOT NULL,
+    enabled text NOT NULL /* yes/no */ 
 );
 
 CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbbordertype" (
@@ -40,6 +48,14 @@ CREATE TABLE IF NOT EXISTS "sch_ephyto"."tbdistricts" (
     "id" SERIAL PRIMARY KEY,
     "pid" INTEGER NOT NULL,
     "dname" TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbmodules" (
+    "id" SERIAL PRIMARY KEY,
+	"code" TEXT NOT NULL,
+    "title" TEXT NOT NULL,  
+    "desc" TEXT,
+    enabled text NOT NULL /* yes/no */
 );
 
 CREATE TABLE IF NOT EXISTS "public"."tbcountry" (
@@ -91,20 +107,40 @@ CREATE TABLE IF NOT EXISTS "public"."tbconveyance" (
     conveyance text NOT NULL /* 1= byland (truck and train), 2=bysea, 3=byair */
 )
 
-CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (
+CREATE TABLE IF NOT EXISTS "public"."tbtapplication" (
+    /* id and uid will be added first, and then update the rest. So, set empty fields for now */
     id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL, /* user_id from tbusers */
-    request_id INTEGER NOT NULL, /* request_id from tbrequestor */
-    transation_date date NOT NULL,
-    company_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL,
-    punit_id INTEGER NOT NULL, /* product_unit */
-    conveyance_id INTEGER NOT NULL,
-    conveyance_sign text NOT NULL,
-    location_id INTEGER NOT NULL, /* borderpoint_id */
-    tbtransaction_type INTEGER NOT NULL, /* 1=import, 2=export */
-    destination_id INTEGER NOT NULL /* company_id */
+    application_id TEXT, /* Application ID=00000 + id + last two digits of year + 2 digits of province */
+    application_date date,
+    company_id INTEGER,
+    reg_no TEXT, /* Registration number of application */
+    export_point INTEGER, /* borderpoint_id from tblocations */
+    contact_person TEXT, /* Name of the contact person from tbentity_exporter */
+    address_person TEXT,
+    phone TEXT,
+    country_import INTEGER, /* country_id */
+    import_point INTEGER, /* borderpoint_id from tblocations */
+    certificate_type TEXT, /* For export OR transit */
+    multi_item TEXT, /* Yes and no */
+    print_support TEXT, /* Yes and no */
+    commodity_id INTEGER, /* product_id from tbproduct */
+    name_oncertificate TEXT, /* Name on certificate */
+    name_scientific TEXT, /* Scientific name of the product */
+    commodity_description TEXT, /* Description of the product */
+    quantity_net REAL, /* Net quantity of the product */
+    quantity_gross REAL, /* Gross quantity of the product */
+    unit_id INTEGER, /* prounit from tbproduct_unit */
+    marks_item TEXT, /* Marks and numbers of the product */
+    place_origin INTEGER, /* Place of origin of the product- country_id from tbcountry */
+    conveyance_id INTEGER, /* conveyance from tbconveyance */
+    conveyance_sign TEXT, /* Conveyance sign */
+    address_exporter TEXT, /* Address of the exporter- it would be from tbentity_export */
+    address_importer TEXT, /* Address of the importer - it would be from tbentity_importer */
+    purpose TEXT, /* Purpose of the product */
+    place_quarantine INTEGER, /* Place of quarantine - borderpoint_id from tblocations */
+    place_treatment INTEGER, /* Place of treatment - borderpoint_id from tblocations */
+    date_certificate date /* Date of certificate */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbinspection" (

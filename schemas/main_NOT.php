@@ -1,13 +1,28 @@
-<?php
-      // Pk: 2025-04-30
-  session_start();
+<?php 
+session_start();
 
-  require("php-bin/connection.php"); // replace include with require
-  require("php-bin/supports.php"); // replace include with require
+// Check if a language is selected via the query parameter
+if (isset($_GET['lang'])) {
+  $selectedLang = $_GET['lang'];
+  $_SESSION['lang'] = $selectedLang; // Store the selected language in the session
+} else {
+  // Default to English if no language is selected
+  if (!isset($_SESSION['lang'])) {
+      $_SESSION['lang'] = 'en';
+  }
+}
 
-  $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; 
+// Include the appropriate language file
+$langFile = "php-bin/lang_" . $_SESSION['lang'] . ".php";
+if (file_exists($langFile)) {
+  $translations = include($langFile);
+} else {
+  die("Language file not found.");
+}
+// connection to database
+ require("php-bin/connection.php"); 
+ $uslogin = $_SESSION["username"];
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -15,7 +30,7 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Users List</title>
+  <title><?php echo $translations['dashboard']; ?></title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -36,10 +51,8 @@
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
-  <!-- Template Main CSS File - PK -->
+  <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
-  <!--  CSS File- PK -->
-  <link href="stylecss/scss.css" rel="stylesheet">
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -56,9 +69,9 @@
   <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="main.php" class="logo d-flex align-items-center">
+      <a href="index.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+        <span class="d-none d-lg-block">ePhyto Certificate</span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -72,19 +85,31 @@
 
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
+        <!-- Language Switcher -->
+        <li class="nav-item">
+          <a href="?lang=la" class="nav-link nav-icon">
+          <img src="assets/img/flags/lao.png" alt="Lao" style="width: 24px; height: 16px;">
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="?lang=en" class="nav-link nav-icon">
+          <img src="assets/img/flags/english.png" alt="English" style="width: 24px; height: 16px;">
+          </a>
+        </li>
+    <!-- End Language Switcher -->
 
         <li class="nav-item d-block d-lg-none">
           <a class="nav-link nav-icon search-bar-toggle " href="#">
             <i class="bi bi-search"></i>
           </a>
         </li><!-- End Search Icon-->
-
+        <!-- pk** notification icon
         <li class="nav-item dropdown">
 
           <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
             <i class="bi bi-bell"></i>
             <span class="badge bg-primary badge-number">4</span>
-          </a><!-- End Notification Icon -->
+          </a>
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
             <li class="dropdown-header">
@@ -150,9 +175,11 @@
               <a href="#">Show all notifications</a>
             </li>
 
-          </ul><!-- End Notification Dropdown Items -->
+          </ul>
 
-        </li><!-- End Notification Nav -->
+        </li>
+        -->
+        <!-- End Notification Nav -->
 
         <li class="nav-item dropdown">
 
@@ -224,13 +251,13 @@
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
             <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $uslogin; ?></span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $loginuser; ?></h6>
-              <span>National IT Consultant</span>
+              <h6>Kevin Anderson</h6>
+              <span>Web Designer</span>
             </li>
             <li>
               <hr class="dropdown-divider">
@@ -267,7 +294,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="index.php">
+              <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Sign Out</span>
               </a>
@@ -287,108 +314,30 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php">
+        <a class="nav-link " href="index.php">
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo $translations['Dashboard']; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-menu-button-wide"></i><span>Components</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="components-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="components-alerts.html">
-              <i class="bi bi-circle"></i><span>Alerts</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-accordion.html">
-              <i class="bi bi-circle"></i><span>Accordion</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-badges.html">
-              <i class="bi bi-circle"></i><span>Badges</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-breadcrumbs.html">
-              <i class="bi bi-circle"></i><span>Breadcrumbs</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-buttons.html">
-              <i class="bi bi-circle"></i><span>Buttons</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-cards.html">
-              <i class="bi bi-circle"></i><span>Cards</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-carousel.html">
-              <i class="bi bi-circle"></i><span>Carousel</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-list-group.html">
-              <i class="bi bi-circle"></i><span>List group</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-modal.html">
-              <i class="bi bi-circle"></i><span>Modal</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-tabs.html">
-              <i class="bi bi-circle"></i><span>Tabs</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-pagination.html">
-              <i class="bi bi-circle"></i><span>Pagination</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-progress.html">
-              <i class="bi bi-circle"></i><span>Progress</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-spinners.html">
-              <i class="bi bi-circle"></i><span>Spinners</span>
-            </a>
-          </li>
-          <li>
-            <a href="components-tooltips.html">
-              <i class="bi bi-circle"></i><span>Tooltips</span>
-            </a>
-          </li>
-        </ul>
-      </li><!-- End Components Nav -->
-
+    <!-- Form Nav -->
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span>Forms</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-journal-text"></i><span><?php echo $translations['e-Phytosanitary']; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="forms-elements.html">
-              <i class="bi bi-circle"></i><span>Form Elements</span>
+              <i class="bi bi-circle"></i><span>Request</span>
             </a>
           </li>
           <li>
             <a href="forms-layouts.html">
-              <i class="bi bi-circle"></i><span>Form Layouts</span>
+              <i class="bi bi-circle"></i><span>Inspection</span>
             </a>
           </li>
           <li>
             <a href="forms-editors.html">
-              <i class="bi bi-circle"></i><span>Form Editors</span>
+              <i class="bi bi-circle"></i><span>Certificate</span>
             </a>
           </li>
           <li>
@@ -400,20 +349,41 @@
       </li><!-- End Forms Nav -->
 
       <li class="nav-item">
-        <a class="nav-link " data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Tables</span><i class="bi bi-chevron-down ms-auto"></i>
+        <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
-        <ul id="tables-nav" class="nav-content collapse show" data-bs-parent="#sidebar-nav">
+        <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="tables-general.html">
               <i class="bi bi-circle"></i><span>General Tables</span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html" class="active">
-              <i class="bi bi-circle"></i><span>Users List</span>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Companies</span>
             </a>
           </li>
+          <li>
+            <a href="masterdata.php?part=product">
+              <i class="bi bi-circle"></i><span>Product</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Districts</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Locations</span>
+            </a>
+          </li>
+          <li>
+            <a href="tables-data.html">
+              <i class="bi bi-circle"></i><span>Provinces</span>
+            </a>
+          </li>
+          
         </ul>
       </li><!-- End Tables Nav -->
 
@@ -473,46 +443,80 @@
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
+        <a class="nav-link collapsed" href="users-profile.html">
+          <i class="bi bi-people"></i>
+          <span>Users group</span>
+        </a>
+      </li><!-- End Users group -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-person-plus"></i><span>Users</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="tables-userslist.php">
+              <i class="bi bi-circle"></i><span>Users list</span>
+            </a>
+          </li>
+          <li>
+            <a href="forms-usregister.php">
+              <i class="bi bi-circle"></i><span>Add new user</span>
+            </a>
+          </li>
+        </ul>
+      </li>  
+      <!-- pk**: End of User Admin-->
+      <!-- pk**
+      <li class="nav-item">
         <a class="nav-link collapsed" href="pages-faq.html">
           <i class="bi bi-question-circle"></i>
           <span>F.A.Q</span>
         </a>
-      </li><!-- End F.A.Q Page Nav -->
+      </li>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="pages-contact.html">
           <i class="bi bi-envelope"></i>
           <span>Contact</span>
         </a>
-      </li><!-- End Contact Page Nav -->
+      </li>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="pages-register.html">
           <i class="bi bi-card-list"></i>
           <span>Register</span>
         </a>
-      </li><!-- End Register Page Nav -->
-
+      </li>
+    -->
+    <!-- End Register Page Nav -->
+    <!-- pk**
       <li class="nav-item">
-        <a class="nav-link collapsed" href="pages-login.html">
+        <a class="nav-link collapsed" href="pages-login.php">
           <i class="bi bi-box-arrow-in-right"></i>
           <span>Login</span>
         </a>
-      </li><!-- End Login Page Nav -->
-
+      </li>
+    -->  
+      <!-- End Login Page Nav -->
+    <!-- pk**
       <li class="nav-item">
         <a class="nav-link collapsed" href="pages-error-404.html">
           <i class="bi bi-dash-circle"></i>
           <span>Error 404</span>
         </a>
-      </li><!-- End Error 404 Page Nav -->
-
+      </li>
+    -->
+      <!-- End Error 404 Page Nav -->
+    <!-- pk**
       <li class="nav-item">
         <a class="nav-link collapsed" href="pages-blank.html">
           <i class="bi bi-file-earmark"></i>
           <span>Blank</span>
         </a>
-      </li><!-- End Blank Page Nav -->
+      </li>
+    -->  
+      <!-- End Blank Page Nav -->
 
     </ul>
 
@@ -521,55 +525,92 @@
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Users List</h1>
+      <h1>Dashboard</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Users</li>
+          <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+          <li class="breadcrumb-item active">Dashboard</li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
-    <?php $upermit = Userpermit($loginuser,$con);
-       if($upermit == true){ 
-     ?>
-    <section class="section">
+
+    <section class="section dashboard">
       <div class="row">
-        <div class="col-lg-12">
 
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Users</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Users list</p>
+        <!-- Left side columns -->
+        <div class="col-lg-8" style="width: 100%;">
+          <div class="row">           
+                 
+            <!-- Recent Sales -->
+            <div class="col-12">
+              <div class="card recent-sales overflow-auto">
+                <div class="card-body">
+                  <h5 class="card-title">Phytosanitary Certificates <span>| Today</span></h5>
 
-              <!-- Table with stripped rows -->
-              <table class="table datatable tabledata-fonts" >
-                <thead>
-                  <tr>
-                   <th><b>N</b>o</th>
-                   <th><b>N</b>ame</th>
-                   <th>Surname</th>
-                   <th>Unit</th>
-                   <th>Phone</th>
-                   <th>Email</th>
-                   <th>Last Login</th>
-                   <th>User Group</th>
-                   <th>Admin User</th>
-                   <th>Location</th>
-                 </tr>
-                </thead>
-                <tbody>
-                  <?php Userlist($con); ?>
-                </tbody>
-              </table>
-              <!-- End Table with stripped rows -->
+                  <table class="table table-borderless datatable">
+                    <thead>
+                      <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Exporters</th>
+                        <th scope="col">Submission date</th>
+                        <th scope="col">Request</th>
+                        <th scope="col">Inspection</th>
+                        <th scope="col">Treatment</th>
+                        <th scope="col">Cerificates</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <th scope="row"><a href="#">#2457</a></th>
+                        <td>ລາວຈີນເຕີຢວນ ເຕັກໂນໂລຊີກະສິກຳ</td>
+                        <td>01 May 2025</td>
+                        <td><a href="#" class="text-primary">Completed</a></td>
+                        <td class="badge bg-warning">Pending</td>
+                        <td><span class="badge bg-success"></span></td>
+                        <td><span class="badge bg-success"></span></td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><a href="#">#2147</a></th>
+                        <td>ທິນສົ່ງເສີມກະສິກຳ ຂາອອກ-ຂາເຂົ້າ</td>
+                        <td>03 May 2025</td>
+                        <td><a href="#" class="text-primary">Completed</a></td>
+                        <td><span class="badge bg-warning">Pending</span></td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><a href="#">#2049</a></th>
+                        <td>ກ້າວໜ້າລາວ ຈໍາກັດ</td>
+                        <td>05 May 2025</td>
+                        <td><a href="#" class="text-primary">Pending</a></td>
+                        <td>$147</td>
+                        <td><span class="badge bg-success">Approved</span></td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><a href="#">#2644</a></th>
+                        <td>ກະເສດວິນນາສາລະວັນ ຈໍາກັດຜູ້ດຽວ</td>
+                        <td>05 May 2025</td>
+                        <td><a href="#" class="text-primar">Pending</a></td>
+                        <td>$67</td>
+                        <td><span class="badge bg-danger">Pending</span></td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><a href="#">#2644</a></th>
+                        <td>ເຄທີພັດທະນາກະສິກຳ</td>
+                        <td>15 May 2025</td>
+                        <td><a href="#" class="text-primary">Pending</a></td>
+                        <td>$165</td>
+                        <td><span class="badge bg-success">Approved</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-            </div>
+                </div>
           </div>
-        </div>
-      </div>
+        </div><!-- End Left side columns -->
+
+        <!-- Right side columns *****************PK************************ -->
     </section>
-     <?php } ?>
+
   </main><!-- End #main -->
 
   <!-- ======= Footer ======= -->

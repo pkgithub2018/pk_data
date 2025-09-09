@@ -166,37 +166,32 @@ CREATE TABLE IF NOT EXISTS "public"."tbentity" (
 
 CREATE TABLE IF NOT EXISTS "public"."tbinspection" (
     id SERIAL PRIMARY KEY,
-    certificate_id INTEGER NOT NULL,
-    inspection_type INTEGER NOT NULL, /* inspection_method */
+    application_id INTEGER NOT NULL, /* application_id - auto increment from tbapplication */
+    /* inspection_type INTEGER NOT NULL, inspection_method */
     inspection_date date NOT NULL,
-    fee real NOT NULL, /* Inspection fee */
+    sample_no text, /* sample number */
+    sample_quantity real NOT NULL, /* Quantity of sample */
+    unit_id INTEGER NOT NULL, /* Unit ID from tbunits */
+    sample_collected_by text, /* User ID who collected the sample */
+    inspected_by text, /* User ID who screened the sample */
+    certificate_fee real NOT NULL, /* Inspection fee */
+    receipt_no text NOT NULL, /* Receipt number */
     lot_number text NOT NULL, /* Lot number */
-    pest_post_detected text NOT NULL, /* yes/no */
-    lab_analysis text NOT NULL, /* yes/no */
-    treatment text NOT NULL, /* yes/no */
-    treatment_date date NOT NULL, /* Date of treatment */
     inspection_method INTEGER NOT NULL, /* inspection_method ID*/
+    pest_detected text NOT NULL, /* yes/no */
+    treat_ability text NOT NULL, /* yes/no */
+    lab_required text NOT NULL, /* yes/no */
     treatment_method INTEGER NOT NULL, /* treatment_method ID */
-    chemical text NOT NULL, /* Chemical used for treatment */
-    chemical_reason text NOT NULL, /* Reason for using chemical */
-    chemical_treatment text NOT NULL, /* Name of chemical treatment */
+    treatment_date date NOT NULL, /* Date of treatment */
+    chemical_used text NOT NULL, /* Chemical used for treatment */
+    chemical_fortreat text NOT NULL, /* Name of chemical treatment */
     duration_temp text NOT NULL, /* Duration and temperature of treatment */
     concentration text NOT NULL, /* Concentration of chemical used */
+    sample_inspectedby text NOT NULL, /* inspection for treatment */
     additonal_info text, /* Additional information */
-    post_treatment_information text NOT NULL, /* Details of post treatment, if any */
-    product_id INTEGER NOT NULL, /* product_id from tbproducts */
-    qty real NOT NULL, /* Quantity of product inspected */
-    location_id INTEGER NOT NULL, /* Location where product is inspected */
-    alternate_location text, /* Alternate location if applicable */
-    sample_screening text NOT NULL, /* yes/no */
-    compliant text NOT NULL, /* pass/fail */
-    internal_note text, /* Internal notes for inspection */
-    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
-    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
-    updated_by INTEGER NOT NULL, /* User ID who updated the record */
-    inpected_by INTEGER NOT NULL, /* User ID who performed the inspection */
+    treatment_reason text NOT NULL, /* Reason for using chemical */
+    post_treatment_details text NOT NULL, /* Details of post treatment, if any */
     enabled text NOT NULL /* yes/no */
-
 )
 
 
@@ -272,6 +267,11 @@ CREATE TABLE IF NOT EXISTS "public"."tbconveyance" (
     conveytype text NOT NULL, /* 1= byland (truck and train), 2=bysea, 3=byair */
     description text, /* was "desc" - avoid using reserved keywords */
     enabled text NOT NULL /* yes/no */
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbpurpose" (
+    id SERIAL PRIMARY KEY,
+    title text NOT NULL 
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (

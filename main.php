@@ -20,19 +20,205 @@ if (file_exists($langFile)) {
   die("Language file not found.");
 }
 // connection to database
- require("php-bin/connection.php"); 
+ require("php-bin/connection.php");
+ require("php-bin/supports.php");
+ 
  $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // use user id
+ $guid = isset($_SESSION["groupid"]) ? $_SESSION["groupid"] : ''; // use group id
  if(empty($userid)){
     // If user ID is not set, redirect to login page
-    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>";
-    
- } else {
-    // If user ID is set, continue with the rest of the code
-   // echo "<script>alert('Welcome back!- Userid: " . $_SESSION['uid'] . "');</script>";
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
  }
- //echo "<script>console.log('User ID: " . $userid . "');</script>";
+ 
+ // CANCEL/DELETE Application
+ if (isset($_GET['btn']) && $_GET['btn'] === 'cancelApp') {
+   // Handle the cancellation logic here
+    $appid = $_GET['appid']; // Get the application ID from the query parameter
+   echo "<script>alert('Application cancelled successfully. ID: " . $appid . "');</script>";
+    $del = DeleteApplication($appid, $con);
+ }
 
- // echo "<script>alert('Group name: " . $_SESSION["groupname"] . "');</script>";
+ // SUBMIT/SAVE application by UPDATING tbapplication with the form data - CLICK ON SUBMIT BUTTON
+    if (isset($_POST['btnsubApplication_save']) && (isset($_POST['btnsubApplication_save']) === "submit") || (isset($_POST['btnsubApplication_save']) === "update")) {  // Submit from application form in transaction.php
+        $app_id = isset($_POST['app_id']) ? $_POST['app_id'] : ''; // hidden input
+        
+        $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
+        $reg_no = isset($_POST['reg_no']) ? $_POST['reg_no'] : '';
+        $entry_point = isset($_POST['entry_point']) ? $_POST['entry_point'] : '';
+        $applicant_name = isset($_POST['applicant_name']) ? $_POST['applicant_name'] : '';
+        $address = isset($_POST['address']) ? $_POST['address'] : '';
+        $phone = isset($_POST['phone']) ? $_POST['phone'] : '';
+
+
+        $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
+        $import_point = isset($_POST['import_point']) ? $_POST['import_point'] : '';
+        $export_certificate = isset($_POST['export_certificate']) ? 1 : 0;
+        $transit_certificate = isset($_POST['transit_certificate']) ? 1 : 0;
+        if($export_certificate==1){
+          $certificate_type = 'export';
+        } elseif($transit_certificate==1) {
+          $certificate_type = 'transit';
+        }
+        $check_multiple = isset($_POST['multiple_commodities']) ? 1 : 0;
+        $check_support_document = isset($_POST['support_document']) ? 1 : 0;
+        $product_name = isset($_POST['proname']) ? $_POST['proname'] : '';
+        $name_oncertificate = isset($_POST['name_oncertificate']) ? $_POST['name_oncertificate'] : '';
+        $scientific_name = isset($_POST['scientific_name']) ? $_POST['scientific_name'] : '';
+
+        $product_id = ProductId($product_name, $scientific_name, $con);
+
+        $commodity_description = isset($_POST['number_description']) ? $_POST['number_description'] : '';
+        $nquantity = isset($_POST['nquantity']) ? $_POST['nquantity'] : '';
+        $gquantity = isset($_POST['gquantity']) ? $_POST['gquantity'] : '';
+
+        $unit = isset($_POST['unit']) ? $_POST['unit'] : '';
+        $marks = isset($_POST['marks']) ? $_POST['marks'] : '';
+
+        $place_origin = isset($_POST['place_origin']) ? $_POST['place_origin'] : null;  // data type - integer could not accept ''
+        $conveyance = isset($_POST['conveyance']) ? $_POST['conveyance'] : null;
+        $conveyance_sign = isset($_POST['conveyance_sign']) ? $_POST['conveyance_sign'] : '';
+
+        $exporter_address = isset($_POST['exporter_address']) ? $_POST['exporter_address'] : '';
+        $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';
+
+        $purpose = isset($_POST['purpose']) ? $_POST['purpose'] : '';
+     
+         $place_quarantine = isset($_POST['place_quarantine']) && $_POST['place_quarantine'] !== '' ? (int)$_POST['place_quarantine'] : null;
+
+        //$place_treatment = isset($_POST['place_treatment']) ? $_POST['place_treatment'] : '';
+        $place_treatment = isset($_POST['place_treatment']) && $_POST['place_treatment'] !== '' ? (int)$_POST['place_treatment'] : null;
+
+        $place_quarantine_other = isset($_POST['place_quarantine_other']) ? $_POST['place_quarantine_other'] : '';
+        $place_treatment_other = isset($_POST['place_treatment_other']) ? $_POST['place_treatment_other'] : '';
+        $certificate_date = isset($_POST['certificate_date']) ? $_POST['certificate_date'] : '';
+        //$guid = isset($_POST['guid']) ? $_POST['guid'] : '';
+
+            // Put them into $data array (keys = DB column names)
+        $data = [
+            'reg_no'             => $reg_no,
+            'export_point'       => $entry_point,
+            'contact_person'     => $applicant_name,
+            'address_person'     => $address,
+            'phone'              => $phone,
+           
+            'country_import'     => $import_country,
+            'import_point'       => $import_point,
+            'certificate_type'   => $certificate_type,  
+            'multi_item'         => $check_multiple,
+            'print_support'      => $check_support_document,
+            'commodity_id'      => $product_id,
+            'name_oncertificate' => $name_oncertificate,
+            'name_scientific'    => $scientific_name,
+            'commodity_description'=> $commodity_description,
+
+            'quantity_net'        => $nquantity,
+            'quantity_gross'     => $gquantity,
+            'unit_id'            => $unit,
+            'marks_item'         => $marks,
+            'place_origin'      => $place_origin,
+            'conveyance_id'     => $conveyance,
+            'conveyance_sign'   => $conveyance_sign,
+            'address_exporter'  => $exporter_address,
+            'address_importer'  => $importer_address,
+            'purpose'           => $purpose,
+            'place_quarantine'  => $place_quarantine,
+            'place_treatment'   => $place_treatment,
+            'date_certificate'  => $certificate_date,
+            'place_quarantine_other' => $place_quarantine_other,
+            'place_treatment_other'  => $place_treatment_other
+        ];
+        
+        $result = ApplicationUpdate($app_id, $data, $con); // Update tbapplication with the form data
+        if ($result) {
+          //  echo "<script>alert('Application updated successfully!');</script>";
+        } else {
+          //  echo "<script>alert('Failed to update application. Please try again.');</script>";
+        }
+    } // End of if - Submission for updating application FIRST TIME (NO CHANGE IS MADE)
+
+   // UPDATE/CHANGE on application - CLICK ON UPDATE BUTTON in transaction.php
+   if(isset($_POST['btnsubApplication_save']) && $_POST['btnsubApplication_save'] === "update"){
+     echo "<script>alert('Update- Application ID: $app_id');</script>";
+   }
+
+   // *************************** INSPECTION ***************************
+    // SAVE inspection data - CLICK ON SAVE BUTTON in inspection form in transaction.php
+    if (isset($_POST['btnSubmitInspection'])) {
+      
+        $app_id = isset($_POST['appid']) ? $_POST['appid'] : ''; // hidden input
+        $inspection_date = isset($_POST['inspection_date']) ? $_POST['inspection_date'] : null;
+        $sample_no = isset($_POST['sampleno']) ? $_POST['sampleno'] : '';
+        $sample_quantity = isset($_POST['sample_volume']) ? $_POST['sample_volume'] : '';
+        $unit_id = isset($_POST['unit']) ? $_POST['unit'] : null;
+        $sample_collected_by = isset($_POST['sample_collectedby']) ? $_POST['sample_collectedby'] : '';
+        $inspected_by = isset($_POST['sample_inspectedby']) ? $_POST['sample_inspectedby'] : '';
+        $certificate_fee = isset($_POST['certificate_fee']) ? $_POST['certificate_fee'] : '';
+        $receipt_no = isset($_POST['receipt_no']) ? $_POST['receipt_no'] : '';
+        $lot_number = isset($_POST['lot_no']) ? $_POST['lot_no'] : '';
+        $inspection_method = isset($_POST['inspection_method']) && $_POST['inspection_method'] !== '' ? (int)$_POST['inspection_method'] : null;
+        $pest_detected = isset($_POST['detected_pest']) ? 1 : 0;
+        $treat_ability = isset($_POST['treatment_ability']) ? 1 : 0;
+        $lab_required = isset($_POST['lab_analysis']) ? 1 : 0;  
+        $treatment_method = isset($_POST['treatment_method']) && $_POST['treatment_method'] !== '' ? (int)$_POST['treatment_method'] : null;
+        $treatment_date = isset($_POST['treatment_date']) ? $_POST['treatment_date'] : null;
+        $chemical_used = isset($_POST['chemical_used']) ? $_POST['chemical_used'] : '';
+        $chemical_fortreat = isset($_POST['chemical_fortreat']) ? $_POST['chemical_fortreat'] : '';
+        $duration_temp = isset($_POST['duration_temp']) ? $_POST['duration_temp'] : '';
+        $concentration = isset($_POST['concentration']) ? $_POST['concentration'] : '';
+        $sample_inspectedby = isset($_POST['sample_inspectedby']) ? $_POST['sample_inspectedby'] : '';
+        $additional_info = isset($_POST['additional_info']) ? $_POST['additional_info'] : '';
+        $treatment_reason = isset($_POST['reason']) ? $_POST['reason'] : '';
+        $post_treatment_details = isset($_POST['post_details']) ? $_POST['post_details'] : '';
+
+         // Put them into $inspection_data array (keys = DB column names)
+
+        $inspection_data = [
+            'application_id' => $app_id,
+            'inspection_date' => $inspection_date,
+            'sample_no' => $sample_no,
+            'sample_quantity' => $sample_quantity,
+            'unit_id' => $unit_id,
+            'sample_collected_by' => $sample_collected_by,
+            'inspected_by' => $inspected_by,
+            'certificate_fee' => $certificate_fee,
+            'receipt_no' => $receipt_no,
+            'lot_number' => $lot_number,
+            'inspection_method' => $inspection_method,
+            'pest_detected' => $pest_detected,
+            'treat_ability' => $treat_ability,
+            'lab_required' => $lab_required,
+            'treatment_method' => $treatment_method,
+            'treatment_date' => $treatment_date,
+            'chemical_used' => $chemical_used,
+            'chemical_fortreat' => $chemical_fortreat,
+            'duration_temp' => $duration_temp,
+            'concentration' => $concentration,
+            'sample_inspectedby' => $sample_inspectedby,
+            'additional_info' => $additional_info,
+            'treatment_reason' => $treatment_reason,
+            'post_treatment_details' => $post_treatment_details,
+            'enabled' => 'yes'
+
+        ];
+        //echo "<script>alert('Save inspection data -UPDATE: pk - Application ID: $app_id');</script>";
+         // ADD NEW inspection data
+         if($_POST['btnSubmitInspection'] === 'submit'){
+            $result = InspectionAdd($inspection_data, $con);
+            if ($result) {
+                echo "<script>alert('Inspection data saved successfully!');</script>";
+            } else {
+                echo "<script>alert('Failed to save inspection data. Please try again.');</script>";
+            }
+          } elseif($_POST['btnSubmitInspection'] === 'update'){  // UPDATE inspection data
+            $result = InspectionUpdate($app_id, $inspection_data, $con);
+            if ($result) {
+                echo "<script>alert('Inspection data updated successfully!');</script>";
+            } else {
+                echo "<script>alert('Failed to update inspection data. Please try again.');</script>";
+            }
+          }
+      
+    } // end of if - submission of inspection form
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +241,7 @@ if (file_exists($langFile)) {
 
   <!-- Vendor CSS Files -->
   <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet"> 
   <link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
   <link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
   <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
@@ -64,6 +250,8 @@ if (file_exists($langFile)) {
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
+ 
+
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -179,33 +367,13 @@ if (file_exists($langFile)) {
   <aside id="sidebar" class="sidebar">
 
     <ul class="sidebar-nav" id="sidebar-nav">
-
       <li class="nav-item">
         <a class="nav-link " href="index.php">
-          <i class="bi bi-grid"></i>
+          <i class="bi bi-grid"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo $translations['Dashboard']; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
     
-      <li class="nav-item">
-        <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-folder"></i>
-          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="transaction-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="transaction.php?part=application_list">
-              <i class="bi bi-circle"></i><span>Application</span>
-            </a>
-          </li>
-          <li>
-            <a href="transaction.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection's results</span>
-            </a>
-          </li>
-        </ul>
-      </li><!-- End Transaction Nav -->
-
       <li class="nav-item">
         <a class="nav-link collapsed" href="entity.php?entity=export" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -219,7 +387,9 @@ if (file_exists($langFile)) {
           <span>Import entity</span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
+
     <!-- Module Nav -->
+     <!--
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-journal-text"></i><span><?php echo $translations['modules']; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -227,7 +397,7 @@ if (file_exists($langFile)) {
         <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Entity/Company</span> <!-- Not used yet -->
+              <i class="bi bi-circle"></i><span>Entity/Company</span> 
             </a>
           </li>
           <li>
@@ -251,7 +421,9 @@ if (file_exists($langFile)) {
             </a>
           </li>
         </ul>
-      </li><!-- End Forms Nav -->
+      </li>
+    -->
+      <!-- End Forms Nav -->
 
       <?php if($_SESSION["groupname"] == "admin"){ ?><!-- Admin group check -->
 
@@ -374,7 +546,7 @@ if (file_exists($langFile)) {
                 <div class="card-body">
                   <h5 class="card-title">Phytosanitary Certificates <span>| Today</span></h5>
 
-                  <table class="table table-borderless datatable">
+                  <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
                         <th scope="col">Application No</th>
@@ -383,51 +555,11 @@ if (file_exists($langFile)) {
                         <th scope="col">Application</th>
                         <th scope="col">Inspection</th>
                         <th scope="col">Certificate</th>
-                        <th scope="col">Printing/Issuing</th>
+                        <th scope="col">Certificate status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <th scope="row"><a href="#">#2457</a></th>
-                        <td>ລາວຈີນເຕີຢວນ ເຕັກໂນໂລຊີກະສິກຳ</td>
-                        <td>01 May 2025</td>
-                        <td><a href="transaction.php?part=application" class="text-primary">Pending</a></td>
-                        <td class="badge bg-warning">Pending</td>
-                        <td><span class="badge bg-success"></span></td>
-                        <td><span class="badge bg-success"></span></td>
-                      </tr>
-                      <tr>
-                        <th scope="row"><a href="#">#2147</a></th>
-                        <td>ທິນສົ່ງເສີມກະສິກຳ ຂາອອກ-ຂາເຂົ້າ</td>
-                        <td>03 May 2025</td>
-                        <td><a href="#" class="text-primary">Completed</a></td>
-                        <td><span class="badge bg-warning">Pending</span></td>
-                        <td></td>
-                      </tr>
-                      <tr>
-                        <th scope="row"><a href="#">#2049</a></th>
-                        <td>ກ້າວໜ້າລາວ ຈໍາກັດ</td>
-                        <td>05 May 2025</td>
-                        <td><a href="#" class="text-primary">Pending</a></td>
-                        <td>$147</td>
-                        <td><span class="badge bg-success">Approved</span></td>
-                      </tr>
-                      <tr>
-                        <th scope="row"><a href="#">#2644</a></th>
-                        <td>ກະເສດວິນນາສາລະວັນ ຈໍາກັດຜູ້ດຽວ</td>
-                        <td>05 May 2025</td>
-                        <td><a href="#" class="text-primar">Pending</a></td>
-                        <td>$67</td>
-                        <td><span class="badge bg-danger">Pending</span></td>
-                      </tr>
-                      <tr>
-                        <th scope="row"><a href="#">#2644</a></th>
-                        <td>ເຄທີພັດທະນາກະສິກຳ</td>
-                        <td>15 May 2025</td>
-                        <td><a href="#" class="text-primary">Pending</a></td>
-                        <td>$165</td>
-                        <td><span class="badge bg-success">Approved</span></td>
-                      </tr>
+                     <?php ApplicationList($guid, $con); ?>
                     </tbody>
                   </table>
 

@@ -31,6 +31,13 @@ body {
 .header .dropdown-item:hover {
     background-color: #495057;
 }
+/* PK - set white background */
+#header {
+   /* background-color: #fff !important; 
+    background-color: #343a40 !important;
+    color: #ffffff !important;
+    */
+}
 footer {
     background-color: #343a40;
     color: #ffffff;
@@ -90,3 +97,23 @@ footer .footer-icon {
         width: 25px;
         height: 20px;
     }
+
+/* PK */
+/* Make all dropdown menu items white */
+.dropdown-menu.profile .dropdown-item,
+.dropdown-menu.profile .dropdown-header h6,
+.dropdown-menu.profile .dropdown-header span {
+    color: #fff !important;
+}
+
+/* Make the background of the dropdown dark for contrast */
+.dropdown-menu.profile {
+    background-color: #222 !important;
+}
+
+/* On hover, make the hovered menu item text black and background white */
+.dropdown-menu.profile .dropdown-item:hover,
+.dropdown-menu.profile .dropdown-item:focus {
+    color: #000 !important;
+    background-color: #fff !important;
+}

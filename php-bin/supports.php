@@ -326,6 +326,36 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
     }
   }
 
+  /*
+    SelectCountry: Select country from tbcountries table
+  */
+ function SelectCountry($countryid, $con){
+    // Check if the country ID is set
+    $sql = "SELECT id, title FROM tbcountries ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($countryid !== null && $countryid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+}
+
+/*
+ SelectProvince: Select province from tbprovinces table
+*/
+function SelectProvince($provinceid, $con){
+    // Check if the province ID is set
+    $sql = "SELECT id, pname FROM tbprovinces ORDER BY pname ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($provinceid !== null && $provinceid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['pname']}</option>";
+        }
+    }
+}
+
 /*
  SelectLocation: Select location from tbusers table
 */
@@ -373,6 +403,51 @@ function SelectLocationType($ltype, $con){
  }
 
  /*
+ SelectUnit: Select unit from tbproduct_unit table
+*/
+ function SelectUnit($unitid, $con){
+    // Check if the unit ID is set
+    $sql = "SELECT id, symb FROM tbproduct_unit ORDER BY symb ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($unitid !== null && $unitid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['symb']}</option>";
+        }
+    }
+ }
+
+ /*
+  SelectConveyance: Select conveyance from tbconveyance table
+*/
+ function SelectConveyance($conveyanceid, $con){
+    // Check if the conveyance ID is set
+    $sql = "SELECT id, conveytype FROM tbconveyance ORDER BY conveytype ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($conveyanceid !== null && $conveyanceid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['conveytype']}</option>";
+        }
+    }
+}
+
+/*
+  SelectPurpose: Select purpose from tbpurpose table
+*/
+ function SelectPurpose($purposeid, $con){
+    // Check if the purpose ID is set
+    $sql = "SELECT id, title FROM tbpurpose ORDER BY title ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($purposeid !== null && $purposeid == $row['id']) ? 'selected' : '';
+            echo "<option value=\"{$row['id']}\" $selected>{$row['title']}</option>";
+        }
+    }
+}
+
+/*
  SelectModules: Select modules from tbmodules table
 */
 function SelectModules($moduleid, $con){
@@ -1065,6 +1140,33 @@ function DeleteProduct($pid, $con) {
     }
 }
 /*
+  ProductInfo: Get product information from tbproduct table
+*/
+function ProductInfo($pid, $con) {
+    $sqlproduct = "SELECT * FROM tbproduct WHERE id='$pid'";
+    $result = pg_query($con, $sqlproduct) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    }
+    return null;
+}
+
+/*
+  ProductId: Get product ID from tbproduct table by name and scientific name
+*/
+function ProductId($name, $scientific_name, $con) {
+    $name = pg_escape_string($con, $name);
+    $scientific_name = pg_escape_string($con, $scientific_name);
+    $sqlproduct = "SELECT id FROM tbproduct WHERE name='$name' AND name_scientific='$scientific_name'";
+    $result = pg_query($con, $sqlproduct) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['id'];
+    }
+    return null;
+}
+
+/*
  ProductgroupList: Show list of product groups from tbproductgroup table
 */
 function ProductgroupList($con) {
@@ -1277,6 +1379,19 @@ function DeleteProductunit($uid, $con) {
 }
 
 /*
+ ProductUnitName: Get product unit name from tbproductunit table
+*/
+function ProductUnitName($uid, $con) {
+    $sqlunit = "SELECT symb FROM tbproduct_unit WHERE id='$uid'";
+    $result = pg_query($con, $sqlunit) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_array($result);
+        return $row['symb'];
+    }
+    return '';
+}
+
+/*
  Conveyancelist: Show list of conveyance from tbconveyance table
 */
 function Conveyancelist($con) {
@@ -1461,6 +1576,24 @@ function UpdateInspectionMethod($mid, $code, $method, $desc, $con) {
 }
 
 /*
+  SelectInspectionMethod: Show list of inspection methods from tbinspectionmethod table
+*/
+function SelectInspectionMethod($selectedMethodId, $con) {
+    $sqlmethod = "SELECT * FROM tbinspection_method ORDER BY id ASC";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $id = $row['id'];
+            $code = $row['code'];
+            $method = $row['title'];
+            $desc = $row['description'];
+            $selected = ($id == $selectedMethodId) ? 'selected' : '';
+            echo "<option value='$id' $selected>$method</option>";
+        }
+    }
+}
+
+/*
   TreatmentMethodList($con): Show list of treatment methods from tbtreatmentmethod table
 */
 function TreatmentMethodList($con) {
@@ -1557,6 +1690,23 @@ function DeleteTreatmentMethod($tmid, $con) {
         echo "<script>alert('Error deleting treatment method: " . pg_last_error($con) . "');</script>";
     }
 }
+
+/*
+    SelectTreatmentMethod: Show list of treatment methods from tbtreatmentmethod table
+*/
+function SelectTreatmentMethod($selectedId, $con) {
+    $sqlmethod = "SELECT id, title FROM tbtreatment_method WHERE enabled='yes' ORDER BY title ASC";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $id = $row['id'];
+            $title = $row['title'];
+            $selected = ($id == $selectedId) ? 'selected' : '';
+            echo "<option value='$id' $selected>$title</option>";
+        }
+    }
+}
+
 /*
  EntityTypeList: Show list of entity types from tbentitytype table
 */
@@ -1658,7 +1808,9 @@ function DeleteEntityType($etid, $con) {
  EntityExportList($con): Show list of entities from tbentity table
 */
 function EntityExportList($con) {
-    $sqle = "SELECT * FROM tbentity_export ORDER BY id ASC";
+    $guid = $_SESSION['groupid']; // already defined in entity.php
+
+    $sqle = "SELECT * FROM tbentity_export WHERE created_guid='$guid' ORDER BY id ASC";
     $result = pg_query($con, $sqle) or die(pg_last_error());
     $i = 0;
     if (pg_num_rows($result) > 0) {
@@ -1693,7 +1845,7 @@ function EntityExportList($con) {
  AddEntityExport: Add new entity export into tbentity_export table
  
 */
-function AddEntityExport($bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $con) {
+function AddEntityExport($bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $guid, $con) {
     // Escape all inputs
     $bstype = pg_escape_string($con, $bstype);
     $enttype = pg_escape_string($con, $enttype);
@@ -1714,10 +1866,11 @@ function AddEntityExport($bstype, $enttype, $title, $address, $zipcode, $pid, $d
     $gap = pg_escape_string($con, $gap);
     $license_export = pg_escape_string($con, $license_export);
     $created_date = pg_escape_string($con, $created_date);
+    $guid = pg_escape_string($con, $guid);
 
     // Insert new entity export
-    $sqladdentity = "INSERT INTO \"tbentity_export\" (\"business_type\", \"entity_type\", \"title\", \"address\", \"zipcode\", \"province\",  \"district\", \"country_id\", \"phone\", \"email\", \"contact_name\", \"registered\", \"registered_date_from\", \"registered_date_to\", \"check_list_registered\", \"license_export\", \"gap\", \"datetime_created\") 
-                     VALUES ('$bstype', '$enttype', '".$title."', '".$address."', '".$zipcode."', '".$province."', '".$district."', '".$country."', '".$phone."', '".$email."', '".$contactperson."', '".$isregister."', '".$regdate1."', '".$regdate2."', '".$checkreg."', '".$license_export."', '".$gap."', '".$created_date."') RETURNING id";
+    $sqladdentity = "INSERT INTO \"tbentity_export\" (\"business_type\", \"entity_type\", \"title\", \"address\", \"zipcode\", \"province\",  \"district\", \"country_id\", \"phone\", \"email\", \"contact_name\", \"registered\", \"registered_date_from\", \"registered_date_to\", \"check_list_registered\", \"license_export\", \"gap\", \"datetime_created\", \"created_guid\") 
+                     VALUES ('$bstype', '$enttype', '".$title."', '".$address."', '".$zipcode."', '".$province."', '".$district."', '".$country."', '".$phone."', '".$email."', '".$contactperson."', '".$isregister."', '".$regdate1."', '".$regdate2."', '".$checkreg."', '".$license_export."', '".$gap."', '".$created_date."', '".$guid."') RETURNING id";
     $result = pg_query($con, $sqladdentity) or die(pg_last_error($con));
     if ($result) {
         echo "<script>window.location.href = 'entity.php?entity=export';</script>";
@@ -1921,12 +2074,12 @@ function ModuleName($mid, $con) {
 */
 function ApplicationNo($exporter_id, $uid, $con) {
     // Add user ID into tbapplication table first to get running number-id
-    $sqlappuser = "INSERT INTO tbapplication (uid, application_id, application_date, company_id, reg_no, export_point, contact_person, address_person, phone, country_import, import_point, certificate_type, multi_item, print_support, commodity_id, name_oncertificate, name_scientific, commodity_description, quantity_net, quantity_gross, unit_id, marks_item, place_origin, conveyance_id, conveyance_sign, address_exporter, address_importer, purpose, place_quarantine, place_treatment, date_certificate) 
+    $sqlappuser = "INSERT INTO tbapplication (uid, application_no, application_date, company_id, reg_no, export_point, contact_person, address_person, phone, country_import, import_point, certificate_type, multi_item, print_support, commodity_id, name_oncertificate, name_scientific, commodity_description, quantity_net, quantity_gross, unit_id, marks_item, place_origin, conveyance_id, conveyance_sign, address_exporter, address_importer, purpose, place_quarantine, place_treatment, date_certificate) 
                     VALUES ('$uid', '', NULL, NULL, '', NULL, '', '', '', NULL, NULL, '', '', '', NULL, '', '', '', NULL, NULL, NULL, '', NULL, NULL, '', '', '', '', NULL, NULL, NULL) RETURNING id";
     $result = pg_query($con, $sqlappuser) or die(pg_last_error($con));
     if ($result) {
         $row = pg_fetch_assoc($result);
-        $id = $row['id']; // Get the last inserted ID
+        $id = $row['id']; // Get the last inserted ID - Application ID (id - auto_increment)
         //$appno = "00000".$id;
         // date("y") will return the last two digits of the current year
         list ($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $loct_id, $status) = Updateuser_values($uid,$con);
@@ -1935,27 +2088,211 @@ function ApplicationNo($exporter_id, $uid, $con) {
         $loct_type = $rowl['location_type']; 
         $pid = $rowl['pid'];
         
-        echo "<script>alert('Location Code: $loct_code, Location Type: $loct_type, Province ID: $pid');</script>";
+      //  echo "<script>alert('Location Code: $loct_code, Location Type: $loct_type, Province ID: $pid');</script>";
        
         if(strlen($pid) === 1) {
             $pid = '0'.$pid; // Ensure province code is always two digits
         }
          // 1- DOA and 2 - PAFO
-        if ($loct_code === "DOA") {
+        if ($loct_type === "1") {  // 1 - DOA
             $province_code = '00'; // if DOA's user, use 00 for province code
-        } 
-        if( $loct_type === "2") {
+        } else if( $loct_type === "2") {  // 2 - PAFO
             $province_code = $pid; // NOT CORRECT -if PAFO's user, use 01 for province code
+        } else if ($loct_type === "3") { // 3 - PASS-BORDER
+            $province_code = $pid."/".$loct_code; // if PASS-BORDER's user
         } 
+        // Generate FULL APPLICATION NUMBER - $appno
+        // $id - Application ID (id - auto_increment) itself
         $appno = str_pad($id, 5, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Get only 5 digits,
-        return $appno; // Append current year (last two digits) and province code (01 for Vientiane Capital)
+        return array($id, $appno); // Append current year (last two digits) and province code (01 for Vientiane Capital)
         //$currentYear = date("y");
     } else {
         echo "<script>alert('Error inserting application user: " . pg_last_error($con) . "');</script>";
         return;
-    }
+    }    
+}
 
-   
-   
+/*
+  ApplicationUpdate: Update application information by application ID
+*/
+function ApplicationUpdate($app_id, $data, $con) {
+    // Escape application ID
+    $sql = "UPDATE tbapplication SET ";
+    $sets = [];
+    foreach ($data as $key => $value) {
+        if (is_null($value)) {
+            $sets[] = "$key = NULL";
+        } else {
+            $sets[] = "$key = '" . pg_escape_string($value) . "'";
+        }
+    }
+    $sql .= implode(", ", $sets);
+    $sql .= " WHERE id = '" . pg_escape_string($app_id) . "'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    return $result;
+}
+
+/*
+  ApplicantInfo: Get application information by application ID
+*/
+function ApplicantInfo_Export($app_id, $con) {
+    $sqlapp = "SELECT * FROM tbentity_export WHERE id='$app_id'";
+    $result = pg_query($con, $sqlapp) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null;
+    }
+}
+
+/*
+  DeleteApplication: Delete application by application ID
+*/
+function DeleteApplication($app_id, $con) {
+    $sqldel = "DELETE FROM tbapplication WHERE id='$app_id'";
+    $result = pg_query($con, $sqldel) or die(pg_last_error($con));
+    return $result;
+}
+
+/*
+  ApplicationProductList: Product list for application-Modal form to be added into main application form
+*/
+function ApplicationProductList($con) {
+    $sql = "SELECT * FROM tbproduct ORDER BY name ASC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $cid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $cname = htmlspecialchars($row['name'], ENT_QUOTES);
+            $cname_scientific = htmlspecialchars($row['name_scientific'], ENT_QUOTES);
+            $cdesc = htmlspecialchars($row['desc'], ENT_QUOTES);
+            print "<tr>
+                    <td>".$cname."</td>
+                    <td>".$cname_scientific."</td>
+                    <td>".$cdesc."</td>
+                    <td><button type='button' name='$cid' id='$cid' class='btn btn-sm btn-danger' onclick='passCommodity(\"$cid\",\"$cname\", \"$cname_scientific\", \"$cdesc\")'>Add</button></td>
+                 </tr>";
+                 $i++;
+        }
+    }
+}
+
+/*
+ ApplicationList: Show list of applications and their status from tbapplication
+*/
+function ApplicationList($guid, $con) {
+
+    $sql = "SELECT * FROM tbapplication WHERE guid = '$guid' ORDER BY id DESC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $id = htmlspecialchars($row['id'], ENT_QUOTES);
+            $appno = htmlspecialchars($row['application_no'], ENT_QUOTES);
+             $comid = htmlspecialchars($row['company_id'], ENT_QUOTES);
+             $rows = GetEntityExport($comid, $con);
+            $exporter = $rows['title'] ?? '';  // Exporter's name
+            $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);   
+            $appdate = date('d/m/Y', strtotime($appdate));  // Format date for display
+            $checkinspect = InspectionCheck($id, $con); // Check if inspection already exists for this application
+            if ($checkinspect == false) { // return true or false
+                $inspection_status = "Add";
+            } else {
+                $inspection_status = "View/Edit";
+            }
+
+            print "<tr>
+                    <td>$appno</td>
+                    <td>$exporter</td>
+                    <td>$appdate</td>
+                    <td><a href='transaction.php?part=application&appid_edit=$id'>View/Edit</a></td>
+                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status'>$inspection_status</a></span></td>
+                    <td><span>n/a</span></td>
+                    <td><span>n/a</span></td>
+                   </tr>";
+        }
+    }
+}
+
+/*
+ ApplicationInfo: Get application information by application ID
+*/
+function ApplicationInfo($app_id, $con) {
+    $sql = "SELECT * FROM tbapplication WHERE id = '$app_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null;
+    }
+}
+
+/*
+ InspectionAdd: Add data on inspection results into tbinspection
+ */
+function InspectionAdd($data, $con) {
+    // $data should be an associative array: column => value
+    $columns = [];
+    $values = [];
+    foreach ($data as $key => $value) {
+        $columns[] = "\"$key\"";
+        if (is_null($value)) {
+            $values[] = "NULL";
+        } else {
+            $values[] = "'" . pg_escape_string($con, $value) . "'";
+        }
+    }
+    $sql = "INSERT INTO \"tbinspection\" (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $values) . ") RETURNING id";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result) {
+        $row = pg_fetch_assoc($result);
+        return $row['id'];
+    } else {
+        return false;
+    }
+}
+
+/*
+ InspectionUpdate: Update inspection information by inspection ID
+*/
+function InspectionUpdate($app_id, $data, $con) {
+    $sets = [];
+    foreach ($data as $key => $value) {
+        if (is_null($value) || $value === '') {
+            $sets[] = "\"$key\" = NULL";
+        } else {
+            $sets[] = "\"$key\" = '" . pg_escape_string($con, $value) . "'";
+        }
+    }
+    $sql = "UPDATE tbinspection SET " . implode(", ", $sets) . " WHERE application_id = '" . pg_escape_string($con, $app_id) . "'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    return $result;
+}
+
+/*
+  InspectionCheck: Check if inspection already exists for a given application ID
+*/
+function InspectionCheck($app_id, $con) {
+    $sql = "SELECT * FROM tbinspection WHERE application_id = '$app_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/*
+  InspectionInfo: Get inspection information by application ID
+*/
+function InspectionInfo($app_id, $con) {
+    $sql = "SELECT * FROM tbinspection WHERE application_id = '$app_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row;
+    } else {
+        return null;
+    }
 }
 ?>

@@ -4,6 +4,7 @@
   session_start();
 
   require("php-bin/connection.php"); // replace include with require
+  require("php-bin/supports.php"); // replace include with require
    // Initialize variables for messages
   $message = "";
     // Check if the form is submitted
@@ -13,30 +14,41 @@
 
    // $message = "Hi, Login: " . $email . "<br>Your password is: " . $password;
     // Destroy session variables
-   
+    $_SESSION["uid"] = "";
+    $_SESSION["username"] = "";
     $_SESSION["email"] = "";
     $_SESSION["passw"] = "";
     $_SESSION["groupid"] = "";
+    $_SESSION["groupname"] = "";
+    $_SESSION["image"] = "";  // Image path
+    $_SESSION["position"] = "";
 
     // IN CASE OF SUBMISSION THROUGH FORM
   if (!empty($email) && !empty($password)) {
-    $sql = "SELECT name, psw, email, group_id FROM tbusers WHERE email = '$email' AND enabled = 'yes'";
+    $sql = "SELECT id, name, psw, position, email, group_id FROM tbusers WHERE email = '$email' AND enabled = 'yes'";
     $result = pg_query($con, $sql) or die(pg_last_error());
 
     //$row = pg_fetch_array($result)
     if ($row = pg_fetch_array($result)) {
+            
         // If passwords are hashed, use password_verify
         if ($password === $row['psw']) { // Replace with password_verify($password, $row['psw']) if hashed
+            $_SESSION["uid"] = $row['id'];
             $_SESSION["username"] = $row['name'];
+            $_SESSION["position"] = $row['position']; // Store position in session
             $_SESSION["email"] = $row['email'];
             $_SESSION["groupid"] = $row['group_id'];
+            $_SESSION["groupname"] = GroupName($row['group_id'], $con); // Get group name
+            $uprofile = Profiledata($row['id'], $con);
+            $_SESSION["image"] = $uprofile['imgfilepath']; // Store image path in session
+           
             echo "<script type='text/javascript'>window.location.href = 'main.php?us=" . urlencode($row['name']) . "';</script>";
             exit();
         } else {
             $message = "Incorrect username or password.";
         }
     } else {
-        $message = "Incorrect username or password.";
+        $message = "Incorrect username or password.".$email."   ".$password;
     }
 }
   

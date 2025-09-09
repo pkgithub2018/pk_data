@@ -5,8 +5,6 @@
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
 
-  $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
-  $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
  //echo "<script>alert('uname: " . $uname . "');</script>"; // Debugging line
 ?>
 
@@ -49,6 +47,7 @@
   <link href="assets/css/style.css" rel="stylesheet">
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
+  <link href="stylecss/dformelement.css" rel="stylesheet">
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -64,19 +63,20 @@
   <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="main.php?us=<?php echo $uname; ?>" class="logo d-flex align-items-center">
+      <a href="main.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
         <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
 
+    <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div> End Search Bar -->
 
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
@@ -88,20 +88,20 @@
         </li><!-- End Search Icon-->
         <li class="nav-item dropdown pe-3">
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="assets/img/pk-img.jpg" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['uname']; ?></span>
+            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
           </a><!-- End Profile Iamge Icon -->
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['uname']; ?></h6>
-              <span>National IT Consultant</span>
+              <h6><?php echo $_SESSION['username']; ?></h6>
+              <span><?php echo $_SESSION['position']; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -111,7 +111,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.html">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -121,7 +121,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
+              <a class="dropdown-item d-flex align-items-center" href="#">
                 <i class="bi bi-question-circle"></i>
                 <span>Need Help?</span>
               </a>
@@ -151,28 +151,98 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?us=<?php echo $uname; ?>" >
+        <a class="nav-link collapsed" href="main.php" >
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
-    
+    <!--  
       <li class="nav-item">
-        <a class="nav-link " data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
+        <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-folder"></i>
+          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="transaction-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="modules.php?part=entity">
+              <i class="bi bi-circle"></i><span>Application</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=inspection">
+              <i class="bi bi-circle"></i><span>Inspection's results</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+  -->
+      <!-- End Transaction Nav -->
+
+      
+      <li class="nav-item">
+        <a class="nav-link active" href="entity.php?entity=export" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span>Export entity</span>
+        </a>
+      </li><!-- End Export Entity Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span>Import entity</span>
+        </a>
+      </li><!-- End Import Entity Nav -->
+    <!--
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php" >
+          <i class="bi bi-collection"></i>
+          <span>Entity/Company form</span>
+        </a>
+      </li>
+    -->
+      <!-- End Entity/Company form Nav -->
+    <!--
+       <li class="nav-item">
+        <a class="nav-link <?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' collapsed' : ''; ?>" data-bs-target="#Modules-nav" data-bs-toggle="collapse" href="#">
+          <i class="bi bi-journal-text"></i><span>Modules</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <ul id="Modules-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+          <li>
+            <a href="modules.php?part=entity">
+              <i class="bi bi-circle"></i><span>Entity/Company</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=inspection">
+              <i class="bi bi-circle"></i><span>Inspection</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=sample">
+              <i class="bi bi-circle"></i><span>Sample</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=certificate">
+              <i class="bi bi-circle"></i><span>Certificate</span>
+            </a>
+          </li>
+          <li>
+            <a href="modules.php?part=printing">
+              <i class="bi bi-circle"></i><span>Printing</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+    -->
+      <!-- End Module Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" data-bs-target="#M-masterdata-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
-        <ul id="tables-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-         
-          <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Companies/Entities</span>
-            </a>
-          </li>
-          <li>
-            <a href="masterdata.php?part=product">
-              <i class="bi bi-circle"></i><span>Product</span>
-            </a>
-          </li>
+        <ul id="M-masterdata-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+
           <li>
             <a href="masterdata.php?part=conveyance">
               <i class="bi bi-circle"></i><span>Conveyance</span>
@@ -189,6 +259,11 @@
             </a>
           </li>
           <li>
+            <a href="masterdata.php?part=entitytype">
+              <i class="bi bi-circle"></i><span>Entity_type</span>
+            </a>
+          </li>
+          <li>
             <a href="masterdata.php?part=inspectionmethod">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
@@ -199,46 +274,63 @@
             </a>
           </li>
           <li>
+            <a href="masterdata.php?part=modules">
+              <i class="bi bi-circle"></i><span>Module List</span>
+            </a>
+          </li>
+          
+          <li>
+            <a href="masterdata.php?part=product">
+              <i class="bi bi-circle"></i><span>Product</span>
+            </a>
+          </li>
+          <li>
             <a href="masterdata.php?part=provinces">
               <i class="bi bi-circle"></i><span>Provinces</span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=treatmentmethod">
+              <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
         </ul>
       </li><!-- End Tables Nav -->
 
-      <li class="nav-heading">Pages</li>
-
+      <li class="nav-heading">Users' Management</li>
+        
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.html">
+        <a class="nav-link<?php echo (basename($_SERVER['PHP_SELF']) === 'users-profile.php') ? ' active' : ''; ?>" href="users-profile.php">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
-
+      
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'ugroup') ? ' active' : ''; ?>" href="users.php?part=ugroup">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
-      </li><!-- End Users group -->
+      </li> <!-- End Users group -->
       
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'upermits') ? ' active' : ''; ?>" href="users.php?part=upermits">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
-      </li><!-- End User Group permit -->
-
+      </li> <!-- End User Group permit -->
+      
       <li class="nav-item">
-        <a class="nav-link active" href="users.php?part=userslist">
+        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' active' : ''; ?>" href="users.php?part=userslist">
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  <!-- End Users Nav -->
+     
     </ul>
-
   </aside><!-- End Sidebar-->
    
   <main id="main" class="main">
+   
     <!-- ======= *************** User Groups ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='ugroup'){
@@ -249,9 +341,9 @@
       <h1>Users Group</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Users Group</li>
+          <li class="breadcrumb-item">Users Group</li>
         </ol>
       </nav>
       </div>
@@ -364,9 +456,9 @@
         <h1>Users</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
             <li class="breadcrumb-item">Tables</li>
-            <li class="breadcrumb-item active">Users List</li>
+            <li class="breadcrumb-item">Users List</li>
           </ol>
           </nav>
         </div>
@@ -431,7 +523,7 @@
         }
       }
      // USERS UPDATE AND ADD new user form - SUBMIT ******
-     if ($_SERVER["REQUEST_METHOD"] == "POST") {  // Form submission for BOTH NEW and UPDATE
+     if ($_SERVER["REQUEST_METHOD"] == "POST" && $_GET["part"]==='userslist') {  // Form submission for BOTH NEW and UPDATE
           $huid = htmlspecialchars($_POST['huid']); // Sanitize the input
           $name = htmlspecialchars($_POST['name']); // Sanitize the input
           $surname = htmlspecialchars($_POST['surname']);
@@ -457,7 +549,7 @@
 
      }
      // FIRST LINK - add or update user 
-     if((isset($_GET['frm']) && ($_GET['frm']==='userupdate' || $_GET['frm']==='newuser'))){
+ if((isset($_GET['frm']) && ($_GET['frm']==='userupdate' || $_GET['frm']==='newuser'))){
        // Update user
         if((isset($_GET['uid']) && !empty($_GET['uid']))){
             $sbupdate = 'update'; 
@@ -487,7 +579,7 @@
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="main.php">Home</a></li>
             <li class="breadcrumb-item">Forms</li>
-            <li class="breadcrumb-item active">Users</li>
+            <li class="breadcrumb-item">Users</li>
           </ol>
         </nav>
       </div>
@@ -616,6 +708,179 @@
         </script>
      <?php } ?>
     <!-- End Users Updates - Form -->
+
+     <!-- ======= *************** Group permission ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='upermits'){
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+        <h1>Group Permits</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item">Tables</li>
+            <li class="breadcrumb-item">Group Permits</li>
+          </ol>
+        </nav>
+      </div>
+      <div>
+        <a href='users.php?part=upermits&apermit=new' class='btn btn-primary btn-sm'><i class="bi bi-plus-circle"></i>Add New Permit</a>
+      </div>
+    </div><!-- End Page Title -->
+
+    <!-- == Modal form - Group permits == --> 
+     <div class="modal fade" id="addPermitModal" tabindex="-1" aria-labelledby="addPermitModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addPermitModalLabel"><b>Add New Group permit</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+               
+                <input type="hidden" id="permitid" name="permitid"> 
+                <input type="hidden" id="permitstatus" name="permitstatus"> 
+                <div class="mb-3">
+                  <label class="col-sm-3 col-form-label">Users Group</label>
+                   <select class="form-select" id="grouppermitid" name="grouppermitid" aria-label="Default select example">
+                     <option value="">*** Please select one ***</option>
+                      <?php SelectUsergroup($groupPermitId, $con); ?>
+                    </select> 
+                </div>
+                <div class="mb-3">
+                  <label class="col-sm-3 col-form-label">Module</label>
+                   <select class="form-select" id="moduleid" name="moduleid" aria-label="Default select example">
+                     <option value="">*** Please select one ***</option>
+                      <?php SelectModules($modulePermitId, $con); ?>
+                    </select>  
+                </div>
+                <div class="mb-3">
+                  <label class="form-label d-block">Permissions</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="permitRead" name="permitRead" value="1">
+                    <label class="form-check-label" for="permitRead">Read</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="permitAdd" name="permitAdd" value="1">
+                    <label class="form-check-label" for="permitAdd">Add</label>
+                  </div>
+                  <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="permitUpdate" name="permitUpdate" value="1">
+                      <label class="form-check-label" for="permitUpdate">Update</label>
+                  </div>
+                  <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="permitDelete" name="permitDelete" value="1">
+                      <label class="form-check-label" for="permitDelete">Delete</label>
+                  </div>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitgroupPermit" name="submitgroupPermit" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section">
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Group Permits</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - List of Group Permits</p>
+
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts" >
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th><b>Group</b> Name</th>
+                   <th>Module</th>
+                   <th>Read</th>
+                   <th>Write</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                   <th>Update</th>
+                   <th>Remove</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php GroupPermitList($con); ?> 
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+
+            </div>
+          </div>
+        </div>
+      </div>
+     </section>
+    <?php } ?> <!-- ********* End of if part=upermits ********* -->
+<!-- Processing Group permits form submission -->
+    <?php
+     // Add new Group permit ************* ModalPermitAdd()
+     if(isset($_GET['part']) && $_GET['part'] === 'upermits' && isset($_GET['apermit']) && !empty($_GET['apermit'])){
+          // OPEN MODAL FORM FOR ADDING NEW
+          echo "<script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    ModalPermitAdd();  
+                    });
+               </script>";
+     }
+      // GROUP PERMIT FOR UPDATE: link in GroupPermitList function in supports.php
+      if (isset($_GET['part']) && $_GET['part'] === 'upermits' && isset($_GET['epermit']) && !empty($_GET['epermit'])) {
+          if(isset($_GET['id']) && !empty($_GET['id'])){
+            $pmtid = htmlspecialchars($_GET['id']);
+            $pstatus = htmlspecialchars($_GET['epermit']); // value: edit
+
+            list($groupPermitId, $modulePermitId, $permitRead, $permitAdd, $permitUpdate, $permitDelete) = GrouppermitVariables($pmtid, $con); // Get group permit data for update
+            // Add variables to Modal form when it pops up for update
+            echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                      ModalPermitUpdate('$pmtid', '$pstatus' ,'$groupPermitId','$modulePermitId','$permitRead','$permitAdd','$permitUpdate','$permitDelete');
+                    });
+                  </script>";
+          }   
+      }
+
+      // Modal form submit - GROUP PERMIT
+      if(isset($_POST['submitgroupPermit'])) {  // ADD/UPDATE Module
+        // Process the form submission for adding/updating module
+        $gpermit = $_POST['permitid']; //  - Hidden input for ID  
+        $ptstatus = $_POST['permitstatus']; // Hidden input for apermit and epermit
+        $groupPermit = $_POST['grouppermitid'];
+        $modulePermit = $_POST['moduleid'];
+        $permitRead = isset($_POST['permitRead']) ? 'yes' : 'no'; // Checkbox for Read
+        $permitAdd = isset($_POST['permitAdd']) ? 'yes' : 'no'; // Checkbox for Add
+        $permitUpdate = isset($_POST['permitUpdate']) ? 'yes' : 'no'; // Checkbox for Update
+        $permitDelete = isset($_POST['permitDelete']) ? 'yes' : 'no'; // Checkbox for Delete
+        // Add new permit id=$id&editpermit=yes
+          // Add new permit
+        if(!empty($ptstatus) && $ptstatus === 'new') { // Check if it's a new module or empty    
+            AddGroupPermit($groupPermit, $modulePermit, $permitRead,$permitAdd,$permitUpdate, $permitDelete, $con); // Function to add new module    
+        } 
+         // Edit permit
+        if(!empty($ptstatus) && $ptstatus ==='edit'){
+           UpdateGroupPermit($gpermit, $groupPermit, $modulePermit, $permitRead, $permitAdd, $permitUpdate, $permitDelete, $con);
+        }
+
+      } // End of if submitModule
+
+      // DELET PERMIT ****************upermits&id=$id&dpermit=del
+      if(isset($_GET['part']) && $_GET['part'] === 'upermits' && isset($_GET['dpermit']) && !empty($_GET['dpermit']))
+        {
+          $pmtid_del = $_GET['id'];
+          if(!empty($pmtid_del)){
+            DeleteGroupPermit($pmtid_del,$con);
+          }
+       }
+    ?>
+
   </main><!-- End #main -->
  
  <!-- End User -->
@@ -667,7 +932,7 @@
         
         if(gId !== 'new') { // Update group
             groupId.value = gId; // Assign the group ID to the hidden input field
-            //alert('Group ID: ' + gId); // Debugging line
+           // alert('Group ID: ' + gId); // Debugging line
             groupNameInput.value = gName || ''; // Assign the data values to input field
             groupDesc.value = gDesc || '';
             btnsubmit.textContent = 'Update'; // Change button value to Update for Updating Usergroup
@@ -681,6 +946,7 @@
             if(modalTitle) modalTitle.textContent = 'Add New Group';
         }    
     });
+
     // Set focus after modal is fully shown - MODAL FORM
         addGroupModal.addEventListener('shown.bs.modal', function () {
           var groupNameInput = addGroupModal.querySelector('#groupName');
@@ -694,7 +960,66 @@
         this.select();
       });
     }
-  </script>
+
+    // Permit - addPermitModal *******
+  // 1.) Add new permit *************
+  function ModalPermitAdd(){
+    // Show modal
+    var modalPmAdd = document.getElementById('addPermitModal');
+    if (modalPmAdd) {
+        var modal = new bootstrap.Modal(modalPmAdd);
+        modal.show();
+
+        var label = document.getElementById('addPermitModalLabel');
+        if (label) label.textContent = 'Add New Permit';
+
+        var pstatus = document.getElementById('permitstatus'); // for new 
+        if (pstatus) pstatus.value = 'new';
+
+        var btname = document.getElementById('submitgroupPermit');
+        if (btname) btname.textContent = 'Submit';
+    }
+  }
+  // 2.) Update Permit **************
+function ModalPermitUpdate(pmit, pstatus, gpmit, mpmit, pread, padd, pupdate, pdelete) {
+  // Set modal fields
+  var permitIdInput = document.getElementById('permitid'); // hidden input in modal 
+  if (permitIdInput) permitIdInput.value = pmit;
+
+  var permitStatusInput = document.getElementById('permitstatus'); // hidden input in modal 
+  if (permitStatusInput) permitStatusInput.value = pstatus;
+
+  var groupPermitSelect = document.getElementById('grouppermitid');
+  if (groupPermitSelect) groupPermitSelect.value = gpmit;
+
+  var moduleSelect = document.getElementById('moduleid');
+  if (moduleSelect) moduleSelect.value = mpmit;
+
+  var permitReadCheckbox = document.getElementById('permitRead');
+  if (permitReadCheckbox) permitReadCheckbox.checked = (pread === 'yes');
+
+  var permitAddCheckbox = document.getElementById('permitAdd');
+  if (permitAddCheckbox) permitAddCheckbox.checked = (padd === 'yes');
+
+  var permitUpdateCheckbox = document.getElementById('permitUpdate');
+  if (permitUpdateCheckbox) permitUpdateCheckbox.checked = (pupdate === 'yes');
+
+  var permitDeleteCheckbox = document.getElementById('permitDelete');
+  if (permitDeleteCheckbox) permitDeleteCheckbox.checked = (pdelete === 'yes');
+
+  // Show modal
+  var modalElement = document.getElementById('addPermitModal');
+  if (modalElement) {
+    var modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    var label = document.getElementById('addPermitModalLabel');
+    if (label) label.textContent = 'Update Group Permit';
+    var btname = document.getElementById('submitgroupPermit');
+    if (btname) btname.textContent = 'Update';
+  }
+}
+
+</script>
   
 </body>
 

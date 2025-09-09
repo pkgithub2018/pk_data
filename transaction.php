@@ -398,7 +398,7 @@ $guid = $_SESSION["groupid"];
             $exporter_id = $_GET['id'];
             $appdate = date('Y-m-d');  // initial application date
             // UPDATE tbapplication with exporter ID
-            $sqlupdate = "UPDATE tbapplication SET company_id = '$exporter_id', application_id = '$app_no', application_date = '$appdate', guid = '$guidLogin' WHERE id = '$app_id'";
+            $sqlupdate = "UPDATE tbapplication SET company_id = '$exporter_id', application_no = '$app_no', application_date = '$appdate', guid = '$guidLogin' WHERE id = '$app_id'";
             pg_query($con, $sqlupdate) or die(pg_last_error($con));
 
             $app_info = ApplicantInfo_Export($exporter_id, $con);
@@ -435,7 +435,7 @@ $guid = $_SESSION["groupid"];
               $app_rows = ApplicationInfo($appEdit_id, $con);
               if ($app_rows) {
                   // Populate form fields with existing application data
-                  $app_no = isset($app_rows['application_id']) ? $app_rows['application_id'] : '';  // application No, not ID
+                  $app_no = isset($app_rows['application_no']) ? $app_rows['application_no'] : '';  // application No, not ID
                   $date = isset($app_rows['application_date']) ? $app_rows['application_date'] : '';
                   $reg_no = isset($app_rows['reg_no']) ? $app_rows['reg_no'] : '';
                   $contact_person = isset($app_rows['contact_person']) ? $app_rows['contact_person'] : '';
@@ -1077,15 +1077,59 @@ function selectExporter(info) {
      ?>
      <!-- ***************INSPECTION *************** -->
      <?php
-      if (isset($_GET['part']) && $_GET['part'] === 'inspection') {
+      if (isset($_GET['part']) && $_GET['part'] === 'inspection') { // Open form -Get link from main.php - dashboard
         // Code for inspection part
-        $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
-        $approws = ApplicationInfo($appid_inspection, $con);
-        if ($approws) {
-          $appno_inspection = $approws['application_id']; // Application No, not ID
-          $entity_id = $approws['company_id'];
-          $entity_rows = GetEntityExport($entity_id, $con);
-          $entityexport_name = $entity_rows['title'];
+            if($_GET['inspect'] == 'Add'){
+                // Button state
+                $btnSubmit = 'submit';
+                $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+                $approws = ApplicationInfo($appid_inspection, $con);
+                if ($approws) {
+                  $appno_inspection = $approws['application_no']; // Application No, not ID
+                  $entity_id = $approws['company_id'];
+                  $entity_rows = GetEntityExport($entity_id, $con);
+                  $entityexport_name = $entity_rows['title'];
+                }
+            } elseif ($_GET['inspect'] == 'View/Edit') {
+                $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+                $insprows = InspectionInfo($appid_inspection, $con);
+                if ($insprows) {
+                  // Button state
+                  $btnSubmit = 'update';
+                  // Populate inspection fields
+                  $appid = $insprows['application_id'];
+                  $appno_inspection = ApplicationInfo($appid, $con)['application_no'];
+                  $entity_id = ApplicationInfo($appid, $con)['company_id'];
+                  $entityexport_name = GetEntityExport($entity_id, $con)['title'];
+                  $inspection_date = $insprows['inspection_date'];
+                  $sampleno = $insprows['sample_no'];
+                  $sample_volume = $insprows['sample_quantity'];
+                  $unitid = $insprows['unit_id'];
+                  $sample_collectedby = $insprows['sample_collected_by'];
+                  $sample_inspected = $insprows['inspected_by'];
+                  $certificate_fee = $insprows['certificate_fee'];
+                  $receipt_no = $insprows['receipt_no'];
+                  $lot_no = $insprows['lot_number'];
+                  $inspection_method = $insprows['inspection_method'];
+                  $detected_pest = $insprows['pest_detected'];
+                  $treatment_ability = $insprows['treat_ability'];
+                  $lab_analysis = $insprows['lab_required'];
+                  $treatment_method = $insprows['treatment_method'];
+                  $treatment_date = $insprows['treatment_date'];
+                  $chemical_used = $insprows['chemical_used'];
+                  $chemical_fortreat = $insprows['chemical_fortreat'];
+                  $duration_temp = $insprows['duration_temp'];
+                  $concentration = $insprows['concentration'];
+                  $sample_inspectedby = $insprows['sample_inspectedby'];
+                  $additional_info = $insprows['additional_info'];
+                  $reason = $insprows['treatment_reason'];
+                  $post_details = $insprows['post_treatment_details'];
+                
+            }
+        } else {
+            // Invalid action
+            echo "<div class='alert alert-danger'>Invalid action specified.</div>";
+            exit;
 
         }
       ?>
@@ -1109,8 +1153,8 @@ function selectExporter(info) {
       <div class="card">
         <div class="card-body">
           <h5 class="card-title">Inspection Form</h5>
-          <!-- FORM: Entity/Company Form -->
-          <form action="main.php" method="POST">
+          <!-- FORM: Inspection Form -->
+          <form id="inspectionFormID" action="main.php" method="POST">
             <!-- Hidden input to store application ID -->
             <input type="hidden" name="appid" value="<?php echo $appid_inspection; ?>">
              <div class="row mb-3 align-items-center">
@@ -1129,7 +1173,7 @@ function selectExporter(info) {
             <div class="row mb-3">
               <label for="inspection_date" class="col-sm-2 col-form-label">Inspection Date</label>
               <div class="col-sm-4">
-                <input type="date" class="form-control" id="inspection_date" name="inspection_date" required>
+                <input type="date" class="form-control" id="inspection_date" name="inspection_date" value="<?php echo isset($inspection_date) ? $inspection_date : ''; ?>">
               </div>
             </div>
            
@@ -1152,15 +1196,15 @@ function selectExporter(info) {
                 </div>
             </div>
             <div class="row mb-3">
-              <label for="sample_drawing" class="col-sm-2 col-form-label">Sample drawn by</label>
+              <label for="sample_collectedby" class="col-sm-2 col-form-label">Sample collected by</label>
                <div class="col-sm-10">
-                 <input type="text" name="sample_drawing" id="sample_drawing" class="form-control" value="<?php echo isset($sample_drawing) ? $sample_drawing : ''; ?>">
+                 <input type="text" name="sample_collectedby" id="sample_collectedby" class="form-control" value="<?php echo isset($sample_collectedby) ? $sample_collectedby : ''; ?>">
                </div>
              </div>
              <div class="row mb-3">
               <label for="sample_inspected" class="col-sm-2 col-form-label">Inspected by</label>
                <div class="col-sm-10">
-                 <input type="text" name="sample_inspected" id="sample_inspected" class="form-control" value="<?php echo isset($sample_inspected) ? $sample_inspected : ''; ?>">
+                 <input type="text" name="sample_inspectedby" id="sample_inspectedby" class="form-control" value="<?php echo isset($sample_inspected) ? $sample_inspected : ''; ?>">
                </div>
              </div>
 
@@ -1168,7 +1212,7 @@ function selectExporter(info) {
                   <!-- Certificate fee -->
                   <label class="col-sm-2 col-form-label">Certificate fee</label>
                   <div class="col-sm-4">
-                    <input type="number" name="cert_fee" id="cert_fee" class="form-control" value="<?php echo isset($cert_fee) ? $cert_fee : ''; ?>" >
+                    <input type="number" name="certificate_fee" id="certificate_fee" class="form-control" value="<?php echo isset($certificate_fee) ? $certificate_fee : ''; ?>" >
                   </div>
                   <!-- Receipt No -->
                   <label class="col-sm-2 col-form-label">Receipt No</label>
@@ -1190,7 +1234,7 @@ function selectExporter(info) {
                   <div class="col-sm-10">
                     <select class="form-select" name="inspection_method" aria-label="Default select example">
                       <option selected></option>
-                      <?php SelectInspectionMethod($inspection_method_id, $con); ?>
+                      <?php SelectInspectionMethod($inspection_method, $con); ?>
                     </select>
                   </div>
               </div>  
@@ -1218,7 +1262,7 @@ function selectExporter(info) {
                   <div class="col-sm-10">
                     <select class="form-select" name="treatment_method" aria-label="Default select example">
                       <option selected></option>
-                      <?php SelectTreatmentMethod($treatment_method_id, $con); ?>
+                      <?php SelectTreatmentMethod($treatment_method, $con); ?>
                     </select>
                   </div>
               </div> 
@@ -1226,8 +1270,8 @@ function selectExporter(info) {
               <div class="row mb-3">
                 <label for="treatment_date" class="col-sm-2 col-form-label">Treatment Date</label>
                 <div class="col-sm-4">
-                  <input type="date" class="form-control" id="treatment_date" name="treatment_date"
-                    value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>" required>
+                  <input type="date" class="form-control" name="treatment_date" id="treatment_date"
+                    value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>">
                   <?php if (!empty($treatment_date)) { ?>
                     <small class="text-muted">Selected: <?php echo date('d/m/Y', strtotime($treatment_date)); ?></small>
                   <?php } ?>
@@ -1242,42 +1286,27 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
           <label class="col-sm-2 col-form-label">Chemical Used</label>
           <div class="col-sm-4">
-            <select class="form-select" name="chemical_used" id="chemical_used" required>
-              <option value="">Select</option>
-              <?php //SelectChemical($chemical_id, $con); ?>
-            </select>
+            <input type="text" class="form-control" name="chemical_used" id="chemical_used" value="<?php echo isset($chemical_used) ? $chemical_used : ''; ?>">
           </div>
           <label class="col-sm-2 col-form-label">Treated by</label>
           <div class="col-sm-4">
-            <select class="form-select" name="treated_by" id="treated_by" required>
-              <option value="">Select</option>
-              <?php //SelectTreatedBy($treated_by_id, $con); ?>
-            </select>
+            <input type="text" class="form-control" name="chemical_fortreat" id="chemical_fortreat" value="<?php echo isset($chemical_fortreat) ? $chemical_fortreat : ''; ?>">
           </div>
         </div>
         <div class="row mb-3 align-items-center">
           <label class="col-sm-2 col-form-label">Duration - Temperature</label>
           <div class="col-sm-4">
-            <select class="form-select" name="duration_temperature" id="duration_temperature">
-              <option value="">Select</option>
-              <?php //SelectDurationTemperature($duration_temperature_id, $con); ?>
-            </select>
+            <input type="text" class="form-control" name="duration_temp" id="duration_temp" placeholder="e.g., 30 minutes - 50°C" value="<?php echo isset($duration_temp) ? $duration_temp : ''; ?>">
           </div>
           <label class="col-sm-2 col-form-label">Concentration</label>
           <div class="col-sm-4">
-            <select class="form-select" name="concentration" id="concentration">
-              <option value="">Select</option>
-              <?php //SelectConcentration($concentration_id, $con); ?>
-            </select>
+            <input type="text" class="form-control" name="concentration" id="concentration" placeholder="e.g., 0.5%" value="<?php echo isset($concentration) ? $concentration : ''; ?>">
           </div>
         </div>
         <div class="row mb-3 align-items-center">
           <label class="col-sm-2 col-form-label">Sample Inspected by</label>
           <div class="col-sm-4">
-            <select class="form-select" name="sample_inspected_by" id="sample_inspected_by">
-              <option value="">Select</option>
-              <?php //SelectSampleInspectedBy($sample_inspected_by_id, $con); ?>
-            </select>
+            <input type="text" class="form-control" name="sample_inspectedby" id="sample_inspectedby" value="<?php echo isset($sample_inspectedby) ? $sample_inspectedby : ''; ?>">
           </div>
         </div>
             <div class="row mb-3 align-items-center">
@@ -1293,32 +1322,32 @@ function selectExporter(info) {
               </div>
             </div>
             <div class="row mb-3 align-items-center">
-  <label class="col-sm-2 col-form-label">Post Treatment Details</label>
-  <div class="col-sm-10">
-    <textarea class="form-control" name="post_treatment_details" id="post_treatment_details" rows="3" placeholder="Enter post treatment details"><?php echo isset($post_treatment_details) ? htmlspecialchars($post_treatment_details) : ''; ?></textarea>
-  </div>
-</div>
-          </div> <!-- details of treatment -->
+            <label class="col-sm-2 col-form-label">Post Treatment Details</label>
+            <div class="col-sm-10">
+              <textarea class="form-control" name="post_details" id="post_details" rows="3" placeholder="Enter post treatment details"><?php echo isset($post_details) ? htmlspecialchars($post_details) : ''; ?></textarea>
+            </div>
+          </div>
+        </div> <!-- details of treatment -->
         </div>
-        <div class="row mb-3">
-  <div class="col-sm-10 offset-sm-2 d-flex gap-2">
-    <button type="submit" name="btn_save_inspection" class="btn btn-success">
-      <i class="bi bi-save"></i> Save
-    </button>
-    <a href="transaction.php?part=inspection" class="btn btn-secondary">
-      <i class="bi bi-x-circle"></i> Cancel
-    </a>
-  </div>
-</div>
-        </form> <!-- End Form for Inspection -->
-       </div>
-      </div>
+          <div class="row mb-3">
+            <div class="col-sm-10 offset-sm-2 d-flex gap-2">
+              <button type="submit" name="btnSubmitInspection" value="<?php echo $btnSubmit === 'update' ? 'update' : 'submit'; ?>" class="btn btn-success">
+                <i class="bi bi-save"></i><?php echo $btnSubmit === 'update' ? ' Update' : ' Submit'; ?>
+              </button>
+              <a href="main.php" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancel
+              </a>
+            </div>
+          </div>
+      </form> <!-- End Form for Inspection -->
+     </div>
     </div>
-  </div>
-</section>
-      <?php
-      }  // End of if- Inspection
-     ?>
+    </div>
+    </div>
+  </section>
+   <?php
+    }  // End of if- Inspection
+  ?>
   </main><!-- End #main -->
 
   <!-- ======= Footer ======= -->

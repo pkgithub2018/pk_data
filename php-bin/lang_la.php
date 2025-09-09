@@ -5,6 +5,6 @@ return [
     'Dashboard' => 'ກະດານຂ່າວ',
     'userlist' => 'ລາຍຊື່ຜູ້ໃຊ້',
     'adduser' => 'ເພີ່ມຜູ້ໃຊ້',
-    'e-Phytosanitary' => 'ໃບຢັ້ງຢືນສຸຂານາໄມພືດ',
+    'modules' => 'ໂມດູນ',
 ];
 ?>

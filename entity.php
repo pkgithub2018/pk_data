@@ -19,6 +19,10 @@ if (file_exists($langFile)) {
 } else {
   die("Language file not found.");
 }
+
+// User group ID
+$guid = $_SESSION["groupid"];
+
 // connection to database
  require("php-bin/connection.php");
  require("php-bin/supports.php");
@@ -148,7 +152,7 @@ if (file_exists($langFile)) {
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="#">
+              <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Sign Out</span>
               </a>
@@ -173,7 +177,7 @@ if (file_exists($langFile)) {
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
-
+      <!--
       <li class="nav-item">
         <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-folder"></i>
@@ -191,7 +195,9 @@ if (file_exists($langFile)) {
             </a>
           </li>
         </ul>
-      </li><!-- End Transaction Nav -->
+      </li>
+      -->
+      <!-- End Transaction Nav -->
 
       <li class="nav-item">
         <a class="nav-link active" href="#" >
@@ -398,7 +404,7 @@ if (file_exists($langFile)) {
           UpdateEntityExport($entity_id, $bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $con);
         } else if($_POST['btnsubEntityExport'] === 'submit') {
           // Add new entity
-          AddEntityExport($bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $con);
+          AddEntityExport($bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $guid, $con);
         }
      } 
    ?>

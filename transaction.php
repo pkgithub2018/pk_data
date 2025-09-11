@@ -1080,6 +1080,7 @@ function selectExporter(info) {
       if (isset($_GET['part']) && $_GET['part'] === 'inspection') { // Open form -Get link from main.php - dashboard
         // Code for inspection part
             if($_GET['inspect'] == 'Add'){
+             // echo "<script>alert('Inspection - Add.');</script>";
                 // Button state
                 $btnSubmit = 'submit';
                 $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
@@ -1347,6 +1348,176 @@ function selectExporter(info) {
   </section>
    <?php
     }  // End of if- Inspection
+  ?>
+ <!-- ***************CERTIFICATE *************** -->
+ <?php
+   if (isset($_GET['part']) && $_GET['part'] === 'certificate') { // Open form -Get link from main.php - dashboard
+        
+            $appid_certificate = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+            $application_no = ApplicationInfo($appid_certificate, $con)['application_no'];
+
+    // ADD CERTIFICATE ************
+         if($_GET['certify'] == 'Add'){   
+            // create new certificate number 
+            list($certificate_id, $certificate_no) = CertificateNo($appid_certificate, $userid, $guid, $con);
+            $current_date = date('Y-m-d');
+            // Button state     //
+         } else if ($_GET['certify'] == 'View/Edit') {
+           
+            $certrows = CertificateInfo($appid_certificate, $con);
+            if ($certrows) {
+              // Button state
+             // $btnSubmit = 'update';
+              // Populate certificate fields
+              $certificate_id = $certrows['id'];
+              $certificate_no = $certrows['certificate_no'];
+              $carbonpaper_id = $certrows['carbonpaper_id'];
+              $approved_by = $certrows['approved_by'];
+              $approver_position = $certrows['position_approved'];
+              $place_issued = $certrows['place_issued'];
+              $consignment_value = $certrows['consignment_value'];
+              $value_currency = $certrows['value_currency'];
+              $additional_scientificname = $certrows['additional_scientificname'];
+              $additional_declaration = $certrows['additional_declaration'];
+              $date_issued = $certrows['date_issued'];
+                if ($date_issued == '0000-00-00' || is_null($date_issued)) {
+                    $date_issued = '';
+                }
+            } // End of populate certificate fields
+         } else {
+            // Invalid action
+            echo "<div class='alert alert-danger'>Invalid action specified.</div>";
+            exit;
+         }
+          
+        
+ ?>
+  <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+        <h1>Certificate</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
+            <li class="breadcrumb-item active">Certificate</li>
+          </ol>
+        </nav>
+      </div>
+    </div><!-- End Page Title -->
+    <section class="section">
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Certificate Form</h5>
+          <form id="certificateFormID" action="main.php" method="POST">
+            <!-- Certificate ID (hidden) -->
+            <input type="hidden" name="certificate_id" value="<?php echo isset($certificate_id) ? $certificate_id : ''; ?>">
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Application No</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="application_no" id="application_no" value="<?php echo isset($application_no) ? $application_no : ''; ?>" readonly>
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Cerificate No</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="certificate_no" id="certificate_no" required value="<?php echo isset($certificate_no) ? $certificate_no : ''; ?>" readonly>
+              </div>
+              <label class="col-sm-2 col-form-label">Carbon Paper No</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="carbonpaper_id" id="carbonpaper_id" required value="<?php echo isset($carbonpaper_id) ? $carbonpaper_id : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Approved By</label>
+              <div class="col-sm-4">
+                <input type="number" class="form-control" name="approved_by" id="approved_by" required value="<?php echo isset($approved_by) ? $approved_by : ''; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Approver's position</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="approver_position" id="approver_position" required value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Place Issued</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="place_issued" id="place_issued" required value="<?php echo isset($place_issued) ? $place_issued : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Consignment Value</label>
+              <div class="col-sm-4">
+                <input type="number" step="0.01" class="form-control" name="consignment_value" id="consignment_value" required value="<?php echo isset($consignment_value) ? $consignment_value : ''; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Value Currency</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="value_currency" id="value_currency" required value="<?php echo isset($value_currency) ? $value_currency : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Additional Scientific Name</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="additional_scientificname" id="additional_scientificname" value="<?php echo isset($additional_scientificname) ? $additional_scientificname : ''; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Additional Declaration</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="additional_declaration" id="additional_declaration" value="<?php echo isset($additional_declaration) ? $additional_declaration : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Date Issued</label>
+              <div class="col-sm-4">
+                <input type="date" class="form-control" name="date_issued" id="date_issued" required value="<?php echo isset($date_issued) ? $date_issued : $current_date; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Certificate Status</label>
+              <div class="col-sm-4">
+                <select class="form-select" name="certificate_status" id="certificate_status" required>
+                  <option value="">Select</option>
+                  <option value="issued" <?php if(isset($certificate_status) && $certificate_status=='issued') echo 'selected'; ?>>Issued</option>
+                  <option value="cancelled" <?php if(isset($certificate_status) && $certificate_status=='cancelled') echo 'selected'; ?>>Cancelled</option>
+                  <option value="amended" <?php if(isset($certificate_status) && $certificate_status=='amended') echo 'selected'; ?>>Amended</option>
+                  <option value="printed" <?php if(isset($certificate_status) && $certificate_status=='printed') echo 'selected'; ?>>Printed</option>
+                  <option value="ongoing" <?php if(isset($certificate_status) && $certificate_status=='ongoing') echo 'selected'; ?>>Ongoing</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Enabled</label>
+              <div class="col-sm-4">
+                <select class="form-select" name="enabled" id="enabled" required>
+                  <option value="yes" <?php if(isset($enabled) && $enabled=='yes') echo 'selected'; ?>>Yes</option>
+                  <option value="no" <?php if(isset($enabled) && $enabled=='no') echo 'selected'; ?>>No</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-sm-10 offset-sm-2 d-flex gap-2">
+                <button type="submit" name="btnSaveCertificate" class="btn btn-primary">
+                  <i class="bi bi-save"></i> Save Certificate
+                </button>
+                <a href="main.php" class="btn btn-secondary">
+                  <i class="bi bi-x-circle"></i> Cancel
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  </section>
+  <?php
+      } // End of if- Certificate
   ?>
   </main><!-- End #main -->
 

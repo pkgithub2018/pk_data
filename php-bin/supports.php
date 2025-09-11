@@ -2195,19 +2195,32 @@ function ApplicationList($guid, $con) {
             $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);   
             $appdate = date('d/m/Y', strtotime($appdate));  // Format date for display
             $checkinspect = InspectionCheck($id, $con); // Check if inspection already exists for this application
-            if ($checkinspect == false) { // return true or false
+            if ($checkinspect == false) { // return true or false - application is found in tbinspection
                 $inspection_status = "Add";
+                $certificate_status = "no inspection";
             } else {
                 $inspection_status = "View/Edit";
+                $checkcertificate = CertificateCheck($id, $con);
+                if ($checkcertificate == true) { // return true or false - application is found in tbcertificate
+                    $certificate_status = "View/Edit";
+                } else {
+                    $certificate_status = "Add";
+                }
             }
-
+             // Certificate status - to be implemented later
+            if ($certificate_status == "Add" || $certificate_status == "View/Edit") {
+                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status'>$certificate_status</a>";
+            } else {
+                $certificate_link = "<span class='text-muted'>Not ready</span>";
+            }
+          
             print "<tr>
                     <td>$appno</td>
                     <td>$exporter</td>
                     <td>$appdate</td>
                     <td><a href='transaction.php?part=application&appid_edit=$id'>View/Edit</a></td>
                     <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status'>$inspection_status</a></span></td>
-                    <td><span>n/a</span></td>
+                    <td>$certificate_link</td>
                     <td><span>n/a</span></td>
                    </tr>";
         }
@@ -2295,4 +2308,77 @@ function InspectionInfo($app_id, $con) {
         return null;
     }
 }
-?>
+
+/*
+  function CertificateNo($application_id, $uid, $con)
+*/
+function CertificateNo($application_id, $uid, $guid, $con) {
+    // Add user ID into tbcertificate table first to get running number-id
+    $sql = "INSERT INTO tbcertificate (
+    application_id,
+    certificate_no,
+    carbonpaper_id,
+    approved_by,
+    position_approved,
+    place_issued,
+    consignment_value,
+    value_currency,
+    additional_scientificname,
+    additional_declaration,
+    created_uid,
+    updated_uid,
+    gid,
+    date_issued,
+    certificate_status,
+    enabled
+) VALUES (
+    '$application_id', '', '', NULL, '', '', NULL, '', '', '', '$uid', NULL, '$guid', NULL, '', 'yes'
+) RETURNING id";
+
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+
+
+    if ($result) {
+        $row = pg_fetch_assoc($result);
+        $id = $row['id']; // Get the last inserted ID - Certificate ID (id - auto_increment)
+        $certno = str_pad($id, 5, "0", STR_PAD_LEFT); // Generate certificate number - 5 digits with leading zeros
+        $sqlupdate = "UPDATE tbcertificate SET certificate_no='$certno' WHERE id='$id'";
+        $resultupdate = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+        if ($resultupdate) {
+            return array($id, $certno); // Return certificate ID and certificate number
+        } else {
+            echo "<script>alert('Error updating certificate number: " . pg_last_error($con) . "');</script>";
+            return false;
+        }
+    } else {
+        echo "<script>alert('Error inserting certificate: " . pg_last_error($con) . "');</script>";
+        return;
+    }
+}
+
+/*
+ CertificateCheck: Check if certificate already exists for a given application ID
+*/
+function CertificateCheck($app_id, $con) {
+    $sql = "SELECT * FROM tbcertificate WHERE application_id = '$app_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/*
+  CertificateInfo: Get certificate information by application ID
+*/
+function CertificateInfo($app_id, $con) {
+    $sql = "SELECT * FROM tbcertificate WHERE application_id = '$app_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row;
+    } else {
+        return null;
+    }
+}

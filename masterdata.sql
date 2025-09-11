@@ -220,9 +220,26 @@ CREATE TABLE IF NOT EXISTS "public"."tbsample" (
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbcertificate" (
-    id SERIAL PRIMARY KEY,
-    id_printed INTEGER NOT NULL, /* ID to be printed */
-    id_carbon_paper INTEGER NOT NULL, /* ID from carbon paper */
+    id SERIAL PRIMARY KEY, /* Auto increment - certificate_id */
+    application_id INTEGER NOT NULL, /* application_id, NOT application_no - auto increment from tbapplication - K */
+    certificate_no TEXT NOT NULL, /* Certificate No : 000001 based on id-autoincrement - K */
+    carbonpaper_id TEXT NOT NULL, /* ID from carbon paper - K */
+    approved_by INTEGER NOT NULL, /* User ID who approved/signed the certificate */
+    position_approved text NOT NULL, /* Position of the approver */
+    place_issued text NOT NULL, /* Place where certificate is issued */
+    consignment_value real NOT NULL, /* Value of the consignment */
+    value_currency text NOT NULL, /* Currency of the consignment value */
+    additional_scientificname text, /* Additional scientific name if any */
+    additional_declaration text, /* Additional declaration if any */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
+    created_uid INTEGER NOT NULL, /* User ID who created the record */
+    updated_uid INTEGER NOT NULL, /* User ID who updated the record */
+    gid INTEGER NOT NULL, /* Group ID of the user who created the record - auto assign as user created */
+    date_issued date NOT NULL, /* Date of issue */
+    certificate_status text NOT NULL, /* Status of the certificate: tbstatus - 1=issued, 2=cancelled, 3=amended, 4= printed, 5=ongoing */
+    enabled text NOT NULL /* yes/no */
+/*
     exporter_id INTEGER NOT NULL, /* Exported ID from lao*/
     importer_id INTEGER NOT NULL, /* Imported ID from overseas */
     package_qty_unit INTEGER NOT NULL, /* Quantity of packages in unit */
@@ -244,16 +261,12 @@ CREATE TABLE IF NOT EXISTS "public"."tbcertificate" (
     certificate_type INTEGER NOT NULL, /* Certificate type from tbcertificate_type */
     location_id INTEGER NOT NULL, /* Location ID from tblocations - where certificate is issued */
     alternate_location text, /* Alternate location if applicable */
-    status text NOT NULL, /* Status of the certificate: tbstatus - 1=issued, 2=cancelled, 3=amended, 4= printed, 5=ongoing */
     internal_note text, /* Internal notes for certificate */
     inspection text NOT NULL, /* yes/no - if inspection is required */
-    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
-    datetime_updated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
-    date_issued date NOT NULL, /* Date of issue */
     updated_by INTEGER NOT NULL, /* User ID who updated the record */
-    approved_by INTEGER NOT NULL, /* User ID who approved/signed the certificate */
+    
     printing_template_id INTEGER NOT NULL, /* Printing template ID from tbprinting_template */
-    enabled text NOT NULL /* yes/no */
+ */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbproduct_unit" (

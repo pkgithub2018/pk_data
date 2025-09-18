@@ -1810,7 +1810,7 @@ function DeleteEntityType($etid, $con) {
 function EntityExportList($con) {
     $guid = $_SESSION['groupid']; // already defined in entity.php
 
-    $sqle = "SELECT * FROM tbentity_export WHERE created_guid='$guid' ORDER BY id ASC";
+    $sqle = "SELECT * FROM tbentity_export WHERE created_guid='$guid' ORDER BY id DESC";
     $result = pg_query($con, $sqle) or die(pg_last_error());
     $i = 0;
     if (pg_num_rows($result) > 0) {
@@ -2103,7 +2103,7 @@ function ApplicationNo($exporter_id, $uid, $con) {
         } 
         // Generate FULL APPLICATION NUMBER - $appno
         // $id - Application ID (id - auto_increment) itself
-        $appno = str_pad($id, 5, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Get only 5 digits,
+        $appno = str_pad($id, 6, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Get only 6 digits,
         return array($id, $appno); // Append current year (last two digits) and province code (01 for Vientiane Capital)
         //$currentYear = date("y");
     } else {
@@ -2339,9 +2339,31 @@ function CertificateNo($application_id, $uid, $guid, $con) {
 
 
     if ($result) {
+        list ($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $loct_id, $status) = Updateuser_values($uid,$con);
+        $location_vars = Locationvariables($loct_id, $con);
+        $loct_code = $location_vars['lid']; // Get location code from Locationvariables function
+        $loct_type = $location_vars['location_type']; 
+        $pid = $location_vars['pid'];
+        
+      //  echo "<script>alert('Location Code: $loct_code, Location Type: $loct_type, Province ID: $pid');</script>";
+       
+        if(strlen($pid) === 1) {
+            $pid = '0'.$pid; // Ensure province code is always two digits
+        }
+         // 1- DOA and 2 - PAFO
+        if ($loct_type === "1") {  // 1 - DOA
+            $province_code = '00'; // if DOA's user, use 00 for province code
+        } else if( $loct_type === "2") {  // 2 - PAFO
+            $province_code = $pid; // NOT CORRECT -if PAFO's user, use 01 for province code
+        } else if ($loct_type === "3") { // 3 - PASS-BORDER
+            $province_code = $pid."/".$loct_code; // if PASS-BORDER's user
+        } 
+
         $row = pg_fetch_assoc($result);
         $id = $row['id']; // Get the last inserted ID - Certificate ID (id - auto_increment)
-        $certno = str_pad($id, 5, "0", STR_PAD_LEFT); // Generate certificate number - 5 digits with leading zeros
+        $certno = str_pad($id, 6, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Generate certificate number - 6 digits with leading zeros
+        
+        
         $sqlupdate = "UPDATE tbcertificate SET certificate_no='$certno' WHERE id='$id'";
         $resultupdate = pg_query($con, $sqlupdate) or die(pg_last_error($con));
         if ($resultupdate) {

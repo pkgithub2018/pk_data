@@ -335,7 +335,7 @@
     <?php
      if(isset($_GET['part']) && $_GET['part']==='ugroup'){
     ?>
-
+ <section class="section">
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
       <h1>Users Group</h1>
@@ -352,7 +352,39 @@
           <i class="bi bi-plus-circle"></i> Add New Group
         </button>
       </div>
-    </div><!-- End Page Title -->
+    </div><!-- End Page Title - Users Group -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Users Group</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - List of Users Group</p>
+
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts" >
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th><b>Group</b>Name</th>
+                   <th>Description</th>
+                   <th>Status</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php Grouplist($con); ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+
+            </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
     <!-- == Modal form == -->
       <div class="modal fade" id="addGroupModal" tabindex="-1" aria-labelledby="addGroupModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -413,38 +445,7 @@
         Groupupdate($groupId,$groupName,$groupDescription,$con); // Update group and back to list
       }
     ?>
-    <section class="section">
-      <div class="row">
-        <div class="col-lg-12">
-
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Users Group</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - List of Users Group</p>
-
-              <!-- Table with stripped rows -->
-              <table class="table datatable tabledata-fonts" >
-                <thead>
-                  <tr>
-                   <th><b>N</b>o</th>
-                   <th><b>Group</b>Name</th>
-                   <th>Description</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
-                 </tr>
-                </thead>
-                <tbody>
-                  <?php Grouplist($con); ?>
-                </tbody>
-              </table>
-              <!-- End Table with stripped rows -->
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+   
    <?php } ?> <!-- ********* End of if part=ugroup ********* -->
     <!-- ======= Users List ======= -->
      <?php

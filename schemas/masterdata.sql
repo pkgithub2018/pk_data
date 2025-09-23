@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbtapplication" (
     /* id and uid will be added first, and then update the rest. So, set empty fields for now */
     id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL, /* user_id from tbusers */
-    application_id TEXT, /* Application ID=00000 + id + last two digits of year + 2 digits of province */
+    application_no TEXT, /* Application ID=00000 + id + last two digits of year + 2 digits of province */
     application_date date,
     company_id INTEGER,
     reg_no TEXT, /* Registration number of application */
@@ -140,7 +140,10 @@ CREATE TABLE IF NOT EXISTS "public"."tbtapplication" (
     purpose TEXT, /* Purpose of the product */
     place_quarantine INTEGER, /* Place of quarantine - borderpoint_id from tblocations */
     place_treatment INTEGER, /* Place of treatment - borderpoint_id from tblocations */
-    date_certificate date /* Date of certificate */
+    date_certificate date, /* Date of certificate */
+    guid INTEGER, /* Guid from tbusers */
+    place_quarantine_other TEXT, /* If other, please specify */
+    place_treatment_other TEXT /* If other, please specify */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbinspection" (

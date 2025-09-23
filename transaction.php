@@ -688,16 +688,13 @@ $guid = $_SESSION["groupid"];
             </div>
 
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Exporter's name and address</label>
+                  <label class="col-sm-2 col-form-label">Exporter</label>
                   <div class="col-sm-4 d-flex align-items-start">
-                      <a href="#" data-bs-toggle="modal" data-bs-target="#exporterModal" class="me-2">
-                        <i class="bi bi-search ms-2" style="font-size: 1.2rem; cursor:pointer;"></i>
-                      </a>
-                      <textarea name="exporter_address" id="exporter_address" class="form-control" rows="5"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
+                      <textarea name="exporter" id="exporter" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
                   </div>
-                  <label class="col-sm-2 col-form-label">Importer's name and address</label>
+                  <label class="col-sm-2 col-form-label">Importer</label>
                   <div class="col-sm-4">
-                    <textarea name="importer_address" id="importer_address" class="form-control" rows="5"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                    <textarea name="importer" id="importer" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
                   </div>
             </div>
             
@@ -1244,15 +1241,15 @@ function selectExporter(info) {
                 <label class="col-sm-2 col-form-label">Inspection Findings</label>
                 <div class="col-sm-10">
                   <div class="form-check mb-2">
-                    <input class="form-check-input border border-success bg-success-subtle" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>>
+                    <input class="form-check-input border border-success" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>>
                     <label class="form-check-label" for="detected_pest">&nbsp;Detected pest</label>
                   </div>
                   <div class="form-check mb-2">
-                    <input class="form-check-input border border-warning bg-warning-subtle" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
+                    <input class="form-check-input border border-warning" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
                     <label class="form-check-label" for="treatment_ability">&nbsp;Treatment ability</label>
                   </div>
                   <div class="form-check mb-2">
-                    <input class="form-check-input border-primary bg-primary-subtle" type="checkbox" name="lab_analysis" id="lab_analysis" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($lab_analysis) && $lab_analysis) echo 'checked'; ?>>
+                    <input class="form-check-input border-primary" type="checkbox" name="lab_analysis" id="lab_analysis" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($lab_analysis) && $lab_analysis) echo 'checked'; ?>>
                     <label class="form-check-label" for="lab_analysis">&nbsp;Lab analysis required</label>
                   </div>
                 </div>
@@ -1420,6 +1417,53 @@ function selectExporter(info) {
                 <input type="text" class="form-control" name="application_no" id="application_no" value="<?php echo isset($application_no) ? $application_no : ''; ?>" readonly>
               </div>
             </div>
+    <!-- No needed by DOA
+        <div class="card mb-4">
+          <div class="card-header">
+            <strong>Inspection findings</strong>
+          </div>
+          <div class="card-body">
+        
+              <div class="row mb-3 align-items-center">
+                <div class="col-sm-5">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-warning" type="checkbox" name="product_inspection" id="product_inspection" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($product_inspection) && $product_inspection) echo 'checked'; ?>>
+                    <label class="form-check-label" for="product_inspection">&nbsp;Product inspection</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-success" type="checkbox" name="pest_inspection" id="pest_inspection" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($pest_inspection) && $pest_inspection) echo 'checked'; ?>>
+                    <label class="form-check-label" for="pest_inspection">&nbsp;Pest inspection</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border-primary" type="checkbox" name="pest_detected" id="pest_detected" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($pest_detected) && $pest_detected) echo 'checked'; ?>>
+                    <label class="form-check-label" for="lab_analysis">&nbsp;Lab analysis required</label>
+                  </div>
+                </div>
+                <div class="col-sm-5">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-info" type="checkbox" name="fumigation_required" id="fumigation_required" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($fumigation_required) && $fumigation_required) echo 'checked'; ?>>
+                    <label class="form-check-label" for="fumigation_required">&nbsp;Fumigation required</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input border border-danger" type="checkbox" name="quarantine_required" id="quarantine_required" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($quarantine_required) && $quarantine_required) echo 'checked'; ?>>
+                    <label class="form-check-label" for="quarantine_required">&nbsp;Quarantine required</label>
+                  </div>
+                </div>
+              </div>        
+            </div>  
+        </div> -->
+        <!-- Inspection findings - Certificate -->
+
+             <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Import country</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="import_country" id="import_country" required value="<?php echo isset($import_country) ? $import_country : ''; ?>" readonly>
+              </div>
+              <label class="col-sm-2 col-form-label">Import entry point</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="import_entrypoint" id="import_entrypoint" required value="<?php echo isset($import_entrypoint) ? $import_entrypoint : ''; ?>">
+              </div>
+            </div>
 
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Cerificate No</label>
@@ -1444,10 +1488,47 @@ function selectExporter(info) {
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Place Issued</label>
+              <label class="col-sm-2 col-form-label">Place of Issue</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="place_issued" id="place_issued" required value="<?php echo isset($place_issued) ? $place_issued : ''; ?>">
+                <input type="text" class="form-control" name="place_of_issue" id="place_of_issue" required value="<?php echo isset($place_of_issue) ? $place_of_issue : ''; ?>">
               </div>
+              <label class="col-sm-2 col-form-label">Export entry point</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="export_entrypoint" id="export_entrypoint" required value="<?php echo isset($export_entrypoint) ? $export_entrypoint : ''; ?>">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">Exporter's name and address</label>
+                  <div class="col-sm-4 d-flex align-items-start">
+                      <input type="text" class="form-control" name="exporter_name" id="exporter_name" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
+                  </div>
+                  <label class="col-sm-2 col-form-label">Importer's name and address</label>
+                  <div class="col-sm-4">
+                    <input type="text" class="form-control" name="importer_name" id="importer_name" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></input>
+                  </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">&nbsp;</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" class="form-control" name="exporter_oncertificate" id="exporter_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($exporter_oncertificate) ? $exporter_oncertificate : ''; ?>" style="font-style: italic;">
+              </div>
+              <label class="col-sm-2 col-form-label">&nbsp;</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="importer_oncertificate" id="importer_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($importer_oncertificate) ? $importer_oncertificate : ''; ?>" style="font-style: italic;">
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">&nbsp;</label>
+                  <div class="col-sm-4 d-flex align-items-start">
+                      <textarea name="exporter_address" id="exporter_address" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
+                  </div>
+                  <label class="col-sm-2 col-form-label">&nbsp;</label>
+                  <div class="col-sm-4">
+                    <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                  </div>
             </div>
 
             <div class="row mb-3 align-items-center">
@@ -1462,16 +1543,20 @@ function selectExporter(info) {
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Additional Scientific Name</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="additional_scientificname" id="additional_scientificname" value="<?php echo isset($additional_scientificname) ? $additional_scientificname : ''; ?>">
-              </div>
-              <label class="col-sm-2 col-form-label">Additional Declaration</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="additional_declaration" id="additional_declaration" value="<?php echo isset($additional_declaration) ? $additional_declaration : ''; ?>">
+              <label class="col-sm-2 col-form-label">Another Scientific Name</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name="another_scientificname" id="another_scientificname" value="<?php echo isset($another_scientificname) ? $another_scientificname : ''; ?>">
               </div>
             </div>
 
+             <div class="row mb-3 align-items-center">
+            <label class="col-sm-2 col-form-label">Additional Declaration</label>
+            <div class="col-sm-10">
+              <textarea class="form-control" name="additional_declaration" id="additional_declaration" rows="3" placeholder="Enter additional declaration"><?php echo isset($additional_declaration) ? htmlspecialchars($additional_declaration) : ''; ?></textarea>
+            </div>
+          </div>
+
+          <!-- WAIT FOR CONFIRMATION FROM DOA IF NEED THIS FIELDS
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Date Issued</label>
               <div class="col-sm-4">
@@ -1491,6 +1576,42 @@ function selectExporter(info) {
             </div>
 
             <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Date created</label>
+              <div class="col-sm-4">
+                <input type="date" class="form-control" name="date_created" id="date_created" required value="<?php echo isset($date_created) ? $date_created : $current_date; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Created by</label>
+              <div class="col-sm-4">
+                <select class="form-select" name="created_by" id="created_by" required>
+                  <option value="">Select</option>
+                  <option value="user1" <?php if(isset($created_by) && $created_by=='user1') echo 'selected'; ?>>User 1</option>
+                  <option value="user2" <?php if(isset($created_by) && $created_by=='user2') echo 'selected'; ?>>User 2</option>
+                  <option value="user3" <?php if(isset($created_by) && $created_by=='user3') echo 'selected'; ?>>User 3</option>
+                  <option value="user4" <?php if(isset($created_by) && $created_by=='user4') echo 'selected'; ?>>User 4</option>
+                  <option value="user5" <?php if(isset($created_by) && $created_by=='user5') echo 'selected'; ?>>User 5</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Date Updated</label>
+              <div class="col-sm-4">
+                <input type="date" class="form-control" name="date_updated" id="date_updated" required value="<?php echo isset($date_updated) ? $date_updated : $current_date; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Updated by</label>
+              <div class="col-sm-4">
+                <select class="form-select" name="updated_by" id="updated_by" required>
+                  <option value="">Select</option>
+                  <option value="user1" <?php if(isset($updated_by) && $updated_by=='user1') echo 'selected'; ?>>User 1</option>
+                  <option value="user2" <?php if(isset($updated_by) && $updated_by=='user2') echo 'selected'; ?>>User 2</option>
+                  <option value="user3" <?php if(isset($updated_by) && $updated_by=='user3') echo 'selected'; ?>>User 3</option>
+                  <option value="user4" <?php if(isset($updated_by) && $updated_by=='user4') echo 'selected'; ?>>User 4</option>
+                  <option value="user5" <?php if(isset($updated_by) && $updated_by=='user5') echo 'selected'; ?>>User 5</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Enabled</label>
               <div class="col-sm-4">
                 <select class="form-select" name="enabled" id="enabled" required>
@@ -1499,11 +1620,11 @@ function selectExporter(info) {
                 </select>
               </div>
             </div>
-
+        -->
             <div class="row mb-3">
               <div class="col-sm-10 offset-sm-2 d-flex gap-2">
                 <button type="submit" name="btnSaveCertificate" class="btn btn-primary">
-                  <i class="bi bi-save"></i> Save Certificate
+                  <i class="bi bi-save"></i> Submit
                 </button>
                 <a href="main.php" class="btn btn-secondary">
                   <i class="bi bi-x-circle"></i> Cancel

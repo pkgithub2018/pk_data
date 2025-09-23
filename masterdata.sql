@@ -328,3 +328,15 @@ CREATE TABLE IF NOT EXISTS "public"."tbmethod_chemical" (
     chinspected_by text NOT NULL /* Person who inspects sample for chemical purpose */
 )
 
+CREATE TABLE IF NOT EXISTS "public"."tbapprovers" (
+    id SERIAL PRIMARY KEY,
+    nameap text NOT NULL,
+    surname text NULL,
+    roles text NOT NULL, /* Officer, Director */
+    position text NOT NULL, /* 1=Yes, 2=No */
+    workplace text NOT NULL, /* DOA, PAF */
+    uid INTEGER NOT NULL, /* user_id from tbusers */
+    gid INTEGER NOT NULL, /* group_id from tbusergroup */
+    enabled text NOT NULL /* yes/no */
+)
+

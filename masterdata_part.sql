@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "public"."tbtapplication" (
+CREATE TABLE IF NOT EXISTS "public"."tbapplication" (
     /* id and uid will be added first, and then update the rest. So, set empty fields for now */
     id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL, /* user_id from tbusers */

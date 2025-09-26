@@ -816,11 +816,11 @@ function Locationupdate($id, $locid, $nameeng, $namelao, $loctype,$pid, $did, $c
   Locationname: Get name of locations from tblocations table
 */
 function Locationname($locid, $con) {
-    $sql = "SELECT name_lao FROM tblocations WHERE id = '$locid'";
+    $sql = "SELECT name_eng FROM tblocations WHERE id = '$locid'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if ($result && pg_num_rows($result) > 0) {
         $row = pg_fetch_assoc($result);
-        return $row['name_lao'];
+        return $row['name_eng'];
     } else {
         return null; // Return null if no location found
     }
@@ -1025,7 +1025,21 @@ function DeleteCountry($cid, $con) {
     } else {
         echo "<script>alert('Error deleting country: " . pg_last_error($con) . "');</script>";
     }
-}   
+} 
+
+/*
+  CountryInfo: Get country information from tbcountries table
+*/
+function CountryInfo($cid, $con) {
+    $sql = "SELECT * FROM tbcountries WHERE id = '$cid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // Return null if no country found
+    }
+}
+
 /* 
   ProductList: List all product  from tbproduct table
 */
@@ -1953,6 +1967,113 @@ function GetEntityExport($id, $con) {
 }
 
 /*
+ EntityImportList($con): Show list of entities from tbentity_import table
+*/
+function EntityImportList($con) {
+   // $guid = $_SESSION['groupid']; // already defined in entity.php
+
+    $sqle = "SELECT * FROM tbentity_import ORDER BY id DESC";
+    $result = pg_query($con, $sqle) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $title = $row['title'];
+            $address = $row['address'];
+            $countryname = CountryInfo($row['country_id'], $con)['title'];
+            //$district = $row['district'];
+            $phone = $row['phone'];
+            $email = $row['email'];
+            $contactperson = $row['contact_name'];
+
+            print "<tr>
+                    <td>$i</td>
+                    <td>$countryname</td>
+                    <td>$title</td>
+                    <td>$address</td>
+                    <td>$phone</td>
+                    <td>$email</td>
+                    <td>$contactperson</td>
+                    <td><a href='entity.php?part=entity&frm=editEntity_import&id=$id' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
+
+
+/*
+ AddEntityImport: Add new entity import into tbentity_import table
+*/
+function AddEntityImport($bstype, $enttype, $title, $address, $zipcode, $pid, $did, $countryid, $phone, $email, $contactperson, $created_date, $guid, $con) {
+    // Escape all inputs
+    $bstype = pg_escape_string($con, $bstype);
+    $enttype = pg_escape_string($con, $enttype);
+    $title = pg_escape_string($con, $title);
+    $address = pg_escape_string($con, $address);
+    $zipcode = pg_escape_string($con, $zipcode);
+    $province = pg_escape_string($con, $pid);
+    $district = pg_escape_string($con, $did);
+    $country = pg_escape_string($con, $countryid);
+    $phone = pg_escape_string($con, $phone);
+    $email = pg_escape_string($con, $email);
+    $contactperson = pg_escape_string($con, $contactperson);
+    $created_date = pg_escape_string($con, $created_date);
+    $guid = pg_escape_string($con, $guid);
+
+    // Insert new entity import
+    $sqladdentity = "INSERT INTO \"tbentity_import\" (\"business_type\", \"entity_type\", \"title\", \"address\", \"zipcode\", \"province\",  \"district\", \"country_id\", \"phone\", \"email\", \"contact_name\", \"datetime_created\", \"created_guid\") 
+                     VALUES ('$bstype', '$enttype', '".$title."', '".$address."', '".$zipcode."', '".$province."', '".$district."', '".$country."', '".$phone."', '".$email."', '".$contactperson."', '".$created_date."', '".$guid."') RETURNING id";
+    $result = pg_query($con, $sqladdentity) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'entity.php?entity=import';</script>";
+    } else {
+        echo "<script>alert('Error adding entity import: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ UpdateEntityImport: Update entity import by ID
+*/
+function UpdateEntityImport($id, $bstype, $enttype, $title, $address, $zipcode, $pid, $did, $countryid, $phone, $email, $contactperson, $con) {
+    // Escape all inputs
+    $id = pg_escape_string($con, $id);
+    $bstype = pg_escape_string($con, $bstype);
+    $enttype = pg_escape_string($con, $enttype);
+    $title = pg_escape_string($con, $title);
+    $address = pg_escape_string($con, $address);
+    $zipcode = pg_escape_string($con, $zipcode);
+    $province = pg_escape_string($con, $pid);
+    $district = pg_escape_string($con, $did);
+    $country = pg_escape_string($con, $countryid);
+    $phone = pg_escape_string($con, $phone);
+    $email = pg_escape_string($con, $email);
+    $contactperson = pg_escape_string($con, $contactperson);
+
+    // Update entity import
+    $sqlupdate = "UPDATE \"tbentity_import\" SET \"business_type\"='$bstype', \"entity_type\"='$enttype', \"title\"='$title', \"address\"='$address', \"zipcode\"='$zipcode', \"province\"='$province', \"district\"='$district', \"country_id\"='$country', \"phone\"='$phone', \"email\"='$email', \"contact_name\"='$contactperson' WHERE id='$id'";
+    $result = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'entity.php?entity=import';</script>";
+    } else {
+        echo "<script>alert('Error updating entity import: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+   EntityImportInfo: Get entity import by ID
+*/
+function EntityImportInfo($id, $con) {
+    $id = pg_escape_string($con, $id);
+    $sql = "SELECT * FROM tbentity_import WHERE id='$id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_array($result);
+    }
+    return null;
+}
+
+/*
  ModuleList($con): Show list of modules from tbmodules table
 */
 function ModuleList($con) {
@@ -2171,7 +2292,7 @@ function ApplicationProductList($con) {
                     <td>".$cname."</td>
                     <td>".$cname_scientific."</td>
                     <td>".$cdesc."</td>
-                    <td><button type='button' name='$cid' id='$cid' class='btn btn-sm btn-danger' onclick='passCommodity(\"$cid\",\"$cname\", \"$cname_scientific\", \"$cdesc\")'>Add</button></td>
+                    <td><button type='button' name='$cid' id='$cid' class='btn btn-sm btn-danger' onclick='passCommodity(\"$cid\",\"$cname\", \"$cname_scientific\", \"$cdesc\")'>Select</button></td>
                  </tr>";
                  $i++;
         }

@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbrequest" (
    country_id INTEGER NOT NULL /* country_id from tbcountry */
    )
 
-CREATE TABLE IF NOT EXISTS "public"."tbentity" (
+CREATE TABLE IF NOT EXISTS "public"."tbentity_export" (
     id SERIAL PRIMARY KEY,
     business_type INTEGER NOT NULL,
     entity_type INTEGER NOT NULL,
@@ -161,7 +161,27 @@ CREATE TABLE IF NOT EXISTS "public"."tbentity" (
     check_list_registered text, /* yes/no - Checklist registered */
     license_export text NOT NULL, /* yes/no */
     gap text NOT NULL, /* yes/no - Good Agricultural Practices */
-    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP /* Date and time of creation */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    created_guid INTEGER NOT NULL /* Group ID of the user who created the record - auto assign as user created */
+   /* uid INTEGER NOT NULL,  User ID who created the record 
+    guid INTEGER NOT NULL  Guid from tbusers- No NEED because data on exporters and importers need to be shared */
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbentity_import" (
+    id SERIAL PRIMARY KEY,
+    business_type INTEGER NOT NULL,
+    entity_type INTEGER NOT NULL,
+    title text NOT NULL, /* Company name */
+    address text NOT NULL, /* Address of the company */
+    zipcode text NOT NULL, /* Zip code */ 
+    province text NOT NULL, /* Province's name */
+    district text NOT NULL, /* District/City's name */
+    country_id INTEGER NOT NULL,
+    phone text,
+    email text, /* Email of the company */
+    contact_name text, /* Contact person name */
+    datetime_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    created_guid INTEGER NOT NULL /* Group ID of the user who created the record - auto assign as user created */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbinspection" (

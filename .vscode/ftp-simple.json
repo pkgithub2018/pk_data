@@ -1,0 +1,13 @@
+[
+    {
+        "name": "ephyto-server",
+        "host": "ephyto.info",
+        "port": 22,
+        "type": "sftp",
+        "username": "ephytoin",
+        "password": "pkCpanel@2025",
+        "path": "/home/ephytoin/public_html",
+        "autosave": true,
+        "confirm": false
+    }
+]

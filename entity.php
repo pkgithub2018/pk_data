@@ -177,37 +177,16 @@ $guid = $_SESSION["groupid"];
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
-      <!--
+      
       <li class="nav-item">
-        <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-folder"></i>
-          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="transaction-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=application_list">
-              <i class="bi bi-circle"></i><span>Application</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection's results</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-      -->
-      <!-- End Transaction Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link active" href="#" >
+        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'export') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=export" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'import') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=import" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
@@ -443,12 +422,12 @@ $guid = $_SESSION["groupid"];
        }
     ?>
     <div class="pagetitle">
-      <h1>Export Entity/Company</h1>
+      <h1>Export Entity</h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php">Home</a></li>
           <li class="breadcrumb-item"><a href="entity.php?entity=export">Export entity-List</a></li>
-          <li class="breadcrumb-item active">Export Entity/Company</li>
+          <li class="breadcrumb-item active">Export Entity</li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -583,7 +562,7 @@ $guid = $_SESSION["groupid"];
                     <button type="submit" name="btnsubEntityExport" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate) ? 'Update' : 'Submit'; ?></button>
                   </div>
                 </div>
-              </form><!-- End General Form Elements -->
+              </form><!-- End Export entity Form -->
             </div>
           </div>
 
@@ -605,37 +584,224 @@ $guid = $_SESSION["groupid"];
      // IMPORT ENTITY/COMPANY FORM  *******************
     if(isset($_GET['entity']) && $_GET['entity'] == 'import') {   
    ?>
+    <section class="section">
+      <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+        <h1>Import entity</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="#">Import entity list</a></li>
+            <li class="breadcrumb-item active">Import entity</li>
+          </ol>
+          </nav>
+        </div>
+        <div>
+          <a href="entity.php?frm=newEntity_import" class="btn btn-success btn-sm" role="button">
+            <i class="bi bi-plus-circle"></i> Add New import entity
+          </a>
+        </div>
+      </div><!-- End Page Title - Import entity list -->
+       <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Import entity</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Import entity</p>
+
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts" >
+                <thead>
+                  <tr>
+                   <th>
+                      <b>N</b>o
+                    </th>
+                    <th>Country</th>
+                    <th>
+                      <b>N</b>ame
+                    </th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Contact Person</th>
+                    <th>Edit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php EntityImportList($con); ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <?php
+      }  // End of Import Entity - List
+     ?>
+    <!-- =======**************** Import entity Add/Updates - Form ************* ======= -->
+     <?php
+       if($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['btnsubEntityImport'])) {
+           $sbupdate_import = ''; // Default to submit action
+           // $uid = $_POST['huid'];
+           $bustype = $_POST['businesstype_import'];
+           $enttype = $_POST['entitytype_import'];
+           $name = $_POST['name_import'];
+            $address = $_POST['address_import'];
+            $zip = $_POST['zipcode_import'];
+            $phone = $_POST['phone_import'];
+            $email = $_POST['email_import'];
+            $countryid = $_POST['country_import'];
+            $province = $_POST['province_import'];
+            $district = $_POST['district_import'];
+            $contact_person = $_POST['contactperson_import'];
+            // Null for date= "1990-01-01"
+            $datenull = "'1990-01-01'";
+            $created_date = date('Y-m-d H:i:s');
+            $created_guid = $guid;
+        // Insert or update logic here
+        if($_POST['btnsubEntityImport'] === 'update') {
+          // Update existing entity
+          $sbupdate = 'update';
+          $entityimport_id = $_GET['id']; // Assuming you pass the entity ID in the URL
+          UpdateEntityImport($entityimport_id, $bustype, $enttype, $name, $address, $zip, $province, $district, $countryid, $phone, $email, $contact_person, $con);
+        }
+        else if($_POST['btnsubEntityImport'] === 'submit') {
+          // Add new entity
+         AddEntityImport($bustype, $enttype, $name, $address, $zip, $province, $district, $countryid, $phone, $email, $contact_person, $created_date, $created_guid, $con);
+        }
+          
+       }
+     ?>
+    <!-- Handle form submission for Import Entity/Company -->
+    <?php
+       if (isset($_GET['frm']) && ($_GET['frm'] === 'newEntity_import' || $_GET['frm'] === 'editEntity_import')) {
+          echo "<script>document.title = 'Import Entity/Company Form';</script>";
+          if(isset($_GET['id'])) { // id for entity import
+            $sbupdate_import = 'update';
+            $entityimport_id = $_GET['id'];
+            // Declare the same variable as in the form
+            $bustype = EntityImportInfo($entityimport_id, $con)['business_type'];
+            $enttype = EntityImportInfo($entityimport_id, $con)['entity_type'];
+            $name = EntityImportInfo($entityimport_id, $con)['title'];
+            $address = EntityImportInfo($entityimport_id, $con)['address'];
+            $zip = EntityImportInfo($entityimport_id, $con)['zipcode'];
+            $phone = EntityImportInfo($entityimport_id, $con)['phone'];
+            $email = EntityImportInfo($entityimport_id, $con)['email'];
+            $countryid = EntityImportInfo($entityimport_id, $con)['country_id'];
+            $province = EntityImportInfo($entityimport_id, $con)['province'];
+            $district = EntityImportInfo($entityimport_id, $con)['district'];
+            $contact_person = EntityImportInfo($entityimport_id, $con)['contact_name'];
+
+          }
+    ?>
     <div class="pagetitle">
-      <h1>Import Entity/Company</h1>
+      <h1>Import Entity</h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item">Data input form</li>
-          <li class="breadcrumb-item active">Import Entity/Company</li>
+          <li class="breadcrumb-item"><a href="entity.php?entity=import">Import entity list</a></li>
+          <li class="breadcrumb-item active">Import Entity</li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
+   
     <section class="section">
       <div class="row">
         <div class="col-lg-12">
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Import Entity/Company Data</h5>
+              <h5 class="card-title">Import Entity</h5>
               <!-- Import Entity/Company Form -->
-              <form action="" method="POST" enctype="multipart/form-data">
+              <form action="" method="POST">
+                 <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Business Type</label>
+                  <div class="col-sm-4">
+                    <select class="form-select" name="businesstype_import" aria-label="Default select example">
+                      <option selected></option>
+                      <option value="1" <?php echo (isset($bustype) && $bustype == '1') ? 'selected' : ''; ?>>Individual</option>
+                      <option value="2" <?php echo (isset($bustype) && $bustype == '2') ? 'selected' : ''; ?>>Company</option>
+                    </select>
+                  </div>
+                  <label class="col-sm-2 col-form-label">Entity Type</label>
+                  <div class="col-sm-4">
+                    <select class="form-select" name="entitytype_import" aria-label="Default select example">
+                      <option selected></option>
+                      <?php SelectEntitytype($enttype, $con); ?>
+                    </select>
+                  </div> 
+                </div>
+
                 <div class="row mb-3">
-                  <label for="inputFile" class="col-sm-2 col-form-label">Select File</label>
+                  <label for="inputText" class="col-sm-2 col-form-label">Entity Name</label>
                   <div class="col-sm-10">
-                    <input type="file" name="import_file" class="form-control" required>
+                    <input type="text" name="name_import" id="name_import" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
                   </div>
                 </div>
+                <div class="row mb-3">
+                  <label for="inputPassword" class="col-sm-2 col-form-label">Address</label>
+                  <div class="col-sm-10">
+                    <textarea class="form-control" name="address_import" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <!-- Zip Code -->
+                  <label class="col-sm-2 col-form-label">Zip Code</label>
+                  <div class="col-sm-2">
+                    <input type="text" name="zipcode_import" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>">
+                  </div>
+
+                  <!-- Phone -->
+                  <label class="col-sm-1 col-form-label">Phone</label>
+                  <div class="col-sm-7">
+                    <input type="text" name="phone_import" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Email</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="email_import" id="email_import" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Country</label>
+                  <div class="col-sm-10">
+                     <select class="form-select" name="country_import" aria-label="Default select example">
+                      <option selected></option>
+                      <?php SelectCountry($countryid, $con); ?>
+                    </select>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">Province</label>
+                  <div class="col-sm-4">
+                    <input type="text" name="province_import" id="province_import" class="form-control" value="<?php echo isset($province) ? $province : ''; ?>">
+                  </div>
+                  <label class="col-sm-2 col-form-label">District/City</label>
+                  <div class="col-sm-4">
+                    <input type="text" name="district_import" id="district_import" class="form-control" value="<?php echo isset($district) ? $district : ''; ?>">
+                  </div> 
+                </div>
+
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label">Contact Person</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="contactperson_import" id="contactperson_import" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>">
+                  </div>
+                </div>
+
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10">
-                    <button type="submit" name="btnimport" class="btn btn-primary">Import</button>
+                    <button type="submit" name="btnsubEntityImport" class="btn btn-primary" value="<?php echo isset($sbupdate_import) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate_import) ? 'Update' : 'Submit'; ?></button>
                   </div>
                 </div>
+
               </form><!-- End Import Form -->
             </div>
           </div>
@@ -643,9 +809,10 @@ $guid = $_SESSION["groupid"];
         </div>
       </div>
     </section>
-    <?php
-      }  // End of Import Entity/Company
-     ?>
+    <?php 
+      }  // End of Import Entity Form
+    ?>
+    
   </main><!-- End #main -->
 
   <!-- ======= Footer ======= -->
@@ -672,6 +839,40 @@ $guid = $_SESSION["groupid"];
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
+
+  <!-- Entity Navigation Active State Handler -->
+  <script>
+    $(document).ready(function() {
+      // Function to update active state
+      function updateActiveState() {
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const entityType = urlParams.get('entity');
+        
+        // Remove active class from all entity nav links
+        $('.nav-item a[href*="entity.php"]').removeClass('active').addClass('collapsed');
+        
+        // Add active class to current page
+        if (entityType === 'export') {
+          $('.nav-item a[href*="entity.php?entity=export"]').removeClass('collapsed').addClass('active');
+        } else if (entityType === 'import') {
+          $('.nav-item a[href*="entity.php?entity=import"]').removeClass('collapsed').addClass('active');
+        }
+      }
+      
+      // Update active state on page load
+      updateActiveState();
+      
+      // Handle click events on entity navigation links
+      $('.nav-item a[href*="entity.php"]').click(function(e) {
+        // Remove active from all entity nav links
+        $('.nav-item a[href*="entity.php"]').removeClass('active').addClass('collapsed');
+        
+        // Add active to clicked link
+        $(this).removeClass('collapsed').addClass('active');
+      });
+    });
+  </script>
 
 </body>
 

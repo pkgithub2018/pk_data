@@ -1352,8 +1352,26 @@ function selectExporter(info) {
         
             $appid_certificate = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
             $application_no = ApplicationInfo($appid_certificate, $con)['application_no'];
+            $import_country_id = ApplicationInfo($appid_certificate, $con)['country_import'];
+            $import_country = CountryInfo($import_country_id, $con)['title'];
+            $import_point = ApplicationInfo($appid_certificate, $con)['import_point'];
+            $uid = ApplicationInfo($appid_certificate, $con)['uid'];
+            $locationid = Userdata($uid, $con)['location_id'];
+            $place_issue = Locationname($locationid, $con);
+            $export_pointid = ApplicationInfo($appid_certificate, $con)['export_point'];
+            $export_point = Locationname($export_pointid, $con);
+            $exporterid = ApplicationInfo($appid_certificate, $con)['company_id'];
+            // Get exporter details
+            $exporter_name = GetEntityExport($exporterid, $con)['title'];
+            $exporter_address = GetEntityExport($exporterid, $con)['address'];
+            $provinceid = GetEntityExport($exporterid, $con)['province'];
+            $districtid = GetEntityExport($exporterid, $con)['district'];
+            $phone = GetEntityExport($exporterid, $con)['phone'];
+            $email = GetEntityExport($exporterid, $con)['email'];
+            $import_countryid = ApplicationInfo($appid_certificate, $con)['country_import'];
+            $import_country = CountryInfo($import_countryid, $con)['title'];
 
-    // ADD CERTIFICATE ************
+    // ADD NEW CERTIFICATE ************
          if($_GET['certify'] == 'Add'){   
             // create new certificate number 
             list($certificate_id, $certificate_no) = CertificateNo($appid_certificate, $userid, $guid, $con);
@@ -1412,11 +1430,16 @@ function selectExporter(info) {
             <input type="hidden" name="certificate_id" value="<?php echo isset($certificate_id) ? $certificate_id : ''; ?>">
 
             <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Cerificate No</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="certificate_no" id="certificate_no" required value="<?php echo isset($certificate_no) ? $certificate_no : ''; ?>" readonly>
+              </div>
               <label class="col-sm-2 col-form-label">Application No</label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="application_no" id="application_no" value="<?php echo isset($application_no) ? $application_no : ''; ?>" readonly>
               </div>
             </div>
+
     <!-- No needed by DOA
         <div class="card mb-4">
           <div class="card-header">
@@ -1461,51 +1484,29 @@ function selectExporter(info) {
               </div>
               <label class="col-sm-2 col-form-label">Import entry point</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="import_entrypoint" id="import_entrypoint" required value="<?php echo isset($import_entrypoint) ? $import_entrypoint : ''; ?>">
-              </div>
-            </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Cerificate No</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="certificate_no" id="certificate_no" required value="<?php echo isset($certificate_no) ? $certificate_no : ''; ?>" readonly>
-              </div>
-              <label class="col-sm-2 col-form-label">Carbon Paper No</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="carbonpaper_id" id="carbonpaper_id" required value="<?php echo isset($carbonpaper_id) ? $carbonpaper_id : ''; ?>">
-              </div>
-            </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Approved By</label>
-              <div class="col-sm-4">
-                <input type="number" class="form-control" name="approved_by" id="approved_by" required value="<?php echo isset($approved_by) ? $approved_by : ''; ?>">
-              </div>
-              <label class="col-sm-2 col-form-label">Approver's position</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="approver_position" id="approver_position" required value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
+                <input type="text" class="form-control" name="import_entrypoint" id="import_entrypoint" required value="<?php echo isset($import_point) ? $import_point : ''; ?>">
               </div>
             </div>
 
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Place of Issue</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="place_of_issue" id="place_of_issue" required value="<?php echo isset($place_of_issue) ? $place_of_issue : ''; ?>">
+                <input type="text" class="form-control" name="place_of_issue" id="place_of_issue" required value="<?php echo isset($place_issue) ? $place_issue : ''; ?>">
               </div>
               <label class="col-sm-2 col-form-label">Export entry point</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="export_entrypoint" id="export_entrypoint" required value="<?php echo isset($export_entrypoint) ? $export_entrypoint : ''; ?>">
+                <input type="text" class="form-control" name="export_entrypoint" id="export_entrypoint" required value="<?php echo isset($export_point) ? $export_point : ''; ?>">
               </div>
             </div>
 
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Exporter's name and address</label>
                   <div class="col-sm-4 d-flex align-items-start">
-                      <input type="text" class="form-control" name="exporter_name" id="exporter_name" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
+                      <input type="text" class="form-control" name="exportername" id="exportername" class="form-control" value="<?php echo isset($exporter_name) ? $exporter_name : ''; ?>"></input>
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's name and address</label>
                   <div class="col-sm-4">
-                    <input type="text" class="form-control" name="importer_name" id="importer_name" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></input>
+                    <input type="text" class="form-control" name="importer_name" id="importer_name" class="form-control" required value="<?php echo isset($importer_name) ? $importer_name : ''; ?>"></input>
                   </div>
             </div>
 
@@ -1527,8 +1528,31 @@ function selectExporter(info) {
                   </div>
                   <label class="col-sm-2 col-form-label">&nbsp;</label>
                   <div class="col-sm-4">
-                    <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                    <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($import_country) ? $import_country : ''; ?></textarea>
                   </div>
+            </div>
+
+            
+             <div class="row mb-3 align-items-center"> 
+              <label class="col-sm-2 col-form-label">Carbon Paper No</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="carbonpaper_id" id="carbonpaper_id" required value="<?php echo isset($carbonpaper_id) ? $carbonpaper_id : ''; ?>">
+              </div>
+            </div>
+
+            
+            <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">Approved by</label>
+                  <div class="col-sm-4">
+                    <select class="form-select" name="approved_by" aria-label="Default select example">
+                      <option selected></option>
+                      <?php //SelectApprovedBy($approved_by, $con); ?>
+                    </select>
+                  </div>
+              <label class="col-sm-2 col-form-label">Approver's position</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="approver_position" id="approver_position" required value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
+              </div>
             </div>
 
             <div class="row mb-3 align-items-center">
@@ -1538,7 +1562,10 @@ function selectExporter(info) {
               </div>
               <label class="col-sm-2 col-form-label">Value Currency</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="value_currency" id="value_currency" required value="<?php echo isset($value_currency) ? $value_currency : ''; ?>">
+                <select class="form-select" name="value_currency" aria-label="Default select example">
+                      <option selected></option>
+                      <?php //SelectApprovedBy($approved_by, $con); ?>
+                    </select>
               </div>
             </div>
 

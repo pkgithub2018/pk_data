@@ -28,6 +28,42 @@ $guid = $_SESSION["groupid"];
  require("php-bin/connection.php");
  require("php-bin/supports.php");
 
+// AJAX endpoint for importer name search
+if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
+    // Debug: Log the request
+    error_log("Search request received for term: " . $_POST['term']);
+    
+    $searchTerm = pg_escape_string($con, $_POST['term']);
+    
+    $sql = "SELECT title, address FROM tbentity_import 
+            WHERE title ILIKE '%$searchTerm%' 
+            ORDER BY title ASC 
+            LIMIT 10";
+    
+    // Debug: Log the SQL query
+    error_log("SQL Query: " . $sql);
+    
+    $result = pg_query($con, $sql);
+    $importers = array();
+    
+    if ($result && pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $importers[] = array(
+                'title' => $row['title'],
+                'address' => $row['address'],
+                'full_text' => $row['title'] . ($row['address'] ? ', ' . $row['address'] : '')
+            );
+        }
+    }
+    
+    // Debug: Log the response
+    error_log("Search results count: " . count($importers));
+    
+    header('Content-Type: application/json');
+    echo json_encode($importers);
+    exit;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -68,6 +104,52 @@ $guid = $_SESSION["groupid"];
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
+
+  <!-- Autocomplete CSS -->
+  <style>
+    .autocomplete-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+    
+    .autocomplete-suggestion {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    
+    .autocomplete-suggestion:hover,
+    .autocomplete-suggestion.active {
+      background-color: #f8f9fa;
+    }
+    
+    .autocomplete-suggestion:last-child {
+      border-bottom: none;
+    }
+    
+    .suggestion-title {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .suggestion-address {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+  </style>
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -693,8 +775,8 @@ $guid = $_SESSION["groupid"];
                       <textarea name="exporter" id="exporter" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
                   </div>
                   <label class="col-sm-2 col-form-label">Importer</label>
-                  <div class="col-sm-4">
-                    <textarea name="importer" id="importer" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+          
+                  co<textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea> ?></textarea>
                   </div>
             </div>
             
@@ -1374,11 +1456,12 @@ function selectExporter(info) {
     // ADD NEW CERTIFICATE ************
          if($_GET['certify'] == 'Add'){   
             // create new certificate number 
+            $btnSubmitCertificate = 'submit';
             list($certificate_id, $certificate_no) = CertificateNo($appid_certificate, $userid, $guid, $con);
             $current_date = date('Y-m-d');
             // Button state     //
          } else if ($_GET['certify'] == 'View/Edit') {
-           
+            $btnSubmitCertificate = 'update';
             $certrows = CertificateInfo($appid_certificate, $con);
             if ($certrows) {
               // Button state
@@ -1440,43 +1523,6 @@ function selectExporter(info) {
               </div>
             </div>
 
-    <!-- No needed by DOA
-        <div class="card mb-4">
-          <div class="card-header">
-            <strong>Inspection findings</strong>
-          </div>
-          <div class="card-body">
-        
-              <div class="row mb-3 align-items-center">
-                <div class="col-sm-5">
-                  <div class="form-check mb-2">
-                    <input class="form-check-input border border-warning" type="checkbox" name="product_inspection" id="product_inspection" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($product_inspection) && $product_inspection) echo 'checked'; ?>>
-                    <label class="form-check-label" for="product_inspection">&nbsp;Product inspection</label>
-                  </div>
-                  <div class="form-check mb-2">
-                    <input class="form-check-input border border-success" type="checkbox" name="pest_inspection" id="pest_inspection" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($pest_inspection) && $pest_inspection) echo 'checked'; ?>>
-                    <label class="form-check-label" for="pest_inspection">&nbsp;Pest inspection</label>
-                  </div>
-                  <div class="form-check mb-2">
-                    <input class="form-check-input border-primary" type="checkbox" name="pest_detected" id="pest_detected" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($pest_detected) && $pest_detected) echo 'checked'; ?>>
-                    <label class="form-check-label" for="lab_analysis">&nbsp;Lab analysis required</label>
-                  </div>
-                </div>
-                <div class="col-sm-5">
-                  <div class="form-check mb-2">
-                    <input class="form-check-input border border-info" type="checkbox" name="fumigation_required" id="fumigation_required" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($fumigation_required) && $fumigation_required) echo 'checked'; ?>>
-                    <label class="form-check-label" for="fumigation_required">&nbsp;Fumigation required</label>
-                  </div>
-                  <div class="form-check mb-2">
-                    <input class="form-check-input border border-danger" type="checkbox" name="quarantine_required" id="quarantine_required" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($quarantine_required) && $quarantine_required) echo 'checked'; ?>>
-                    <label class="form-check-label" for="quarantine_required">&nbsp;Quarantine required</label>
-                  </div>
-                </div>
-              </div>        
-            </div>  
-        </div> -->
-        <!-- Inspection findings - Certificate -->
-
              <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Import country</label>
               <div class="col-sm-4">
@@ -1491,7 +1537,7 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Place of Issue</label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="place_of_issue" id="place_of_issue" required value="<?php echo isset($place_issue) ? $place_issue : ''; ?>">
+                <input type="text" class="form-control" name="place_issue" id="place_issue" required value="<?php echo isset($place_issue) ? $place_issue : ''; ?>">
               </div>
               <label class="col-sm-2 col-form-label">Export entry point</label>
               <div class="col-sm-4">
@@ -1502,11 +1548,16 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Exporter's name and address</label>
                   <div class="col-sm-4 d-flex align-items-start">
-                      <input type="text" class="form-control" name="exportername" id="exportername" class="form-control" value="<?php echo isset($exporter_name) ? $exporter_name : ''; ?>"></input>
+                      <input type="text" class="form-control" name="exporter_name" id="exporter_name" class="form-control" value="<?php echo isset($exporter_name) ? $exporter_name : ''; ?>"></input>
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's name and address</label>
-                  <div class="col-sm-4">
-                    <input type="text" class="form-control" name="importer_name" id="importer_name" class="form-control" required value="<?php echo isset($importer_name) ? $importer_name : ''; ?>"></input>
+                  <div class="col-sm-4 d-flex align-items-center position-relative">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal">
+                      <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
+                    </a>&nbsp;<input type="text" class="form-control" name="importer_name" id="importer_name" required 
+                             value="<?php echo isset($importer_name) ? $importer_name : ''; ?>">
+                    <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($importer_id) ? $importer_id : ''; ?>">
+                    <div id="importer_suggestions" class="autocomplete-suggestions"></div>
                   </div>
             </div>
 
@@ -1528,10 +1579,9 @@ function selectExporter(info) {
                   </div>
                   <label class="col-sm-2 col-form-label">&nbsp;</label>
                   <div class="col-sm-4">
-                    <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($import_country) ? $import_country : ''; ?></textarea>
+                    <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
                   </div>
             </div>
-
             
              <div class="row mb-3 align-items-center"> 
               <label class="col-sm-2 col-form-label">Carbon Paper No</label>
@@ -1544,9 +1594,9 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Approved by</label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="approved_by" aria-label="Default select example">
-                      <option selected></option>
-                      <?php //SelectApprovedBy($approved_by, $con); ?>
+                    <select class="form-select" name="approved_by" aria-label="Select approver">
+                      <option value="">Select approver...</option>
+                      <?php CertificateApprovedBy($con); ?>
                     </select>
                   </div>
               <label class="col-sm-2 col-form-label">Approver's position</label>
@@ -1562,10 +1612,10 @@ function selectExporter(info) {
               </div>
               <label class="col-sm-2 col-form-label">Value Currency</label>
               <div class="col-sm-4">
-                <select class="form-select" name="value_currency" aria-label="Default select example">
-                      <option selected></option>
-                      <?php //SelectApprovedBy($approved_by, $con); ?>
-                    </select>
+                <select class="form-select" name="value_currency" aria-label="Select currency">
+                  <option value="">Select currency...</option>
+                  <?php SelectCurrency($value_currency, $con); ?>
+                </select>
               </div>
             </div>
 
@@ -1580,84 +1630,54 @@ function selectExporter(info) {
             <label class="col-sm-2 col-form-label">Additional Declaration</label>
             <div class="col-sm-10">
               <textarea class="form-control" name="additional_declaration" id="additional_declaration" rows="3" placeholder="Enter additional declaration"><?php echo isset($additional_declaration) ? htmlspecialchars($additional_declaration) : ''; ?></textarea>
-            </div>
-          </div>
-
-          <!-- WAIT FOR CONFIRMATION FROM DOA IF NEED THIS FIELDS
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Date Issued</label>
-              <div class="col-sm-4">
-                <input type="date" class="form-control" name="date_issued" id="date_issued" required value="<?php echo isset($date_issued) ? $date_issued : $current_date; ?>">
-              </div>
-              <label class="col-sm-2 col-form-label">Certificate Status</label>
-              <div class="col-sm-4">
-                <select class="form-select" name="certificate_status" id="certificate_status" required>
-                  <option value="">Select</option>
-                  <option value="issued" <?php if(isset($certificate_status) && $certificate_status=='issued') echo 'selected'; ?>>Issued</option>
-                  <option value="cancelled" <?php if(isset($certificate_status) && $certificate_status=='cancelled') echo 'selected'; ?>>Cancelled</option>
-                  <option value="amended" <?php if(isset($certificate_status) && $certificate_status=='amended') echo 'selected'; ?>>Amended</option>
-                  <option value="printed" <?php if(isset($certificate_status) && $certificate_status=='printed') echo 'selected'; ?>>Printed</option>
-                  <option value="ongoing" <?php if(isset($certificate_status) && $certificate_status=='ongoing') echo 'selected'; ?>>Ongoing</option>
-                </select>
               </div>
             </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Date created</label>
-              <div class="col-sm-4">
-                <input type="date" class="form-control" name="date_created" id="date_created" required value="<?php echo isset($date_created) ? $date_created : $current_date; ?>">
-              </div>
-              <label class="col-sm-2 col-form-label">Created by</label>
-              <div class="col-sm-4">
-                <select class="form-select" name="created_by" id="created_by" required>
-                  <option value="">Select</option>
-                  <option value="user1" <?php if(isset($created_by) && $created_by=='user1') echo 'selected'; ?>>User 1</option>
-                  <option value="user2" <?php if(isset($created_by) && $created_by=='user2') echo 'selected'; ?>>User 2</option>
-                  <option value="user3" <?php if(isset($created_by) && $created_by=='user3') echo 'selected'; ?>>User 3</option>
-                  <option value="user4" <?php if(isset($created_by) && $created_by=='user4') echo 'selected'; ?>>User 4</option>
-                  <option value="user5" <?php if(isset($created_by) && $created_by=='user5') echo 'selected'; ?>>User 5</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Date Updated</label>
-              <div class="col-sm-4">
-                <input type="date" class="form-control" name="date_updated" id="date_updated" required value="<?php echo isset($date_updated) ? $date_updated : $current_date; ?>">
-              </div>
-              <label class="col-sm-2 col-form-label">Updated by</label>
-              <div class="col-sm-4">
-                <select class="form-select" name="updated_by" id="updated_by" required>
-                  <option value="">Select</option>
-                  <option value="user1" <?php if(isset($updated_by) && $updated_by=='user1') echo 'selected'; ?>>User 1</option>
-                  <option value="user2" <?php if(isset($updated_by) && $updated_by=='user2') echo 'selected'; ?>>User 2</option>
-                  <option value="user3" <?php if(isset($updated_by) && $updated_by=='user3') echo 'selected'; ?>>User 3</option>
-                  <option value="user4" <?php if(isset($updated_by) && $updated_by=='user4') echo 'selected'; ?>>User 4</option>
-                  <option value="user5" <?php if(isset($updated_by) && $updated_by=='user5') echo 'selected'; ?>>User 5</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Enabled</label>
-              <div class="col-sm-4">
-                <select class="form-select" name="enabled" id="enabled" required>
-                  <option value="yes" <?php if(isset($enabled) && $enabled=='yes') echo 'selected'; ?>>Yes</option>
-                  <option value="no" <?php if(isset($enabled) && $enabled=='no') echo 'selected'; ?>>No</option>
-                </select>
-              </div>
-            </div>
-        -->
             <div class="row mb-3">
               <div class="col-sm-10 offset-sm-2 d-flex gap-2">
-                <button type="submit" name="btnSaveCertificate" class="btn btn-primary">
-                  <i class="bi bi-save"></i> Submit
+                <button type="submit" name="btnSubmitCertificate" class="btn btn-primary" value="<?php echo $btnSubmitCertificate === 'update' ? 'update' : 'submit'; ?>">
+                  <i class="bi bi-save"></i> <?php echo $btnSubmitCertificate === 'update' ? ' Update' : ' Submit'; ?>
                 </button>
                 <a href="main.php" class="btn btn-secondary">
                   <i class="bi bi-x-circle"></i> Cancel
                 </a>
               </div>
             </div>
+
+
+     <!-- Modal form for Importer ************** -->
+      <div class="modal fade" id="importerModal" tabindex="-1" aria-labelledby="importerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="importerModalLabel">Search Importer</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <!-- Search box above the table -->
+              <div class="mb-3">
+                <input type="text" id="importerSearch" class="form-control" placeholder="Search importers...">
+              </div>
+              <!-- Data table for importer list -->
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="importerTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Address</th>
+                      <th>Zip code</th>
+                      <th>Country</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php CertificateImporterList($con); ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+<!-- End Modal form for Importer -->
           </form>
         </div>
       </div>
@@ -1693,6 +1713,141 @@ function selectExporter(info) {
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
+
+  <!-- Importer Autocomplete Script -->
+  <script>
+    $(document).ready(function() {
+      console.log('Autocomplete script loaded'); // Debug line
+      
+      let searchTimeout;
+      let selectedIndex = -1;
+      
+      // Make sure we target all importer_name inputs
+      $(document).on('input', '#importer_name', function() {
+        console.log('Input detected: ' + $(this).val()); // Debug line
+        
+        const searchTerm = $(this).val().trim();
+        const inputElement = $(this);
+        const suggestionsContainer = inputElement.siblings('#importer_suggestions').length > 0 
+          ? inputElement.siblings('#importer_suggestions') 
+          : inputElement.parent().find('#importer_suggestions');
+        
+        clearTimeout(searchTimeout);
+        
+        if (searchTerm.length >= 1) {
+          console.log('Searching for: ' + searchTerm); // Debug line
+          searchTimeout = setTimeout(function() {
+            searchImporters(searchTerm, suggestionsContainer);
+          }, 300); // Delay to avoid too many requests
+        } else {
+          suggestionsContainer.hide().empty();
+          selectedIndex = -1;
+        }
+      });
+      
+      // Handle keyboard navigation
+      $(document).on('keydown', '#importer_name', function(e) {
+        const inputElement = $(this);
+        const suggestionsContainer = inputElement.siblings('#importer_suggestions').length > 0 
+          ? inputElement.siblings('#importer_suggestions') 
+          : inputElement.parent().find('#importer_suggestions');
+        const suggestions = suggestionsContainer.find('.autocomplete-suggestion');
+        
+        if (e.which === 40) { // Down arrow
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+          updateSelection(suggestions);
+        } else if (e.which === 38) { // Up arrow
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, -1);
+          updateSelection(suggestions);
+        } else if (e.which === 13) { // Enter key
+          e.preventDefault();
+          if (selectedIndex >= 0 && suggestions.length > 0) {
+            selectSuggestion(suggestions.eq(selectedIndex), inputElement);
+          }
+        } else if (e.which === 27) { // Escape key
+          suggestionsContainer.hide();
+          selectedIndex = -1;
+        }
+      });
+      
+      // Hide suggestions when clicking outside
+      $(document).on('click', function(e) {
+        if (!$(e.target).closest('#importer_name, #importer_suggestions').length) {
+          $('#importer_suggestions').hide();
+          selectedIndex = -1;
+        }
+      });
+      
+      function searchImporters(term, container) {
+        console.log('Making AJAX request for: ' + term); // Debug line
+        
+        $.ajax({
+          url: window.location.href,
+          type: 'POST',
+          dataType: 'json',
+          data: {
+            action: 'search_importer',
+            term: term
+          },
+          success: function(response) {
+            console.log('AJAX response:', response); // Debug line
+            displaySuggestions(response, container);
+          },
+          error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error); // Debug line
+            container.hide().empty();
+          }
+        });
+      }
+      
+      function displaySuggestions(importers, container) {
+        container.empty();
+        selectedIndex = -1;
+        
+        if (importers.length > 0) {
+          importers.forEach(function(importer, index) {
+            const suggestion = $('<div class="autocomplete-suggestion" data-index="' + index + '">')
+              .html('<div class="suggestion-title">' + escapeHtml(importer.title) + '</div>' +
+                    (importer.address ? '<div class="suggestion-address">' + escapeHtml(importer.address) + '</div>' : ''))
+              .data('full-text', importer.full_text);
+            
+            suggestion.on('click', function() {
+              const inputElement = container.siblings('#importer_name').length > 0 
+                ? container.siblings('#importer_name') 
+                : container.parent().find('#importer_name');
+              selectSuggestion($(this), inputElement);
+            });
+            
+            container.append(suggestion);
+          });
+          
+          container.show();
+        } else {
+          container.hide();
+        }
+      }
+      
+      function updateSelection(suggestions) {
+        suggestions.removeClass('active');
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          suggestions.eq(selectedIndex).addClass('active');
+        }
+      }
+      
+      function selectSuggestion(suggestion, inputElement) {
+        const fullText = suggestion.data('full-text');
+        inputElement.val(fullText);
+        suggestion.closest('#importer_suggestions').hide();
+        selectedIndex = -1;
+      }
+      
+      function escapeHtml(text) {
+        return $('<div>').text(text).html();
+      }
+    });
+  </script>
 
   <script>
       document.addEventListener('DOMContentLoaded', function() {

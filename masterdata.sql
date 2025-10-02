@@ -242,7 +242,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbsample" (
 CREATE TABLE IF NOT EXISTS "public"."tbcertificate" (
     id SERIAL PRIMARY KEY, /* Auto increment - certificate_id */
     application_id INTEGER NOT NULL, /* application_id, NOT application_no - auto increment from tbapplication - K */
-    certificate_no TEXT NOT NULL, /* Certificate No : 000001 based on id-autoincrement - K */
+    certificate_no TEXT NOT NULL, /* Certificate No : 000001 based on id-autoincrement - Updated after id is created */
     carbonpaper_id TEXT NOT NULL, /* ID from carbon paper - K */
     approved_by INTEGER NOT NULL, /* User ID who approved/signed the certificate */
     position_approved text NOT NULL, /* Position of the approver */
@@ -305,6 +305,13 @@ CREATE TABLE IF NOT EXISTS "public"."tbconveyance" (
 CREATE TABLE IF NOT EXISTS "public"."tbpurpose" (
     id SERIAL PRIMARY KEY,
     title text NOT NULL 
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbcurrency" (
+    id SERIAL PRIMARY KEY,
+    country text NOT NULL, 
+    currency text NOT NULL, 
+    code text NOT NULL /* USD, LAK, THB, VND, CNY, EUR, GBP, JPY, KRW, AUD, CAD, CHF, HKD, SGD, MYR, IDR */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (

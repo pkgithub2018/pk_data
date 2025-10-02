@@ -39,7 +39,10 @@ if (file_exists($langFile)) {
  }
 
  // SUBMIT/SAVE application by UPDATING tbapplication with the form data - CLICK ON SUBMIT BUTTON
-    if (isset($_POST['btnsubApplication_save']) && (isset($_POST['btnsubApplication_save']) === "submit") || (isset($_POST['btnsubApplication_save']) === "update")) {  // Submit from application form in transaction.php
+    if (isset($_POST['btnsubApplication_save']) && ($_POST['btnsubApplication_save'] === "submit" || $_POST['btnsubApplication_save'] === "update")) {  // Submit from application form in transaction.php
+        
+       echo "<script>alert('Hello, submit application');</script>";
+
         $app_id = isset($_POST['app_id']) ? $_POST['app_id'] : ''; // hidden input
         
         $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
@@ -48,7 +51,7 @@ if (file_exists($langFile)) {
         $applicant_name = isset($_POST['applicant_name']) ? $_POST['applicant_name'] : '';
         $address = isset($_POST['address']) ? $_POST['address'] : '';
         $phone = isset($_POST['phone']) ? $_POST['phone'] : '';
-
+        
 
         $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
         $import_point = isset($_POST['import_point']) ? $_POST['import_point'] : '';
@@ -78,8 +81,8 @@ if (file_exists($langFile)) {
         $conveyance = isset($_POST['conveyance']) ? $_POST['conveyance'] : null;
         $conveyance_sign = isset($_POST['conveyance_sign']) ? $_POST['conveyance_sign'] : '';
 
-        $exporter_address = isset($_POST['exporter_address']) ? $_POST['exporter_address'] : '';
-        $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';
+        $exporter_address = isset($_POST['exporter']) ? $_POST['exporter'] : '';  // exporter address
+        $importer_address = isset($_POST['importer']) ? $_POST['importer'] : ''; // importer address
 
         $purpose = isset($_POST['purpose']) ? $_POST['purpose'] : '';
      
@@ -219,6 +222,69 @@ if (file_exists($langFile)) {
           }
       
     } // end of if - submission of inspection form
+
+    // *************************** CERTIFICATE ***************************
+    // SAVE certificate data - CLICK ON SAVE BUTTON in certificate form in transaction.php
+    if (isset($_POST['btnSubmitCertificate'])) {
+
+        $certificate_id = isset($_POST['certificate_id']) ? $_POST['certificate_id'] : ''; // hidden input
+        $certificate_no = isset($_POST['certificate_no']) ? $_POST['certificate_no'] : '';
+        $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
+        $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
+        $import_entrypoint = isset($_POST['import_entrypoint']) ? $_POST['import_entrypoint'] : '';
+        $place_issue = isset($_POST['place_issue']) ? $_POST['place_issue'] : '';
+        $export_entrypoint = isset($_POST['export_entrypoint']) ? $_POST['export_entrypoint'] : '';
+        $exporter_name = isset($_POST['exporter_name']) ? $_POST['exporter_name'] : '';
+        $importer_name = isset($_POST['importer_name']) ? $_POST['importer_name'] : '';
+        $exporter_oncertificate = isset($_POST['exporter_oncertificate']) ? $_POST['exporter_oncertificate'] : '';
+        $importer_oncertificate = isset($_POST['importer_oncertificate']) ? $_POST['importer_oncertificate'] : '';
+        $exporter_address = isset($_POST['exporter_address']) ? $_POST['exporter_address'] : '';
+        $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';
+        $carbonpaper_id = isset($_POST['carbonpaper_id']) && $_POST['carbonpaper_id'] !== '' ? (int)$_POST['carbonpaper_id'] : null;
+        $approved_by = isset($_POST['approved_by']) ? $_POST['approved_by'] : '';
+        $approver_position = isset($_POST['approver_position']) ? $_POST['approver_position'] : '';
+        $consignment_value = isset($_POST['consignment_value']) ? $_POST['consignment_value'] : '';
+        $value_currency = isset($_POST['value_currency']) ? $_POST['value_currency'] : '';
+        $another_scientificname = isset($_POST['another_scientificname']) ? $_POST['another_scientificname'] : '';
+        $additional_declaration = isset($_POST['additional_declaration']) ? $_POST['additional_declaration'] : '';
+
+        $date_issue = isset($_POST['date_issue']) ? $_POST['date_issue'] : null;
+        $inspector_name = isset($_POST['inspector_name']) ? $_POST['inspector_name'] : '';
+        $position = isset($_POST['position']) ? $_POST['position'] : '';
+        $official_stamps = isset($_POST['official_stamps']) ? 1 : 0;
+
+         // Put them into $certificate_data array (keys = DB column names)
+
+        $certificate_data = [
+            'application_id' => $app_id,
+            'certificate_no' => $certificate_no,
+            'date_issue' => $date_issue,
+            'inspector_name' => $inspector_name,
+            'position' => $position,
+            'official_stamps' => $official_stamps,
+            'additional_declaration' => $additional_declaration,
+            'enabled' => 'yes'
+
+        ];
+        //echo "<script>alert('Save certificate data -UPDATE: pk - Application ID: $app_id');</script>";
+         // ADD NEW certificate data
+         if($_POST['btnSubmitCertificate'] === 'submit'){
+            $result = CertificateAdd($certificate_data, $con);
+            if ($result) {
+                echo "<script>alert('Certificate data saved successfully!');</script>";
+            } else {
+                echo "<script>alert('Failed to save certificate data. Please try again.');</script>";
+            }
+          } elseif($_POST['btnSubmitCertificate'] === 'update'){  // UPDATE certificate data
+            $result = CertificateUpdate($app_id, $certificate_data, $con);
+            if ($result) {
+                echo "<script>alert('Certificate data updated successfully!');</script>";
+            } else {
+                echo "<script>alert('Failed to update certificate data. Please try again.');</script>";
+            }
+          }
+      
+    } // end of if - submission of certificate form
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -532,6 +598,184 @@ if (file_exists($langFile)) {
         </ol>
       </nav>
     </div><!-- End Page Title -->
+
+    <!-- Charts Section -->
+    <section class="section">
+      <div class="row">
+        
+        <!-- Chart 1: Application Status Chart -->
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Application Status <span>| This Month</span></h5>
+              
+              <!-- Donut Chart -->
+              <div id="donutChart" style="min-height: 250px;" class="echart"></div>
+
+              <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                  echarts.init(document.querySelector("#donutChart")).setOption({
+                    tooltip: {
+                      trigger: 'item'
+                    },
+                    legend: {
+                      top: '5%',
+                      left: 'center'
+                    },
+                    series: [{
+                      name: 'Applications',
+                      type: 'pie',
+                      radius: ['40%', '70%'],
+                      avoidLabelOverlap: false,
+                      label: {
+                        show: false,
+                        position: 'center'
+                      },
+                      emphasis: {
+                        label: {
+                          show: true,
+                          fontSize: '18',
+                          fontWeight: 'bold'
+                        }
+                      },
+                      labelLine: {
+                        show: false
+                      },
+                      data: [
+                        { value: 1048, name: 'Submitted' },
+                        { value: 735, name: 'Under Review' },
+                        { value: 580, name: 'Approved' },
+                        { value: 484, name: 'Rejected' },
+                        { value: 300, name: 'Pending' }
+                      ]
+                    }]
+                  });
+                });
+              </script>
+              <!-- End Donut Chart -->
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 2: Monthly Applications Trend -->
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
+
+              <!-- Line Chart -->
+              <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
+
+              <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                  echarts.init(document.querySelector("#reportsChart")).setOption({
+                    tooltip: {
+                      trigger: 'item'
+                    },
+                    legend: {
+                      data: ['Applications', 'Certificates', 'Inspections']
+                    },
+                    toolbox: {
+                      show: true,
+                      feature: {
+                        dataView: { show: true, readOnly: false },
+                        magicType: { show: true, type: ['line', 'bar'] },
+                        restore: { show: true },
+                        saveAsImage: { show: true }
+                      }
+                    },
+                    xAxis: {
+                      type: 'category',
+                      boundaryGap: false,
+                      data: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+                    },
+                    yAxis: {
+                      type: 'value'
+                    },
+                    series: [{
+                      name: 'Applications',
+                      type: 'line',
+                      data: [120, 132, 101, 134, 90, 230],
+                      smooth: true
+                    }, {
+                      name: 'Certificates',
+                      type: 'line',
+                      data: [220, 182, 191, 234, 290, 330],
+                      smooth: true
+                    }, {
+                      name: 'Inspections',
+                      type: 'line',
+                      data: [150, 232, 201, 154, 190, 330],
+                      smooth: true
+                    }]
+                  });
+                });
+              </script>
+              <!-- End Line Chart -->
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 3: Export Entities Performance -->
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Export Entities <span>| Performance</span></h5>
+
+              <!-- Column Chart -->
+              <div id="columnChart" style="min-height: 250px;" class="echart"></div>
+
+              <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                  echarts.init(document.querySelector("#columnChart")).setOption({
+                    tooltip: {
+                      trigger: 'axis',
+                      axisPointer: {
+                        type: 'shadow'
+                      }
+                    },
+                    legend: {},
+                    grid: {
+                      left: '3%',
+                      right: '4%',
+                      bottom: '3%',
+                      containLabel: true
+                    },
+                    xAxis: [{
+                      type: 'category',
+                      data: ['Entity A', 'Entity B', 'Entity C', 'Entity D', 'Entity E', 'Entity F']
+                    }],
+                    yAxis: [{
+                      type: 'value'
+                    }],
+                    series: [{
+                      name: 'Applications',
+                      type: 'bar',
+                      emphasis: {
+                        focus: 'series'
+                      },
+                      data: [320, 302, 301, 334, 390, 330]
+                    }, {
+                      name: 'Certificates',
+                      type: 'bar',
+                      emphasis: {
+                        focus: 'series'
+                      },
+                      data: [120, 132, 101, 134, 90, 230]
+                    }]
+                  });
+                });
+              </script>
+              <!-- End Column Chart -->
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section><!-- End Charts Section -->
 
     <section class="section dashboard">
       <div class="row">

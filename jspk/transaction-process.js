@@ -18,3 +18,56 @@ function passCommodity(pid, pname, spname, dproduct) {
     }
 
 }
+
+// Function to pass importer details to the main form
+function passImporter(importerId, importerName, importerAddress, importerZipcode, importerCountry) {
+    // Set the importer ID if field exists
+    const importerIdField = document.querySelector('input[name="importer_id"]');
+    if (importerIdField) {
+        importerIdField.value = importerId;
+    }
+    
+    // Set the importer name
+    const importerNameField = document.querySelector('input[name="importer_name"]');
+    if (importerNameField) {
+        importerNameField.value = importerName;
+    }
+    
+    // Set the importer address - combine address, zipcode, and country
+    const importerAddressField = document.querySelector('textarea[name="importer"]');
+    if (importerAddressField) {
+        let fullAddress = importerAddress;
+        if (importerZipcode) {
+            fullAddress += (fullAddress ? ', ' : '') + importerZipcode;
+        }
+        if (importerCountry) {
+            fullAddress += (fullAddress ? ', ' : '') + importerCountry;
+        }
+        importerAddressField.value = fullAddress;
+    }
+    
+    // Also try to populate the autocomplete field if it exists
+    const importerNameAutocomplete = document.querySelector('#importer_name');
+    if (importerNameAutocomplete) {
+        let fullInfo = importerName;
+        if (importerAddress) {
+            fullInfo += ', ' + importerAddress;
+        }
+        if (importerZipcode) {
+            fullInfo += ', ' + importerZipcode;
+        }
+        if (importerCountry) {
+            fullInfo += ', ' + importerCountry;
+        }
+        importerNameAutocomplete.value = fullInfo;
+    }
+    
+    // Close the modal (Bootstrap 5)
+    var modalEl = document.getElementById('importerModal');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+    }
+}

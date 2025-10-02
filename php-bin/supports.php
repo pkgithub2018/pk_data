@@ -1040,6 +1040,20 @@ function CountryInfo($cid, $con) {
     }
 }
 
+/*
+  SelectCountryCurrency: Select country currency from tbcountries table
+*/
+function SelectCurrency($currency, $con) {
+    $sql = "SELECT DISTINCT country, currency, code FROM tbcurrency ORDER BY country ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($currency!== null && $currency == $row['currency']) ? 'selected' : '';
+            echo "<option value=\"{$row['code']}\" $selected>{$row['country']} ({$row['currency']})</option>";
+        }
+    }
+}
+
 /* 
   ProductList: List all product  from tbproduct table
 */
@@ -1157,7 +1171,14 @@ function DeleteProduct($pid, $con) {
   ProductInfo: Get product information from tbproduct table
 */
 function ProductInfo($pid, $con) {
-    $sqlproduct = "SELECT * FROM tbproduct WHERE id='$pid'";
+    // Validate that $pid is not empty and is numeric
+    if (empty($pid) || !is_numeric($pid)) {
+        return null;
+    }
+    
+    // Cast to integer to ensure it's a valid ID
+    $pid = (int)$pid;
+    $sqlproduct = "SELECT * FROM tbproduct WHERE id=$pid";
     $result = pg_query($con, $sqlproduct) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         return pg_fetch_assoc($result);
@@ -2435,6 +2456,8 @@ function InspectionInfo($app_id, $con) {
 */
 function CertificateNo($application_id, $uid, $guid, $con) {
     // Add user ID into tbcertificate table first to get running number-id
+    $date_issued = date('Y-m-d');
+    $cstatus = 'registered'; // certificate status - to be defined later
     $sql = "INSERT INTO tbcertificate (
     application_id,
     certificate_no,
@@ -2453,7 +2476,7 @@ function CertificateNo($application_id, $uid, $guid, $con) {
     certificate_status,
     enabled
 ) VALUES (
-    '$application_id', '', '', NULL, '', '', NULL, '', '', '', '$uid', NULL, '$guid', NULL, '', 'yes'
+    '$application_id', '', '', NULL, '', '', NULL, '', '', '', '$uid', NULL, '$guid', '$date_issued', '$cstatus', 'yes'
 ) RETURNING id";
 
     $result = pg_query($con, $sql) or die(pg_last_error($con));
@@ -2525,3 +2548,65 @@ function CertificateInfo($app_id, $con) {
         return null;
     }
 }
+
+/*
+ CertificateImporterList: Show list of importers from tbentity_import table
+*/
+function CertificateImporterList($con) {
+    $sql = "SELECT * FROM tbentity_import";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $impid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $impname = htmlspecialchars($row['title'], ENT_QUOTES);
+            $impaddress = htmlspecialchars($row['address'], ENT_QUOTES);
+            $impzipcode = htmlspecialchars($row['zipcode'], ENT_QUOTES);
+            $impcountry = CountryInfo($row['country_id'], $con)['title'] ?? 'Unknown';  // Get country name
+            print "<tr>
+                    <td>".$impname."</td>
+                    <td>".$impaddress."</td>
+                    <td>".$impzipcode."</td>
+                    <td>".$impcountry."</td>
+                    <td><button type='button' name='$impid' id='$impid' class='btn btn-sm btn-danger' onclick='passImporter(\"$impid\",\"$impname\", \"$impaddress\", \"$impzipcode\", \"$impcountry\")'>Select</button></td>
+                 </tr>";
+                 $i++;
+        }
+    }
+}
+
+/*
+ CertificateImporterInfo: Get importer information by importer ID
+*/
+function CertificateImporterInfo($importer_id, $con) {
+
+     if (empty($importer_id) || !is_numeric($importer_id)) {
+        return null;
+    }
+    $importer_id = (int)$importer_id; // Cast to integer to ensure it's a valid ID
+    $sql = "SELECT * FROM tbentity_import WHERE id = '$importer_id'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null;
+    }
+}
+
+/*
+  CertificateApprovedBy: Get list of approvers from tbapprovers table
+*/
+function CertificateApprovedBy($con, $selectedId = null) {
+    $sql = "SELECT id, name, surname FROM tbapprovers ORDER BY name ASC";
+    $result = pg_query($con, $sql);
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $selected = ($selectedId !== null && $selectedId == $row['id']) ? 'selected' : '';
+            $fullName = trim($row['name'] . ' ' . $row['surname']);
+            echo "<option value=\"{$row['id']}\" $selected>$fullName</option>";
+        }
+    }
+}
+
+?>
+

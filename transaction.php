@@ -770,14 +770,19 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             </div>
 
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Exporter</label>
+                  <label class="col-sm-2 col-form-label">Exporter's address</label> <!-- Application -->
                   <div class="col-sm-4 d-flex align-items-start">
                       <textarea name="exporter" id="exporter" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
                   </div>
-                  <label class="col-sm-2 col-form-label">Importer</label>
-          
-                  co<textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea> ?></textarea>
-                  </div>
+                  <label class="col-sm-2 col-form-label">Importer's address</label> <!-- Application -->
+
+                  <div class="col-sm-4 d-flex align-items-center">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal">
+                      <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
+                    </a>&nbsp;<textarea name="importer" id="importer" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                    <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($importer_id) ? $importer_id : ''; ?>">
+                    <div id="importer_suggestions" class="autocomplete-suggestions"></div>
+                    
             </div>
             
 
@@ -837,6 +842,43 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                     </button>
                    </div>
                 </div>
+                    
+                      <!-- Modal form for Importer ************** -->
+                        <div class="modal fade" id="importerModal" tabindex="-1" aria-labelledby="importerModalLabel" aria-hidden="true">
+                          <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title" id="importerModalLabel">Search Importer</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                <!-- Search box above the table -->
+                                <div class="mb-3">
+                                  <input type="text" id="importerSearch" class="form-control" placeholder="Search importers...">
+                                </div>
+                                <!-- Data table for importer list -->
+                                <div class="table-responsive">
+                                  <table class="table table-bordered table-striped" id="importerTable">
+                                    <thead>
+                                      <tr>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Zip code</th>
+                                        <th>Country</th>
+                                        <th>Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <?php CertificateImporterList($con); ?>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                  <!-- End Modal form for Importer -->
+
               </form><!-- End Form for commodity -->
             </div>
           </div>
@@ -1086,6 +1128,20 @@ function selectExporter(info) {
         exporterSearch.addEventListener('keyup', function() {
           const filter = exporterSearch.value.toLowerCase();
           const rows = exporterTable.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+          });
+        });
+      }
+
+      // Search/Filter importer **************
+      const importerSearch = document.getElementById('importerSearch');
+      const importerTable = document.getElementById('importerTable');
+      if (importerSearch && importerTable) {
+        importerSearch.addEventListener('keyup', function() {
+          const filter = importerSearch.value.toLowerCase();
+          const rows = importerTable.querySelectorAll('tbody tr');
           rows.forEach(row => {
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(filter) ? '' : 'none';
@@ -1450,6 +1506,7 @@ function selectExporter(info) {
             $districtid = GetEntityExport($exporterid, $con)['district'];
             $phone = GetEntityExport($exporterid, $con)['phone'];
             $email = GetEntityExport($exporterid, $con)['email'];
+            // Importer details
             $import_countryid = ApplicationInfo($appid_certificate, $con)['country_import'];
             $import_country = CountryInfo($import_countryid, $con)['title'];
 
@@ -1546,30 +1603,24 @@ function selectExporter(info) {
             </div>
 
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Exporter's name and address</label>
+                  <label class="col-sm-2 col-form-label">Exporter's name and address</label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-start">
                       <input type="text" class="form-control" name="exporter_name" id="exporter_name" class="form-control" value="<?php echo isset($exporter_name) ? $exporter_name : ''; ?>"></input>
                   </div>
-                  <label class="col-sm-2 col-form-label">Importer's name and address</label>
+                  <label class="col-sm-2 col-form-label">Importer's name and address</label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-center position-relative">
+                    <!--
                     <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal">
                       <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
-                    </a>&nbsp;<input type="text" class="form-control" name="importer_name" id="importer_name" required 
+                    </a>&nbsp;
+                    -->
+                    <input type="text" class="form-control" name="importer_name" id="importer_name" required 
                              value="<?php echo isset($importer_name) ? $importer_name : ''; ?>">
+                    <!--
                     <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($importer_id) ? $importer_id : ''; ?>">
                     <div id="importer_suggestions" class="autocomplete-suggestions"></div>
+                    -->
                   </div>
-            </div>
-
-            <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">&nbsp;</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" class="form-control" name="exporter_oncertificate" id="exporter_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($exporter_oncertificate) ? $exporter_oncertificate : ''; ?>" style="font-style: italic;">
-              </div>
-              <label class="col-sm-2 col-form-label">&nbsp;</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="importer_oncertificate" id="importer_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($importer_oncertificate) ? $importer_oncertificate : ''; ?>" style="font-style: italic;">
-              </div>
             </div>
 
             <div class="row mb-3 align-items-center">
@@ -1583,6 +1634,17 @@ function selectExporter(info) {
                   </div>
             </div>
             
+             <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">&nbsp;</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" class="form-control" name="exporter_oncertificate" id="exporter_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($exporter_oncertificate) ? $exporter_oncertificate : ''; ?>" style="font-style: italic;">
+              </div>
+              <label class="col-sm-2 col-form-label">&nbsp;</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="importer_oncertificate" id="importer_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($importer_oncertificate) ? $importer_oncertificate : ''; ?>" style="font-style: italic;">
+              </div>
+            </div>
+
              <div class="row mb-3 align-items-center"> 
               <label class="col-sm-2 col-form-label">Carbon Paper No</label>
               <div class="col-sm-4">
@@ -1642,42 +1704,6 @@ function selectExporter(info) {
                 </a>
               </div>
             </div>
-
-
-     <!-- Modal form for Importer ************** -->
-      <div class="modal fade" id="importerModal" tabindex="-1" aria-labelledby="importerModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="importerModalLabel">Search Importer</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <!-- Search box above the table -->
-              <div class="mb-3">
-                <input type="text" id="importerSearch" class="form-control" placeholder="Search importers...">
-              </div>
-              <!-- Data table for importer list -->
-              <div class="table-responsive">
-                <table class="table table-bordered table-striped" id="importerTable">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Address</th>
-                      <th>Zip code</th>
-                      <th>Country</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <?php CertificateImporterList($con); ?>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-<!-- End Modal form for Importer -->
           </form>
         </div>
       </div>
@@ -1716,6 +1742,7 @@ function selectExporter(info) {
 
   <!-- Importer Autocomplete Script -->
   <script>
+   /*
     $(document).ready(function() {
       console.log('Autocomplete script loaded'); // Debug line
       
@@ -1847,6 +1874,7 @@ function selectExporter(info) {
         return $('<div>').text(text).html();
       }
     });
+    */
   </script>
 
   <script>

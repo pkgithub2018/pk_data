@@ -82,7 +82,20 @@ if (file_exists($langFile)) {
         $conveyance_sign = isset($_POST['conveyance_sign']) ? $_POST['conveyance_sign'] : '';
 
         $exporter_address = isset($_POST['exporter']) ? $_POST['exporter'] : '';  // exporter address
-        $importer_address = isset($_POST['importer']) ? $_POST['importer'] : ''; // importer address
+        $importerid = isset($_POST['importer_id']) ? $_POST['importer_id'] : ''; // hidden input for importer entity id
+        
+        // Ensure importerid is properly handled for database operations
+        if ($importerid === '' || !is_numeric($importerid)) {
+            $importerid = null;
+        } else {
+            $importerid = (int)$importerid;
+        }
+        
+        // Handle importer info safely
+        $importer_info = EntityImportInfo($importerid, $con);
+        $importer_name = $importer_info ? $importer_info['title'] : '';
+        $importer_address = $importer_info ? $importer_info['address'] : '';
+       // $importer_address = isset($_POST['importer']) ? $_POST['importer'] : ''; // importer address
 
         $purpose = isset($_POST['purpose']) ? $_POST['purpose'] : '';
      
@@ -128,7 +141,8 @@ if (file_exists($langFile)) {
             'place_treatment'   => $place_treatment,
             'date_certificate'  => $certificate_date,
             'place_quarantine_other' => $place_quarantine_other,
-            'place_treatment_other'  => $place_treatment_other
+            'place_treatment_other'  => $place_treatment_other,
+            'importerid'       => $importerid
         ];
         
         $result = ApplicationUpdate($app_id, $data, $con); // Update tbapplication with the form data
@@ -226,64 +240,68 @@ if (file_exists($langFile)) {
     // *************************** CERTIFICATE ***************************
     // SAVE certificate data - CLICK ON SAVE BUTTON in certificate form in transaction.php
     if (isset($_POST['btnSubmitCertificate'])) {
-
+       
         $certificate_id = isset($_POST['certificate_id']) ? $_POST['certificate_id'] : ''; // hidden input
+        $app_id = isset($_POST['appid_certificate']) ? $_POST['appid_certificate'] : ''; // hidden input from Certificate form
         $certificate_no = isset($_POST['certificate_no']) ? $_POST['certificate_no'] : '';
         $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
+        $carbonpaper_id = isset($_POST['carbonpaper_id']) ? $_POST['carbonpaper_id'] : '';
+        $approved_by = isset($_POST['approved_by']) ? $_POST['approved_by'] : '';
+        $approver_position = isset($_POST['approver_position']) ? $_POST['approver_position'] : '';
+        $place_issue = isset($_POST['place_issue']) ? $_POST['place_issue'] : '';
+        $consignment_value = isset($_POST['consignment_value']) ? $_POST['consignment_value'] : '';
+        $value_currency = isset($_POST['value_currency']) ? $_POST['value_currency'] : '';
+        $additional_scientificname = isset($_POST['additional_scientificname']) ? $_POST['additional_scientificname'] : '';
+        $additional_declaration = isset($_POST['additional_declaration']) ? $_POST['additional_declaration'] : '';
+        $datetime_created = CertificateInfo($app_id, $con)['datetime_created']; // keep the original created date
+        $datetime_updated = CertificateInfo($app_id, $con)['datetime_updated']; // keep the original updated date
+        $created_uid = CertificateInfo($app_id, $con)['created_uid']; // keep the original created uid
+        $updated_uid = CertificateInfo($app_id, $con)['updated_uid']; // update uid
+        $date_issue = isset($_POST['date_issue']) ? $_POST['date_issue'] : null;
+        $cert_status = CertificateInfo($app_id, $con)['certificate_status']; // keep the original certificate status
+        $enabled = CertificateInfo($app_id, $con)['enabled']; // keep the original enabled status
+
+        // These inputs are used for presentation on the form only - NOT saved in tbcertificate
         $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
         $import_entrypoint = isset($_POST['import_entrypoint']) ? $_POST['import_entrypoint'] : '';
-        $place_issue = isset($_POST['place_issue']) ? $_POST['place_issue'] : '';
         $export_entrypoint = isset($_POST['export_entrypoint']) ? $_POST['export_entrypoint'] : '';
         $exporter_name = isset($_POST['exporter_name']) ? $_POST['exporter_name'] : '';
         $importer_name = isset($_POST['importer_name']) ? $_POST['importer_name'] : '';
-        $exporter_oncertificate = isset($_POST['exporter_oncertificate']) ? $_POST['exporter_oncertificate'] : '';
-        $importer_oncertificate = isset($_POST['importer_oncertificate']) ? $_POST['importer_oncertificate'] : '';
         $exporter_address = isset($_POST['exporter_address']) ? $_POST['exporter_address'] : '';
         $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';
-        $carbonpaper_id = isset($_POST['carbonpaper_id']) && $_POST['carbonpaper_id'] !== '' ? (int)$_POST['carbonpaper_id'] : null;
-        $approved_by = isset($_POST['approved_by']) ? $_POST['approved_by'] : '';
-        $approver_position = isset($_POST['approver_position']) ? $_POST['approver_position'] : '';
-        $consignment_value = isset($_POST['consignment_value']) ? $_POST['consignment_value'] : '';
-        $value_currency = isset($_POST['value_currency']) ? $_POST['value_currency'] : '';
-        $another_scientificname = isset($_POST['another_scientificname']) ? $_POST['another_scientificname'] : '';
-        $additional_declaration = isset($_POST['additional_declaration']) ? $_POST['additional_declaration'] : '';
-
-        $date_issue = isset($_POST['date_issue']) ? $_POST['date_issue'] : null;
-        $inspector_name = isset($_POST['inspector_name']) ? $_POST['inspector_name'] : '';
-        $position = isset($_POST['position']) ? $_POST['position'] : '';
-        $official_stamps = isset($_POST['official_stamps']) ? 1 : 0;
-
+       
          // Put them into $certificate_data array (keys = DB column names)
 
         $certificate_data = [
             'application_id' => $app_id,
             'certificate_no' => $certificate_no,
-            'date_issue' => $date_issue,
-            'inspector_name' => $inspector_name,
-            'position' => $position,
-            'official_stamps' => $official_stamps,
+            'carbonpaper_id' => $carbonpaper_id,
+            'approved_by' => $approved_by,
+            'position_approved' => $approver_position,
+            'place_issued' => $place_issue,
+            'consignment_value' => $consignment_value,
+            'value_currency' => $value_currency,
+            'additional_scientificname' => $additional_scientificname,
             'additional_declaration' => $additional_declaration,
-            'enabled' => 'yes'
-
+            'datetime_created' => $datetime_created,
+            'datetime_updated' => $datetime_updated,
+            'created_uid' => $userid,
+            'updated_uid' => $userid,
+            'gid' => $guid,
+            'date_issued' => $date_issue,
+            'certificate_status' => $cert_status,
+            'enabled' => $enabled
         ];
-        //echo "<script>alert('Save certificate data -UPDATE: pk - Application ID: $app_id');</script>";
-         // ADD NEW certificate data
-         if($_POST['btnSubmitCertificate'] === 'submit'){
-            $result = CertificateAdd($certificate_data, $con);
+       
+         // SUBMIT AND UPDATE ARE THE SAME- certificate data because certificate no is generated when application is submitted
+         if($_POST['btnSubmitCertificate'] === 'submit' || $_POST['btnSubmitCertificate'] === 'update'){
+           $result = CertificateUpdate($certificate_id, $certificate_data, $con);
             if ($result) {
-                echo "<script>alert('Certificate data saved successfully!');</script>";
-            } else {
-                echo "<script>alert('Failed to save certificate data. Please try again.');</script>";
-            }
-          } elseif($_POST['btnSubmitCertificate'] === 'update'){  // UPDATE certificate data
-            $result = CertificateUpdate($app_id, $certificate_data, $con);
-            if ($result) {
-                echo "<script>alert('Certificate data updated successfully!');</script>";
+                echo "<script>alert('Certificate data submit/updated successfully!');</script>";
             } else {
                 echo "<script>alert('Failed to update certificate data. Please try again.');</script>";
-            }
-          }
-      
+            }    
+          }      
     } // end of if - submission of certificate form
 ?>
 <!DOCTYPE html>

@@ -1048,7 +1048,7 @@ function SelectCurrency($currency, $con) {
     $result = pg_query($con, $sql);
     if ($result) {
         while ($row = pg_fetch_assoc($result)) {
-            $selected = ($currency!== null && $currency == $row['currency']) ? 'selected' : '';
+            $selected = ($currency !== null && $currency == $row['code']) ? 'selected' : '';
             echo "<option value=\"{$row['code']}\" $selected>{$row['country']} ({$row['currency']})</option>";
         }
     }
@@ -1915,10 +1915,16 @@ function AddEntityExport($bstype, $enttype, $title, $address, $zipcode, $pid, $d
 } 
 
 /*
-  GetEntityExport: Get entity export by ID
+  EntityExportInfo: Get entity export by ID
 */
-function GetEntityExport($id, $con) {
-    $sql = "SELECT * FROM tbentity_export WHERE id='$id'";
+function EntityExportInfo($id, $con) {
+    // Validate ID is not empty and is numeric
+    if (empty($id) || !is_numeric($id)) {
+        return null;
+    }
+    
+    $id = (int)$id; // Cast to integer for safety
+    $sql = "SELECT * FROM tbentity_export WHERE id=$id";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         return pg_fetch_assoc($result);
@@ -2085,8 +2091,13 @@ function UpdateEntityImport($id, $bstype, $enttype, $title, $address, $zipcode, 
    EntityImportInfo: Get entity import by ID
 */
 function EntityImportInfo($id, $con) {
-    $id = pg_escape_string($con, $id);
-    $sql = "SELECT * FROM tbentity_import WHERE id='$id'";
+    // Validate ID is not empty and is numeric
+    if (empty($id) || !is_numeric($id)) {
+        return null;
+    }
+    
+    $id = (int)$id; // Cast to integer for safety
+    $sql = "SELECT * FROM tbentity_import WHERE id=$id";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         return pg_fetch_array($result);
@@ -2216,8 +2227,8 @@ function ModuleName($mid, $con) {
 */
 function ApplicationNo($exporter_id, $uid, $con) {
     // Add user ID into tbapplication table first to get running number-id
-    $sqlappuser = "INSERT INTO tbapplication (uid, application_no, application_date, company_id, reg_no, export_point, contact_person, address_person, phone, country_import, import_point, certificate_type, multi_item, print_support, commodity_id, name_oncertificate, name_scientific, commodity_description, quantity_net, quantity_gross, unit_id, marks_item, place_origin, conveyance_id, conveyance_sign, address_exporter, address_importer, purpose, place_quarantine, place_treatment, date_certificate) 
-                    VALUES ('$uid', '', NULL, NULL, '', NULL, '', '', '', NULL, NULL, '', '', '', NULL, '', '', '', NULL, NULL, NULL, '', NULL, NULL, '', '', '', '', NULL, NULL, NULL) RETURNING id";
+    $sqlappuser = "INSERT INTO tbapplication (uid, application_no, application_date, company_id, reg_no, export_point, contact_person, address_person, phone, country_import, import_point, certificate_type, multi_item, print_support, commodity_id, name_oncertificate, name_scientific, commodity_description, quantity_net, quantity_gross, unit_id, marks_item, place_origin, conveyance_id, conveyance_sign, address_exporter, address_importer, purpose, place_quarantine, place_treatment, date_certificate, guid, place_quarantine_other, place_treatment_other, importerid) 
+                    VALUES ('$uid', '', NULL, NULL, '', NULL, '', '', '', NULL, NULL, '', '', '', NULL, '', '', '', NULL, NULL, NULL, '', NULL, NULL, '', '', '', '', NULL, NULL, NULL, NULL, '', '', NULL) RETURNING id";
     $result = pg_query($con, $sqlappuser) or die(pg_last_error($con));
     if ($result) {
         $row = pg_fetch_assoc($result);
@@ -2262,14 +2273,14 @@ function ApplicationUpdate($app_id, $data, $con) {
     $sql = "UPDATE tbapplication SET ";
     $sets = [];
     foreach ($data as $key => $value) {
-        if (is_null($value)) {
+        if (is_null($value) || ($value === '' && in_array($key, ['importerid', 'company_id', 'export_point', 'country_import', 'commodity_id', 'unit_id', 'place_origin', 'conveyance_id', 'purpose', 'place_quarantine', 'place_treatment']))) {
             $sets[] = "$key = NULL";
         } else {
-            $sets[] = "$key = '" . pg_escape_string($value) . "'";
+            $sets[] = "$key = '" . pg_escape_string($con, $value) . "'";
         }
     }
     $sql .= implode(", ", $sets);
-    $sql .= " WHERE id = '" . pg_escape_string($app_id) . "'";
+    $sql .= " WHERE id = '" . pg_escape_string($con, $app_id) . "'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     return $result;
 }
@@ -2332,7 +2343,7 @@ function ApplicationList($guid, $con) {
             $id = htmlspecialchars($row['id'], ENT_QUOTES);
             $appno = htmlspecialchars($row['application_no'], ENT_QUOTES);
              $comid = htmlspecialchars($row['company_id'], ENT_QUOTES);
-             $rows = GetEntityExport($comid, $con);
+             $rows = EntityExportInfo($comid, $con);
             $exporter = $rows['title'] ?? '';  // Exporter's name
             $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);   
             $appdate = date('d/m/Y', strtotime($appdate));  // Format date for display
@@ -2373,7 +2384,13 @@ function ApplicationList($guid, $con) {
  ApplicationInfo: Get application information by application ID
 */
 function ApplicationInfo($app_id, $con) {
-    $sql = "SELECT * FROM tbapplication WHERE id = '$app_id'";
+    // Validate ID is not empty and is numeric
+    if (empty($app_id) || !is_numeric($app_id)) {
+        return null;
+    }
+    
+    $app_id = (int)$app_id; // Cast to integer for safety
+    $sql = "SELECT * FROM tbapplication WHERE id = $app_id";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         return pg_fetch_assoc($result);
@@ -2523,6 +2540,26 @@ function CertificateNo($application_id, $uid, $guid, $con) {
 }
 
 /*
+ CertificateUpdate: Add data on certificate results into tbcertificate
+*/
+function CertificateUpdate($cert_id, $data, $con) { // Use certificate ID to update certificate information
+    // Escape application ID
+    $sql = "UPDATE tbcertificate SET ";
+    $sets = [];
+    foreach ($data as $key => $value) {
+        if (is_null($value) || $value === '') {
+            $sets[] = "\"$key\" = NULL";
+        } else {
+            $sets[] = "\"$key\" = '" . pg_escape_string($con, $value) . "'";
+        }
+    }
+    $sql .= implode(", ", $sets);
+    $sql .= " WHERE id = '" . pg_escape_string($con, $cert_id) . "'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    return $result;
+}
+
+/*
  CertificateCheck: Check if certificate already exists for a given application ID
 */
 function CertificateCheck($app_id, $con) {
@@ -2538,7 +2575,7 @@ function CertificateCheck($app_id, $con) {
 /*
   CertificateInfo: Get certificate information by application ID
 */
-function CertificateInfo($app_id, $con) {
+function CertificateInfo($app_id, $con) { // Use application ID to get certificate information
     $sql = "SELECT * FROM tbcertificate WHERE application_id = '$app_id'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
@@ -2597,14 +2634,17 @@ function CertificateImporterInfo($importer_id, $con) {
   CertificateApprovedBy: Get list of approvers from tbapprovers table
 */
 function CertificateApprovedBy($con, $selectedId = null) {
-    $sql = "SELECT id, name, surname FROM tbapprovers ORDER BY name ASC";
+    $sql = "SELECT id, name, surname FROM tbapprovers WHERE enabled = 'yes' ORDER BY name ASC";
     $result = pg_query($con, $sql);
-    if ($result) {
+    if ($result && pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
             $selected = ($selectedId !== null && $selectedId == $row['id']) ? 'selected' : '';
             $fullName = trim($row['name'] . ' ' . $row['surname']);
             echo "<option value=\"{$row['id']}\" $selected>$fullName</option>";
         }
+    } else {
+        // Debug: Show if no approvers found
+        echo "<option value=\"\" disabled>No approvers available</option>";
     }
 }
 

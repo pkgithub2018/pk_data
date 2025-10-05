@@ -769,20 +769,22 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 </div>
             </div>
 
-            <div class="row mb-3 align-items-center">
+            <div class="row mb-3 align-items-start">
                   <label class="col-sm-2 col-form-label">Exporter's address</label> <!-- Application -->
-                  <div class="col-sm-4 d-flex align-items-start">
+                  <div class="col-sm-4">
                       <textarea name="exporter" id="exporter" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's address</label> <!-- Application -->
-
-                  <div class="col-sm-4 d-flex align-items-center">
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal">
-                      <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
-                    </a>&nbsp;<textarea name="importer" id="importer" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                  <div class="col-sm-4 position-relative">
+                    <div class="d-flex align-items-start">
+                      <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal" class="me-2 mt-2">
+                        <i class="bi bi-search" style="font-size: 1.2rem;"></i>
+                      </a>
+                      <textarea name="importer" id="importer" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
+                    </div>
                     <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($importer_id) ? $importer_id : ''; ?>">
                     <div id="importer_suggestions" class="autocomplete-suggestions"></div>
-                    
+                  </div>
             </div>
             
 
@@ -1223,7 +1225,7 @@ function selectExporter(info) {
                 if ($approws) {
                   $appno_inspection = $approws['application_no']; // Application No, not ID
                   $entity_id = $approws['company_id'];
-                  $entity_rows = GetEntityExport($entity_id, $con);
+                  $entity_rows = EntityExportInfo($entity_id, $con);
                   $entityexport_name = $entity_rows['title'];
                 }
             } elseif ($_GET['inspect'] == 'View/Edit') {
@@ -1236,7 +1238,7 @@ function selectExporter(info) {
                   $appid = $insprows['application_id'];
                   $appno_inspection = ApplicationInfo($appid, $con)['application_no'];
                   $entity_id = ApplicationInfo($appid, $con)['company_id'];
-                  $entityexport_name = GetEntityExport($entity_id, $con)['title'];
+                  $entityexport_name = EntityExportInfo($entity_id, $con)['title'];
                   $inspection_date = $insprows['inspection_date'];
                   $sampleno = $insprows['sample_no'];
                   $sample_volume = $insprows['sample_quantity'];
@@ -1488,27 +1490,44 @@ function selectExporter(info) {
  <?php
    if (isset($_GET['part']) && $_GET['part'] === 'certificate') { // Open form -Get link from main.php - dashboard
         
-            $appid_certificate = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
-            $application_no = ApplicationInfo($appid_certificate, $con)['application_no'];
-            $import_country_id = ApplicationInfo($appid_certificate, $con)['country_import'];
-            $import_country = CountryInfo($import_country_id, $con)['title'];
-            $import_point = ApplicationInfo($appid_certificate, $con)['import_point'];
-            $uid = ApplicationInfo($appid_certificate, $con)['uid'];
-            $locationid = Userdata($uid, $con)['location_id'];
-            $place_issue = Locationname($locationid, $con);
-            $export_pointid = ApplicationInfo($appid_certificate, $con)['export_point'];
-            $export_point = Locationname($export_pointid, $con);
-            $exporterid = ApplicationInfo($appid_certificate, $con)['company_id'];
-            // Get exporter details
-            $exporter_name = GetEntityExport($exporterid, $con)['title'];
-            $exporter_address = GetEntityExport($exporterid, $con)['address'];
-            $provinceid = GetEntityExport($exporterid, $con)['province'];
-            $districtid = GetEntityExport($exporterid, $con)['district'];
-            $phone = GetEntityExport($exporterid, $con)['phone'];
-            $email = GetEntityExport($exporterid, $con)['email'];
+            $appid_certificate = isset($_GET['appid']) ? (int)$_GET['appid'] : 0; // Application ID
+            
+            // Get application info with validation
+            $app_info = ApplicationInfo($appid_certificate, $con);
+            if (!$app_info) {
+                echo "<div class='alert alert-danger'>Application not found.</div>";
+                exit;
+            }
+            
+            $application_no = $app_info['application_no'] ?? '';
+            $import_country_id = $app_info['country_import'] ?? '';
+            $import_country = $import_country_id ? CountryInfo($import_country_id, $con)['title'] : '';
+            $import_point = $app_info['import_point'] ?? '';
+            $uid = $app_info['uid'] ?? '';
+            $locationid = $uid ? Userdata($uid, $con)['location_id'] : '';
+            $place_issue = $locationid ? Locationname($locationid, $con) : '';
+            $export_pointid = $app_info['export_point'] ?? '';
+            $export_point = $export_pointid ? Locationname($export_pointid, $con) : '';
+            $exporterid = $app_info['company_id'] ?? '';
+            
+            // Get exporter details with validation
+            $exporter_info = EntityExportInfo($exporterid, $con);
+            $exporter_name = $exporter_info ? $exporter_info['title'] : '';
+            $exporter_address = $exporter_info ? $exporter_info['address'] : '';
+            $app_importerid = $app_info['importerid'] ?? '';
+            
+            // Handle importer info - check if importer ID exists
+            $importer_info = EntityImportInfo($app_importerid, $con);
+            $importer_name = $importer_info ? $importer_info['title'] : '';
+            $importer_address = $importer_info ? $importer_info['address'] : '';
+
+            $provinceid = $exporter_info ? $exporter_info['province'] : '';
+            $districtid = $exporter_info ? $exporter_info['district'] : '';
+            $phone = $exporter_info ? $exporter_info['phone'] : '';
+            $email = $exporter_info ? $exporter_info['email'] : '';
             // Importer details
-            $import_countryid = ApplicationInfo($appid_certificate, $con)['country_import'];
-            $import_country = CountryInfo($import_countryid, $con)['title'];
+            $import_countryid = $app_info['country_import'] ?? '';
+            $import_country = $import_countryid ? CountryInfo($import_countryid, $con)['title'] : '';
 
     // ADD NEW CERTIFICATE ************
          if($_GET['certify'] == 'Add'){   
@@ -1516,10 +1535,21 @@ function selectExporter(info) {
             $btnSubmitCertificate = 'submit';
             list($certificate_id, $certificate_no) = CertificateNo($appid_certificate, $userid, $guid, $con);
             $current_date = date('Y-m-d');
+            
+            // Initialize form variables with default values
+            $carbonpaper_id = '';
+            $approved_by = '';
+            $approver_position = '';
+            $place_issued = '';
+            $consignment_value = '';
+            $value_currency = '';
+            $additional_scientificname = '';
+            $additional_declaration = '';
+            $date_issued = '';
             // Button state     //
          } else if ($_GET['certify'] == 'View/Edit') {
             $btnSubmitCertificate = 'update';
-            $certrows = CertificateInfo($appid_certificate, $con);
+            $certrows = CertificateInfo($appid_certificate, $con); // Application ID
             if ($certrows) {
               // Button state
              // $btnSubmit = 'update';
@@ -1566,7 +1596,8 @@ function selectExporter(info) {
         <div class="card-body">
           <h5 class="card-title">Certificate Form</h5>
           <form id="certificateFormID" action="main.php" method="POST">
-            <!-- Certificate ID (hidden) -->
+            <!-- HIDDEN INPUTS -->
+            <input type="hidden" name="appid_certificate" value="<?php echo $appid_certificate; ?>">
             <input type="hidden" name="certificate_id" value="<?php echo isset($certificate_id) ? $certificate_id : ''; ?>">
 
             <div class="row mb-3 align-items-center">
@@ -1602,6 +1633,14 @@ function selectExporter(info) {
               </div>
             </div>
 
+            
+                <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label">Issue Date</label>
+                    <div class="col-sm-4">
+                      <input type="date" name="date_issue" class="form-control" value="<?php echo isset($date_issued) ? $date_issued : ''; ?>">
+                    </div>
+                </div>
+
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Exporter's name and address</label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-start">
@@ -1609,17 +1648,8 @@ function selectExporter(info) {
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's name and address</label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-center position-relative">
-                    <!--
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal">
-                      <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
-                    </a>&nbsp;
-                    -->
                     <input type="text" class="form-control" name="importer_name" id="importer_name" required 
                              value="<?php echo isset($importer_name) ? $importer_name : ''; ?>">
-                    <!--
-                    <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($importer_id) ? $importer_id : ''; ?>">
-                    <div id="importer_suggestions" class="autocomplete-suggestions"></div>
-                    -->
                   </div>
             </div>
 
@@ -1633,7 +1663,7 @@ function selectExporter(info) {
                     <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
                   </div>
             </div>
-            
+           <!-- 
              <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">&nbsp;</label>
               <div class="col-sm-4">
@@ -1644,7 +1674,7 @@ function selectExporter(info) {
                 <input type="text" class="form-control" name="importer_oncertificate" id="importer_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($importer_oncertificate) ? $importer_oncertificate : ''; ?>" style="font-style: italic;">
               </div>
             </div>
-
+            -->
              <div class="row mb-3 align-items-center"> 
               <label class="col-sm-2 col-form-label">Carbon Paper No</label>
               <div class="col-sm-4">
@@ -1658,7 +1688,7 @@ function selectExporter(info) {
                   <div class="col-sm-4">
                     <select class="form-select" name="approved_by" aria-label="Select approver">
                       <option value="">Select approver...</option>
-                      <?php CertificateApprovedBy($con); ?>
+                      <?php CertificateApprovedBy($con, isset($approved_by) ? $approved_by : null); ?>
                     </select>
                   </div>
               <label class="col-sm-2 col-form-label">Approver's position</label>
@@ -1684,7 +1714,7 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Another Scientific Name</label>
               <div class="col-sm-10">
-                <input type="text" class="form-control" name="another_scientificname" id="another_scientificname" value="<?php echo isset($another_scientificname) ? $another_scientificname : ''; ?>">
+                <input type="text" class="form-control" name="additional_scientificname" id="another_scientificname" value="<?php echo isset($additional_scientificname) ? $additional_scientificname : ''; ?>">
               </div>
             </div>
 

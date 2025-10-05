@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbconveyance" (
     conveyance text NOT NULL /* 1= byland (truck and train), 2=bysea, 3=byair */
 )
 
-CREATE TABLE IF NOT EXISTS "public"."tbtapplication" (
+CREATE TABLE IF NOT EXISTS "public"."tbapplication" (
     /* id and uid will be added first, and then update the rest. So, set empty fields for now */
     id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL, /* user_id from tbusers */

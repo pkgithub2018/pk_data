@@ -1526,6 +1526,19 @@ function DeleteConveyance($cid, $con) {
 }
 
 /*
+ ConveyanceName: Get conveyance name from tbconveyance table
+*/
+function ConveyanceType($id, $con) {
+    $sql = "SELECT conveytype FROM tbconveyance WHERE id='$id'";
+    $result = pg_query($con, $sql);
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row['conveytype'];
+    }
+    return null;
+}
+
+/*
  InspectionMethodList: Show list of inspection methods from tbinspectionmethod table
 */
 function InspectionMethodList($con) {

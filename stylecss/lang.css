@@ -1,11 +1,36 @@
 @charset "utf-8";
 /* CSS Document */
+
+/* Import Noto Sans Lao from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* Apply Noto Sans Lao font to all elements when Lao language is active */
+html[lang="lo"], 
+body[lang="lo"],
+html[lang="lo"] *, 
+body[lang="lo"] *,
+.lang-lao,
+.lang-lao * {
+    font-family: 'Noto Sans Lao', sans-serif !important;
+}
+
+/* Fallback for elements that might not inherit properly */
 html, body, div, h1, h2, h3, h4, h5, h6, blockquote, a, pre, abbr, 
 acronym, address, big, cite, code, del, dfn, em, font, ins, kbd, q, s, samp, small, strike, 
 sub, sup, tt, var, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, 
 caption, tbody, tfoot, thead, 
 .entry-title, .entry-header {
-	 font-family: 'Noto Sans Lao';  /* 'Phetsarath OT' and Noto Sans Lao Condensed Light */
+	 font-family: 'Noto Sans Lao', sans-serif;  /* 'Phetsarath OT' and Noto Sans Lao Condensed Light */
 }
 
-p, tr, th, td, textarea, input, select, button{font-family: 'Noto Sans Lao';}
+p, tr, th, td, textarea, input, select, button {
+    font-family: 'Noto Sans Lao', sans-serif;
+}
+
+/* Specific styling for Lao text */
+.lao-text {
+    font-family: 'Noto Sans Lao', sans-serif !important;
+    font-feature-settings: "liga" 1, "calt" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+}

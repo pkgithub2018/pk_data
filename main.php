@@ -297,7 +297,12 @@ if (file_exists($langFile)) {
          if($_POST['btnSubmitCertificate'] === 'submit' || $_POST['btnSubmitCertificate'] === 'update'){
            $result = CertificateUpdate($certificate_id, $certificate_data, $con);
             if ($result) {
-                echo "<script>alert('Certificate data submit/updated successfully!');</script>";
+                $appid_for_cert = isset($_POST['appid_certificate']) ? $_POST['appid_certificate'] : 0;
+                echo "<script>
+                    if(confirm('Certificate data submit/updated successfully! Would you like to view and print the certificate?')) {
+                        window.open('certificate_view.php?appid=" . $appid_for_cert . "', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+                    }
+                </script>";
             } else {
                 echo "<script>alert('Failed to update certificate data. Please try again.');</script>";
             }    
@@ -305,7 +310,7 @@ if (file_exists($langFile)) {
     } // end of if - submission of certificate form
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo ($_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
 
 <head>
   <meta charset="utf-8">
@@ -334,6 +339,7 @@ if (file_exists($langFile)) {
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
  
 
 
@@ -346,7 +352,7 @@ if (file_exists($langFile)) {
   ======================================================== -->
 </head>
 
-<body>
+<body class="<?php echo ($_SESSION['lang'] == 'la') ? 'lang-lao' : 'lang-en'; ?>">
 
   <!-- ======= Header ======= -->
   <header id="header" class="header fixed-top d-flex align-items-center">

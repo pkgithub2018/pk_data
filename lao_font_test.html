@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noto Sans Lao Font Test</title>
+    <link href="stylecss/lang.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .font-display {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body class="lang-lao">
+    <h1>Noto Sans Lao Font Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Navigation Items in Lao (ການນໍາທາງເປັນພາສາລາວ)</h2>
+        <div class="font-display">
+            <strong>ສະບາຍດີ</strong> - Welcome (ยินดีต้อนรับ)<br>
+            <strong>ກະດານຂ່າວ</strong> - Dashboard (แดชบอร์ด)<br>
+            <strong>ລາຍຊື່ຜູ້ໃຊ້</strong> - User List (รายชื่อผู้ใช้)<br>
+            <strong>ເພີ່ມຜູ້ໃຊ້</strong> - Add User (เพิ่มผู้ใช้)<br>
+            <strong>ໂມດູນ</strong> - Modules (โมดูล)
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Form Elements Test</h2>
+        <form>
+            <label for="test-input">ຊື່ຜູ້ໃຊ້ (Username):</label>
+            <input type="text" id="test-input" placeholder="ປ້ອນຊື່ຜູ້ໃຊ້" style="font-family: 'Noto Sans Lao', sans-serif; padding: 8px; margin: 5px;">
+            
+            <br><br>
+            
+            <label for="test-select">ເລືອກພາສາ (Select Language):</label>
+            <select id="test-select" style="font-family: 'Noto Sans Lao', sans-serif; padding: 8px; margin: 5px;">
+                <option value="la">ລາວ (Lao)</option>
+                <option value="en">ອັງກິດ (English)</option>
+            </select>
+            
+            <br><br>
+            
+            <button type="button" style="font-family: 'Noto Sans Lao', sans-serif; padding: 10px 20px; margin: 5px;">
+                ບັນທຶກ (Save)
+            </button>
+        </form>
+    </div>
+
+    <div class="test-section">
+        <h2>Table Example</h2>
+        <table border="1" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px;">ລຳດັບ (No.)</th>
+                    <th style="padding: 10px;">ຊື່ (Name)</th>
+                    <th style="padding: 10px;">ຕຳແໜ່ງ (Position)</th>
+                    <th style="padding: 10px;">ສະຖານະ (Status)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px;">1</td>
+                    <td style="padding: 10px;">ວຽງພັດ ພັນທະຈັກ (Viengphet Phanthachack)</td>
+                    <td style="padding: 10px;">ຜູ້ອຳນວຍການ (Director)</td>
+                    <td style="padding: 10px;">ເປີດໃຊ້ງານ (Enabled)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px;">2</td>
+                    <td style="padding: 10px;">ສີສຸດາ ລວງໄຊ (Sisouda Luangxay)</td>
+                    <td style="padding: 10px;">ຮອງຜູ້ອຳນວຍການ (Deputy Director)</td>
+                    <td style="padding: 10px;">ເປີດໃຊ້ງານ (Enabled)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="test-section">
+        <h2>Font Information</h2>
+        <p><strong>Font Family:</strong> Noto Sans Lao</p>
+        <p><strong>Font Source:</strong> Google Fonts</p>
+        <p><strong>Language Support:</strong> Full Lao script support including tone marks</p>
+        <p><strong>CSS Class:</strong> .lang-lao</p>
+    </div>
+
+</body>
+</html>

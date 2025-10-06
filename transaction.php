@@ -67,7 +67,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo ($_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
 
 <head>
   <meta charset="utf-8">
@@ -104,6 +104,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
 
   <!-- Autocomplete CSS -->
   <style>
@@ -160,7 +161,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
   ======================================================== -->
 </head>
  
-<body>
+<body class="<?php echo ($_SESSION['lang'] == 'la') ? 'lang-lao' : 'lang-en'; ?>">
   <!-- ======= Header ======= -->
   <header id="header" class="header fixed-top d-flex align-items-center">
 
@@ -1729,6 +1730,11 @@ function selectExporter(info) {
                 <button type="submit" name="btnSubmitCertificate" class="btn btn-primary" value="<?php echo $btnSubmitCertificate === 'update' ? 'update' : 'submit'; ?>">
                   <i class="bi bi-save"></i> <?php echo $btnSubmitCertificate === 'update' ? ' Update' : ' Submit'; ?>
                 </button>
+                <?php if ($btnSubmitCertificate === 'update'): ?>
+                <button type="button" class="btn btn-success" onclick="viewCertificate(<?php echo $appid_certificate; ?>)">
+                  <i class="bi bi-file-earmark-text"></i> View Certificate
+                </button>
+                <?php endif; ?>
                 <a href="main.php" class="btn btn-secondary">
                   <i class="bi bi-x-circle"></i> Cancel
                 </a>
@@ -1921,6 +1927,24 @@ function selectExporter(info) {
           });
         }
       });
+
+      // Function to view certificate in new window
+      function viewCertificate(appid) {
+        if (appid) {
+          const certWindow = window.open(
+            'certificate_view.php?appid=' + appid, 
+            'certificateView', 
+            'width=900,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
+          );
+          if (certWindow) {
+            certWindow.focus();
+          } else {
+            alert('Popup blocked! Please allow popups for this site to view the certificate.');
+          }
+        } else {
+          alert('Invalid application ID');
+        }
+      }
 </script>
 
 </body>

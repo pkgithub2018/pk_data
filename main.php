@@ -1,35 +1,105 @@
-<?php 
+<?php
 session_start();
-
-// Check if a language is selected via the query parameter
+require("php-bin/connection.php");
+require("php-bin/supports.php");
+$_SESSION['lang'] = 'en'; // NOT WORKING -FIX- Default to English
 if (isset($_GET['lang'])) {
   $selectedLang = $_GET['lang'];
   $_SESSION['lang'] = $selectedLang; // Store the selected language in the session
 } else {
   // Default to English if no language is selected
   if (!isset($_SESSION['lang'])) {
-      $_SESSION['lang'] = 'en';
+    $_SESSION['lang'] = 'en';
   }
 }
-
-// Include the appropriate language file
-$langFile = "php-bin/lang_" . $_SESSION['lang'] . ".php";
-if (file_exists($langFile)) {
-  $translations = include($langFile);
-} else {
-  die("Language file not found.");
+//if (ob_get_level()) ob_end_clean();
+// Fixed language loading for cloud server compatibility
+$lang = 'en'; // Default to English
+if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
+    $lang = $_SESSION['lang'];
+} elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
+    $lang = $_GET['lang'];
 }
-// connection to database
- require("php-bin/connection.php");
- require("php-bin/supports.php");
- 
- $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // use user id
- $guid = isset($_SESSION["groupid"]) ? $_SESSION["groupid"] : ''; // use group id
- if(empty($userid)){
-    // If user ID is not set, redirect to login page
-    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
+// Include the appropriate language file
+$langFile = "php-bin/lang_" . $lang . ".php";
+if (file_exists($langFile)) {
+    $translations = include($langFile);
+} else {
+    // Fallback translations if file doesn't exist
+    $translations = array(
+        'dashboard' => 'Dashboard',
+        'Dashboard' => 'Dashboard'
+    );
+}
+// echo "<script>alert('Login-Updated with User id: " . (isset($_GET["uid"]) ? $_GET["uid"] : 'not set') . "');</script>"; 
+// Dynamic Authentication System - same as entity.php
+$userid = '';
+// Try multiple sources for userid (priority order)
+if (isset($_GET["uid"]) && !empty($_GET["uid"])) {
+    $userid = $_GET["uid"];
+} elseif (isset($_POST["uid"]) && !empty($_POST["uid"])) {
+    $userid = $_POST["uid"];
+} elseif (isset($_POST["huid"]) && !empty($_POST["huid"])) {
+    $userid = $_POST["huid"];
+} elseif (isset($_COOKIE["ephyto_uid"]) && !empty($_COOKIE["ephyto_uid"])) {
+    $userid = $_COOKIE["ephyto_uid"];
+} elseif (isset($_SERVER["HTTP_REFERER"]) && !empty($_SERVER["HTTP_REFERER"])) {
+    $referer = $_SERVER["HTTP_REFERER"];
+    if (preg_match('/[?&]uid=([^&]+)/', $referer, $matches)) {
+        $userid = urldecode($matches[1]);
+    }
+} 
+if (!empty($userid)) {
+    // Get user data from database
+    $userdata = Userdata($userid, $con);  
+    if ($userdata) {
+        $username = $userdata['name'];
+        $email = $userdata['email'];
+        $position = $userdata['position'];
+        $groupid = isset($userdata['group_id']) && !empty($userdata['group_id']) ? $userdata['group_id'] : '1'; // Default to group 1 if not set
+        $groupname = GroupName($userdata['group_id'], $con);      
+        // Get and store user profile image
+        $uprofile = Profiledata($userid, $con);
+        if (!$uprofile) {
+            // Initialize profile if it doesn't exist
+            InitializeProfile($userid, $con);
+            $uprofile = Profiledata($userid, $con);
+        }
+        // Debug alert to show actual profile data - FIXED SYNTAX
+        if ($uprofile && is_array($uprofile)) {
+            $imgpath_value = isset($uprofile['imgfilepath']) ? $uprofile['imgfilepath'] : 'NOT SET';      
+        } else {
+            // echo "<script>alert('User profile: NO PROFILE DATA FOUND');</script>";
+        }  
+        if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+            $uimage = $uprofile['imgfilepath'];
+        } else {
+            $uimage = 'assets/img/profile-img.jpg'; // default image if no profile or image
+        }
+    } else {
+        $username = '';
+        $position = '';
+        $groupid = '';
+        $groupname = '';
+        $uimage = 'assets/img/profile-img.jpg';
+    }
+ } else {
+    // No user ID provided, set defaults
+    $username = '';
+    $position = '';
+    $groupid = '';
+    $groupname = '';
+    $uimage = 'assets/img/profile-img.jpg';
  }
- 
+ // Authentication check
+ if(empty($userid)){
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+ }
+ // Use group ID from user data
+ $guid = $groupid;
+  // *************************** APPLICATION ***************************
  // CANCEL/DELETE Application
  if (isset($_GET['btn']) && $_GET['btn'] === 'cancelApp') {
    // Handle the cancellation logic here
@@ -37,22 +107,17 @@ if (file_exists($langFile)) {
    echo "<script>alert('Application cancelled successfully. ID: " . $appid . "');</script>";
     $del = DeleteApplication($appid, $con);
  }
-
  // SUBMIT/SAVE application by UPDATING tbapplication with the form data - CLICK ON SUBMIT BUTTON
-    if (isset($_POST['btnsubApplication_save']) && ($_POST['btnsubApplication_save'] === "submit" || $_POST['btnsubApplication_save'] === "update")) {  // Submit from application form in transaction.php
-        
+    if (isset($_POST['btnsubApplication_save']) && ($_POST['btnsubApplication_save'] === "submit" || $_POST['btnsubApplication_save'] === "update")) {  // Submit from application form in transaction.php    
        echo "<script>alert('Hello, submit application');</script>";
-
         $app_id = isset($_POST['app_id']) ? $_POST['app_id'] : ''; // hidden input
-        
+        echo "<script>alert('Application ID (hidden input): " . $app_id . "');</script>";  
         $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
         $reg_no = isset($_POST['reg_no']) ? $_POST['reg_no'] : '';
         $entry_point = isset($_POST['entry_point']) ? $_POST['entry_point'] : '';
         $applicant_name = isset($_POST['applicant_name']) ? $_POST['applicant_name'] : '';
         $address = isset($_POST['address']) ? $_POST['address'] : '';
-        $phone = isset($_POST['phone']) ? $_POST['phone'] : '';
-        
-
+        $phone = isset($_POST['phone']) ? $_POST['phone'] : '';  
         $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
         $import_point = isset($_POST['import_point']) ? $_POST['import_point'] : '';
         $export_certificate = isset($_POST['export_certificate']) ? 1 : 0;
@@ -67,48 +132,36 @@ if (file_exists($langFile)) {
         $product_name = isset($_POST['proname']) ? $_POST['proname'] : '';
         $name_oncertificate = isset($_POST['name_oncertificate']) ? $_POST['name_oncertificate'] : '';
         $scientific_name = isset($_POST['scientific_name']) ? $_POST['scientific_name'] : '';
-
         $product_id = ProductId($product_name, $scientific_name, $con);
-
         $commodity_description = isset($_POST['number_description']) ? $_POST['number_description'] : '';
         $nquantity = isset($_POST['nquantity']) ? $_POST['nquantity'] : '';
         $gquantity = isset($_POST['gquantity']) ? $_POST['gquantity'] : '';
-
         $unit = isset($_POST['unit']) ? $_POST['unit'] : '';
         $marks = isset($_POST['marks']) ? $_POST['marks'] : '';
-
         $place_origin = isset($_POST['place_origin']) ? $_POST['place_origin'] : null;  // data type - integer could not accept ''
         $conveyance = isset($_POST['conveyance']) ? $_POST['conveyance'] : null;
         $conveyance_sign = isset($_POST['conveyance_sign']) ? $_POST['conveyance_sign'] : '';
-
         $exporter_address = isset($_POST['exporter']) ? $_POST['exporter'] : '';  // exporter address
-        $importerid = isset($_POST['importer_id']) ? $_POST['importer_id'] : ''; // hidden input for importer entity id
-        
+        $importerid = isset($_POST['importer_id']) ? $_POST['importer_id'] : ''; // hidden input for importer entity id 
         // Ensure importerid is properly handled for database operations
         if ($importerid === '' || !is_numeric($importerid)) {
             $importerid = null;
         } else {
             $importerid = (int)$importerid;
-        }
-        
+        } 
         // Handle importer info safely
         $importer_info = EntityImportInfo($importerid, $con);
         $importer_name = $importer_info ? $importer_info['title'] : '';
         $importer_address = $importer_info ? $importer_info['address'] : '';
        // $importer_address = isset($_POST['importer']) ? $_POST['importer'] : ''; // importer address
-
         $purpose = isset($_POST['purpose']) ? $_POST['purpose'] : '';
-     
          $place_quarantine = isset($_POST['place_quarantine']) && $_POST['place_quarantine'] !== '' ? (int)$_POST['place_quarantine'] : null;
-
         //$place_treatment = isset($_POST['place_treatment']) ? $_POST['place_treatment'] : '';
         $place_treatment = isset($_POST['place_treatment']) && $_POST['place_treatment'] !== '' ? (int)$_POST['place_treatment'] : null;
-
         $place_quarantine_other = isset($_POST['place_quarantine_other']) ? $_POST['place_quarantine_other'] : '';
         $place_treatment_other = isset($_POST['place_treatment_other']) ? $_POST['place_treatment_other'] : '';
         $certificate_date = isset($_POST['certificate_date']) ? $_POST['certificate_date'] : '';
         //$guid = isset($_POST['guid']) ? $_POST['guid'] : '';
-
             // Put them into $data array (keys = DB column names)
         $data = [
             'reg_no'             => $reg_no,
@@ -116,7 +169,6 @@ if (file_exists($langFile)) {
             'contact_person'     => $applicant_name,
             'address_person'     => $address,
             'phone'              => $phone,
-           
             'country_import'     => $import_country,
             'import_point'       => $import_point,
             'certificate_type'   => $certificate_type,  
@@ -126,7 +178,6 @@ if (file_exists($langFile)) {
             'name_oncertificate' => $name_oncertificate,
             'name_scientific'    => $scientific_name,
             'commodity_description'=> $commodity_description,
-
             'quantity_net'        => $nquantity,
             'quantity_gross'     => $gquantity,
             'unit_id'            => $unit,
@@ -143,25 +194,21 @@ if (file_exists($langFile)) {
             'place_quarantine_other' => $place_quarantine_other,
             'place_treatment_other'  => $place_treatment_other,
             'importerid'       => $importerid
-        ];
-        
+        ]; 
         $result = ApplicationUpdate($app_id, $data, $con); // Update tbapplication with the form data
         if ($result) {
-          //  echo "<script>alert('Application updated successfully!');</script>";
+            echo "<script>alert('Application updated successfully!');</script>";
         } else {
-          //  echo "<script>alert('Failed to update application. Please try again.');</script>";
+            echo "<script>alert('Failed to update application. Please check the console for details.');</script>";
         }
     } // End of if - Submission for updating application FIRST TIME (NO CHANGE IS MADE)
-
    // UPDATE/CHANGE on application - CLICK ON UPDATE BUTTON in transaction.php
    if(isset($_POST['btnsubApplication_save']) && $_POST['btnsubApplication_save'] === "update"){
      echo "<script>alert('Update- Application ID: $app_id');</script>";
    }
-
    // *************************** INSPECTION ***************************
     // SAVE inspection data - CLICK ON SAVE BUTTON in inspection form in transaction.php
-    if (isset($_POST['btnSubmitInspection'])) {
-      
+    if (isset($_POST['btnSubmitInspection'])) {     
         $app_id = isset($_POST['appid']) ? $_POST['appid'] : ''; // hidden input
         $inspection_date = isset($_POST['inspection_date']) ? $_POST['inspection_date'] : null;
         $sample_no = isset($_POST['sampleno']) ? $_POST['sampleno'] : '';
@@ -186,9 +233,7 @@ if (file_exists($langFile)) {
         $additional_info = isset($_POST['additional_info']) ? $_POST['additional_info'] : '';
         $treatment_reason = isset($_POST['reason']) ? $_POST['reason'] : '';
         $post_treatment_details = isset($_POST['post_details']) ? $_POST['post_details'] : '';
-
          // Put them into $inspection_data array (keys = DB column names)
-
         $inspection_data = [
             'application_id' => $app_id,
             'inspection_date' => $inspection_date,
@@ -215,7 +260,6 @@ if (file_exists($langFile)) {
             'treatment_reason' => $treatment_reason,
             'post_treatment_details' => $post_treatment_details,
             'enabled' => 'yes'
-
         ];
         //echo "<script>alert('Save inspection data -UPDATE: pk - Application ID: $app_id');</script>";
          // ADD NEW inspection data
@@ -233,14 +277,11 @@ if (file_exists($langFile)) {
             } else {
                 echo "<script>alert('Failed to update inspection data. Please try again.');</script>";
             }
-          }
-      
+          }     
     } // end of if - submission of inspection form
-
     // *************************** CERTIFICATE ***************************
     // SAVE certificate data - CLICK ON SAVE BUTTON in certificate form in transaction.php
-    if (isset($_POST['btnSubmitCertificate'])) {
-       
+    if (isset($_POST['btnSubmitCertificate'])) {  
         $certificate_id = isset($_POST['certificate_id']) ? $_POST['certificate_id'] : ''; // hidden input
         $app_id = isset($_POST['appid_certificate']) ? $_POST['appid_certificate'] : ''; // hidden input from Certificate form
         $certificate_no = isset($_POST['certificate_no']) ? $_POST['certificate_no'] : '';
@@ -260,7 +301,6 @@ if (file_exists($langFile)) {
         $date_issue = isset($_POST['date_issue']) ? $_POST['date_issue'] : null;
         $cert_status = CertificateInfo($app_id, $con)['certificate_status']; // keep the original certificate status
         $enabled = CertificateInfo($app_id, $con)['enabled']; // keep the original enabled status
-
         // These inputs are used for presentation on the form only - NOT saved in tbcertificate
         $import_country = isset($_POST['import_country']) ? $_POST['import_country'] : '';
         $import_entrypoint = isset($_POST['import_entrypoint']) ? $_POST['import_entrypoint'] : '';
@@ -268,10 +308,8 @@ if (file_exists($langFile)) {
         $exporter_name = isset($_POST['exporter_name']) ? $_POST['exporter_name'] : '';
         $importer_name = isset($_POST['importer_name']) ? $_POST['importer_name'] : '';
         $exporter_address = isset($_POST['exporter_address']) ? $_POST['exporter_address'] : '';
-        $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';
-       
-         // Put them into $certificate_data array (keys = DB column names)
-
+        $importer_address = isset($_POST['importer_address']) ? $_POST['importer_address'] : '';   
+       // Put them into $certificate_data array (keys = DB column names)
         $certificate_data = [
             'application_id' => $app_id,
             'certificate_no' => $certificate_no,
@@ -291,8 +329,7 @@ if (file_exists($langFile)) {
             'date_issued' => $date_issue,
             'certificate_status' => $cert_status,
             'enabled' => $enabled
-        ];
-       
+        ];    
          // SUBMIT AND UPDATE ARE THE SAME- certificate data because certificate no is generated when application is submitted
          if($_POST['btnSubmitCertificate'] === 'submit' || $_POST['btnSubmitCertificate'] === 'update'){
            $result = CertificateUpdate($certificate_id, $certificate_data, $con);
@@ -300,7 +337,7 @@ if (file_exists($langFile)) {
                 $appid_for_cert = isset($_POST['appid_certificate']) ? $_POST['appid_certificate'] : 0;
                 echo "<script>
                     if(confirm('Certificate data submit/updated successfully! Would you like to view and print the certificate?')) {
-                        window.open('certificate_view.php?appid=" . $appid_for_cert . "', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+                        window.open('certificate_view.php?appid=" . intval($appid_for_cert) . "', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
                     }
                 </script>";
             } else {
@@ -310,24 +347,20 @@ if (file_exists($langFile)) {
     } // end of if - submission of certificate form
 ?>
 <!DOCTYPE html>
-<html lang="<?php echo ($_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
-
+<html lang="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
-  <title><?php echo $translations['dashboard']; ?></title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title><?php echo isset($translations['dashboard']) ? $translations['dashboard'] : 'Dashboard'; ?></title>
   <meta content="" name="description">
   <meta content="" name="keywords">
-
   <!-- Favicons -->
   <link href="assets/img/favicon.png" rel="icon">
   <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-
   <!-- Google Fonts -->
   <link href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
-
   <!-- Vendor CSS Files -->
   <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet"> 
@@ -336,13 +369,9 @@ if (file_exists($langFile)) {
   <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
-
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
   <link href="stylecss/lang.css" rel="stylesheet">
- 
-
-
   <!-- =======================================================
   * Template Name: NiceAdmin
   * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
@@ -351,27 +380,22 @@ if (file_exists($langFile)) {
   * License: https://bootstrapmade.com/license/
   ======================================================== -->
 </head>
-
-<body class="<?php echo ($_SESSION['lang'] == 'la') ? 'lang-lao' : 'lang-en'; ?>">
-
+<body class="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lang-lao' : 'lang-en'; ?>">
   <!-- ======= Header ======= -->
   <header id="header" class="header fixed-top d-flex align-items-center">
-
     <div class="d-flex align-items-center justify-content-between">
       <a href="index.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhyto Certificate</span>
+        <span class="d-none d-lg-block">e-Phytosanitary</span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
-
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
     </div><!-- End Search Bar -->
-
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
@@ -386,30 +410,26 @@ if (file_exists($langFile)) {
           </a>
         </li>
     <!-- End Language Switcher -->
-
         <li class="nav-item d-block d-lg-none">
           <a class="nav-link nav-icon search-bar-toggle " href="#">
             <i class="bi bi-search"></i>
           </a>
         </li><!-- End Search Icon-->
         <li class="nav-item dropdown pe-3">
-
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION["username"]; ?></span>
+            <img src="<?php echo $uimage; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $username; ?></span>
           </a><!-- End Profile Iamge Icon -->
-
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
-              <span><?php echo $_SESSION["position"]; ?></span>
+              <h6><?php echo $username; ?></h6>
+              <span><?php echo $position; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
-
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -417,9 +437,8 @@ if (file_exists($langFile)) {
             <li>
               <hr class="dropdown-divider">
             </li>
-
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -427,7 +446,6 @@ if (file_exists($langFile)) {
             <li>
               <hr class="dropdown-divider">
             </li>
-
             <li>
               <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
                 <i class="bi bi-question-circle"></i>
@@ -437,104 +455,56 @@ if (file_exists($langFile)) {
             <li>
               <hr class="dropdown-divider">
             </li>
-
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Sign Out</span>
               </a>
             </li>
-
           </ul><!-- End Profile Dropdown Items -->
         </li><!-- End Profile Nav -->
-
       </ul>
     </nav><!-- End Icons Navigation -->
-
   </header><!-- End Header -->
-
   <!-- ======= Sidebar ======= -->
   <aside id="sidebar" class="sidebar">
-
     <ul class="sidebar-nav" id="sidebar-nav">
       <li class="nav-item">
         <a class="nav-link " href="index.php">
           <i class="bi bi-grid"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
-          <span><?php echo $translations['Dashboard']; ?></span>
+          <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
-      </li><!-- End Dashboard Nav -->
-    
+      </li><!-- End Dashboard Nav --> 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
-
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
-
-    <!-- Module Nav -->
-     <!--
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span><?php echo $translations['modules']; ?></span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Entity/Company</span> 
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=sample">
-              <i class="bi bi-circle"></i><span>Sample</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=certificate">
-              <i class="bi bi-circle"></i><span>Certificate</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=printing">
-              <i class="bi bi-circle"></i><span>Printing</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-    -->
-      <!-- End Forms Nav -->
-
-      <?php if($_SESSION["groupname"] == "admin"){ ?><!-- Admin group check -->
-
+      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-         
-          <li>
-            <a href="masterdata.php?part=product">
-              <i class="bi bi-circle"></i><span>Product</span>
+         <li>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
@@ -544,75 +514,66 @@ if (file_exists($langFile)) {
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=modules">
-              <i class="bi bi-circle"></i><span>Module List</span>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces">
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
         </ul>
       </li><!-- End Master Data Nav -->
-
       <?php } // End of Admin group check ?>
-
       <li class="nav-heading">Users' Management</li>
-
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
-
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
       </li><!-- End Users group -->
-
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
       </li><!-- End Permission: User Group and Module -->
-
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
     </ul>
-
   </aside><!-- End Sidebar-->
-
   <main id="main" class="main">
-
     <div class="pagetitle">
       <h1>Dashboard</h1>
       <nav>
@@ -622,20 +583,16 @@ if (file_exists($langFile)) {
         </ol>
       </nav>
     </div><!-- End Page Title -->
-
     <!-- Charts Section -->
     <section class="section">
-      <div class="row">
-        
+      <div class="row">  
         <!-- Chart 1: Application Status Chart -->
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">Application Status <span>| This Month</span></h5>
-              
               <!-- Donut Chart -->
               <div id="donutChart" style="min-height: 250px;" class="echart"></div>
-
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
                   echarts.init(document.querySelector("#donutChart")).setOption({
@@ -677,20 +634,16 @@ if (file_exists($langFile)) {
                 });
               </script>
               <!-- End Donut Chart -->
-
             </div>
           </div>
         </div>
-
         <!-- Chart 2: Monthly Applications Trend -->
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
-
               <!-- Line Chart -->
               <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
-
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
                   echarts.init(document.querySelector("#reportsChart")).setOption({
@@ -737,20 +690,16 @@ if (file_exists($langFile)) {
                 });
               </script>
               <!-- End Line Chart -->
-
             </div>
           </div>
         </div>
-
         <!-- Chart 3: Export Entities Performance -->
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">Export Entities <span>| Performance</span></h5>
-
               <!-- Column Chart -->
               <div id="columnChart" style="min-height: 250px;" class="echart"></div>
-
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
                   echarts.init(document.querySelector("#columnChart")).setOption({
@@ -793,27 +742,21 @@ if (file_exists($langFile)) {
                 });
               </script>
               <!-- End Column Chart -->
-
             </div>
           </div>
         </div>
-
       </div>
     </section><!-- End Charts Section -->
-
     <section class="section dashboard">
       <div class="row">
-
         <!-- Left side columns -->
         <div class="col-lg-8" style="width: 100%;">
           <div class="row">           
-                 
             <!-- Recent Sales -->
             <div class="col-12">
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
                   <h5 class="card-title">Phytosanitary Certificates <span>| Today</span></h5>
-
                   <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
@@ -827,19 +770,18 @@ if (file_exists($langFile)) {
                       </tr>
                     </thead>
                     <tbody>
-                     <?php ApplicationList($guid, $con); ?>
+                     <?php ApplicationList($guid, $con, $userid); ?>
                     </tbody>
                   </table>
-
                 </div>
+              </div>
+            </div><!-- End Recent Sales -->
           </div>
         </div><!-- End Left side columns -->
-
         <!-- Right side columns *****************PK************************ -->
+      </div>
     </section>
-
   </main><!-- End #main -->
-
   <!-- ======= Footer ======= -->
   <!-- PK: no need for footer for this page
   <footer id="footer" class="footer">
@@ -849,9 +791,7 @@ if (file_exists($langFile)) {
   </footer>
   -->
   <!-- End Footer -->
-
   <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
-
   <!-- Vendor JS Files -->
   <script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
   <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -859,12 +799,9 @@ if (file_exists($langFile)) {
   <script src="assets/vendor/echarts/echarts.min.js"></script>
   <script src="assets/vendor/quill/quill.js"></script>
   <script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
-  <script src="assets/vendor/tinymce/tinymce.min.js"></script>
+  <script src="assets/vendor/tinymce/tinymce.min.js"></script> 
   <script src="assets/vendor/php-email-form/validate.js"></script>
-
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
-
 </body>
-
 </html>

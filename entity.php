@@ -1,5 +1,11 @@
 <?php
-session_start();
+/*
+ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_strict_mode', 1);
+ini_set('session.cookie_samesite', 'Lax');
+
+session_start();  // NOT WORKING FOR NOW - FOR CLOUD SERVER
 
 // Check if a language is selected via the query parameter
 if (isset($_GET['lang'])) {
@@ -19,13 +25,42 @@ if (file_exists($langFile)) {
 } else {
   die("Language file not found.");
 }
-
-// User group ID
-$guid = $_SESSION["groupid"];
-
+*/
 // connection to database
  require("php-bin/connection.php");
  require("php-bin/supports.php");
+
+// USER DATA
+ $userid = '';
+    $userid = Userconnect(
+        isset($_GET['uid']) ? $_GET['uid'] : '',
+        isset($_POST['uid']) ? $_POST['uid'] : '',
+        isset($_POST['huid']) ? $_POST['huid'] : '',
+        isset($_COOKIE['ephyto_uid']) ? $_COOKIE['ephyto_uid'] : '',
+        isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+        $con
+    );
+$userinfo = Userdata($userid, $con);
+$loginuser = isset($userinfo['name']) ? $userinfo['name'] : ''; // Name of user
+$uname = isset($userinfo['email']) ? $userinfo['email'] : ''; // Use email as login name
+$usname = isset($userinfo['surname']) ? $userinfo['surname'] : ''; // Surname
+$ufullname = $loginuser."  ".$usname;  // Full name
+$position = isset($userinfo['position']) ? $userinfo['position'] : '';
+
+ // Get and store user profile image
+$uprofile = Profiledata($userid, $con);
+  if (!$uprofile) {
+  // Initialize profile if it doesn't exist
+   InitializeProfile($userid, $con);
+   $uprofile = Profiledata($userid, $con);
+  }
+
+  if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+    $uimage = $uprofile['imgfilepath'];
+  }
+
+// User group ID - get from user data instead of session
+$guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $userinfo['group_id'] : '0';
 
 ?>
 
@@ -83,7 +118,7 @@ $guid = $_SESSION["groupid"];
     <div class="d-flex align-items-center justify-content-between">
       <a href="index.html" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+        <span class="d-none d-lg-block">e-Phytosanitary</span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -108,21 +143,21 @@ $guid = $_SESSION["groupid"];
         <li class="nav-item dropdown pe-3">
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
+            <img src="<?php echo $uimage; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
-              <span><?php echo $_SESSION['position']; ?></span>
+              <h6><?php echo $loginuser; ?></h6>
+              <span><?php echo $position; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -132,7 +167,7 @@ $guid = $_SESSION["groupid"];
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -172,21 +207,21 @@ $guid = $_SESSION["groupid"];
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php">
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
       
       <li class="nav-item">
-        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'export') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=export" >
+        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'export') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'import') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=import" >
+        <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'import') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
@@ -197,10 +232,9 @@ $guid = $_SESSION["groupid"];
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-         
           <li>
-            <a href="masterdata.php?part=product">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
             </a>
           </li>
           <li>
@@ -233,9 +267,9 @@ $guid = $_SESSION["groupid"];
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
-          <li>
-            <a href="masterdata.php?part=modules">
-              <i class="bi bi-circle"></i><span>Module List</span>
+            <li>
+            <a href="masterdata.php?part=product">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
@@ -254,28 +288,28 @@ $guid = $_SESSION["groupid"];
       <li class="nav-heading">Users' Management</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i>
           <span>Users</span>
         </a>
@@ -296,14 +330,14 @@ $guid = $_SESSION["groupid"];
         <h1>Export entity</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item">Tables</li>
             <li class="breadcrumb-item">Export entity</li>
           </ol>
           </nav>
         </div>
         <div>
-          <a href="entity.php?frm=newEntity_export" class="btn btn-success btn-sm" role="button">
+          <a href="entity.php?frm=newEntity_export&uid=<?php echo $userid; ?>" class="btn btn-success btn-sm" role="button">
             <i class="bi bi-plus-circle"></i> Add New export entity
           </a>
         </div>
@@ -335,7 +369,7 @@ $guid = $_SESSION["groupid"];
                   </tr>
                 </thead>
                 <tbody>
-                  <?php EntityExportList($con); ?>
+                  <?php EntityExportList($con, $guid, $userid); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -352,6 +386,9 @@ $guid = $_SESSION["groupid"];
    <?php
        // Handle form submission for Export Entity/Company
        if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['btnsubEntityExport'])) {
+           echo "<!-- Debug: Form submitted with method POST -->";
+           echo "<!-- Debug: btnsubEntityExport value: " . $_POST['btnsubEntityExport'] . " -->";
+           
            $sbupdate = ''; // Default to submit action
            // $uid = $_POST['huid'];
            $bustype = $_POST['business_type'];
@@ -378,11 +415,15 @@ $guid = $_SESSION["groupid"];
        // Insert or update logic here
         if($_POST['btnsubEntityExport'] === 'update') {
           // Update existing entity
+          echo "<!-- Debug: Entering update branch -->";
           $sbupdate = 'update';
-          $entity_id = $_GET['id']; // Assuming you pass the entity ID in the URL
-          UpdateEntityExport($entity_id, $bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $con);
+          $entity_id = $_POST['entity_id']; // Get entity ID from hidden form field
+          echo "<!-- Debug: Entity ID from POST: $entity_id -->";
+          echo "<!-- Debug: UserID: $userid -->";
+          UpdateEntityExport($entity_id, $bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $userid, $con);
         } else if($_POST['btnsubEntityExport'] === 'submit') {
           // Add new entity
+          echo "<!-- Debug: Entering submit branch -->";
           AddEntityExport($bustype, $enttype, $name, $address, $zip, $pid, $did, $phone, $email, $contact_person, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $created_date, $guid, $con);
         }
      } 
@@ -397,7 +438,7 @@ $guid = $_SESSION["groupid"];
          // Fetch the entity data for editing
          // Assuming you have a function GetEntityExport that retrieves the entity data by ID 
          $entity_id = $_GET['id'];
-         $entityData = GetEntityExport($entity_id, $con);
+         $entityData = EntityExportInfo($entity_id, $con);
          if ($entityData) {
            // Extract data from the result
           
@@ -441,8 +482,14 @@ $guid = $_SESSION["groupid"];
               <h5 class="card-title">Entity Data Form</h5>
                <!-- Entity/Company Form -->
               <form action="" method="POST">
-                <!-- Hidden input for uid : User ID -->
-               <!-- <input type="hidden" id="huid" name="huid" value="<?php echo isset($uid) ? $uid : ''; ?>"> -->
+                <!-- Hidden inputs to preserve parameters -->
+                <?php if (isset($_GET['id'])): ?>
+                <input type="hidden" name="entity_id" value="<?php echo $_GET['id']; ?>">
+                <?php endif; ?>
+                <input type="hidden" name="uid" value="<?php echo $userid; ?>">
+                <?php if (isset($_GET['frm'])): ?>
+                <input type="hidden" name="frm" value="<?php echo $_GET['frm']; ?>">
+                <?php endif; ?>
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">Business Type</label>
                   <div class="col-sm-4">
@@ -590,14 +637,14 @@ $guid = $_SESSION["groupid"];
         <h1>Import entity</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item"><a href="#">Import entity list</a></li>
             <li class="breadcrumb-item active">Import entity</li>
           </ol>
           </nav>
         </div>
         <div>
-          <a href="entity.php?frm=newEntity_import" class="btn btn-success btn-sm" role="button">
+          <a href="entity.php?frm=newEntity_import&uid=<?php echo $userid; ?>" class="btn btn-success btn-sm" role="button">
             <i class="bi bi-plus-circle"></i> Add New import entity
           </a>
         </div>
@@ -628,7 +675,7 @@ $guid = $_SESSION["groupid"];
                   </tr>
                 </thead>
                 <tbody>
-                  <?php EntityImportList($con); ?>
+                  <?php EntityImportList($con, $userid); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -701,8 +748,8 @@ $guid = $_SESSION["groupid"];
       <h1>Import Entity</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item"><a href="entity.php?entity=import">Import entity list</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="entity.php?entity=import&uid=<?php echo $userid; ?>">Import entity list</a></li>
           <li class="breadcrumb-item active">Import Entity</li>
         </ol>
       </nav>
@@ -717,6 +764,8 @@ $guid = $_SESSION["groupid"];
               <h5 class="card-title">Import Entity</h5>
               <!-- Import Entity/Company Form -->
               <form action="" method="POST">
+                <!-- Hidden inputs to preserve parameters -->
+                 <input type="hidden" name="huid" value="<?php echo $userid; ?>">
                  <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">Business Type</label>
                   <div class="col-sm-4">

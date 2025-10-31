@@ -1,13 +1,45 @@
 <?php
       // Pk: 2025-04-30
-  session_start();
+  //session_start(); - not working on cloud server
 
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
-
+  /*
+  // Authentication check
+  $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : '';
+  if(empty($userid)){
+    // If user ID is not set, redirect to login page
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+  }
   $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
   $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
   //echo "<script>alert('uname: " . $uname . "');</script>"; // Debugging line
+  */
+  // User data
+   $userid = '';
+    $userid = Userconnect(
+        isset($_GET['uid']) ? $_GET['uid'] : '',
+        isset($_POST['uid']) ? $_POST['uid'] : '',
+        isset($_POST['huid']) ? $_POST['huid'] : '',
+        isset($_COOKIE['ephyto_uid']) ? $_COOKIE['ephyto_uid'] : '',
+        isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+        $con
+    );
+    $loginuser = Userdata($userid, $con)['name']; // User name
+    $guid = Userdata($userid, $con)['group_id'];
+    $position = Userdata($userid, $con)['position'];       
+    // Get and store user profile image
+    $uprofile = Profiledata($userid, $con);
+    if (!$uprofile) {
+    // Initialize profile if it doesn't exist
+    InitializeProfile($userid, $con);
+        $uprofile = Profiledata($userid, $con);
+    }
+    if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+    $uimage = $uprofile['imgfilepath'];
+    }
 ?>
 
 <!DOCTYPE html>
@@ -65,7 +97,7 @@
   <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="main.php?us=<?php echo $uname; ?>" class="logo d-flex align-items-center">
+      <a href="main.php?uid=<?php echo $userid; ?>" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
         <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
       </a>
@@ -89,12 +121,12 @@
         </li><!-- End Search Icon-->
         <li class="nav-item dropdown pe-3">
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
+            <img src="<?php echo $uimage; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
           </a><!-- End Profile Iamge Icon -->
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
+              <h6><?php echo $loginuser; ?></h6>
               <span>National IT Consultant</span>
             </li>
             <li>
@@ -102,7 +134,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -112,7 +144,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -152,61 +184,27 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?us=<?php echo $uname; ?>" >
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>" >
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
       <li class="nav-item">
-        <a class="nav-link active" href="entity.php?entity=export" >
+        <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
       </li><!-- End Import Entity Nav -->
 
-      <!-- Module Nav -->
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span>Modules</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Entity/Company</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=sample">
-              <i class="bi bi-circle"></i><span>Sample</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=certificate">
-              <i class="bi bi-circle"></i><span>Certificate</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=printing">
-              <i class="bi bi-circle"></i><span>Printing</span>
-            </a>
-          </li>
-        </ul>
-      </li><!-- End Forms Nav -->
-
        <?php
-          $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod','treatmentmethod', 'entitytype', 'modules']; // Add all relevant parts here
+          $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod','treatmentmethod', 'entitytype', 'approvers']; // Add all relevant parts here
           $isMasterActive = (isset($_GET['part']) && in_array($_GET['part'], $masterParts));
       ?>
       <li class="nav-item">
@@ -214,19 +212,18 @@
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse<?php echo $isMasterActive ? ' show' : ''; ?>" data-bs-parent="#sidebar-nav">
-         
           <li>
-            <a href="masterdata.php?part=product" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'approvers') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'countries') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'countries') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
@@ -236,32 +233,33 @@
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'entitytype') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'entitytype') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'inspectionmethod') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'inspectionmethod') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
 
           <li>
-            <a href="masterdata.php?part=locations" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
-          <li>
-            <a href="masterdata.php?part=modules" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'modules') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Module List</span>
-            </a>  
+           <li>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span>Product</span>
+            </a>
+          </li>
           <li>
             <a href="#">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'treatmentmethod') ? 'active' : ''; ?>">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'treatmentmethod') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
@@ -271,28 +269,28 @@
       <li class="nav-heading">Pages</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
       </li><!-- End Users group -->
       
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
       </li><!-- End User Group permit -->
 
       <li class="nav-item">
-        <a class="nav-link active" href="users.php?part=userslist">
+        <a class="nav-link active" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  <!-- End Users Nav -->
@@ -313,9 +311,9 @@
       <h1>Locations</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active"><a href="masterdata.php?part=locations">Locations</a></li>
+          <li class="breadcrumb-item active"><a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">Locations</a></li>
         </ol>
       </nav>
       </div>
@@ -435,7 +433,7 @@
         <h1>Add/Update Location</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item">Forms</li>
             <li class="breadcrumb-item active">Locations</li>
           </ol>
@@ -448,7 +446,7 @@
             <div class="card-body">
               <h5 class="card-title"><?php echo (isset($_GET['loc']) && $_GET['loc'] === 'edit') ? 'Location Update' : 'New Location'; ?></h5>
               <!-- Users Form -->
-              <form action="masterdata.php?part=locations" method="POST">
+              <form action="masterdata.php?part=locations&uid=<?php echo $userid; ?>" method="POST">
                 <!-- Hidden input for id : location  ID -->
                 <input type="hidden" id="hlid" name="hlid" value="<?php echo isset($id) ? $id : ''; ?>">
                 <div class="row mb-3">
@@ -521,7 +519,7 @@
             // Call the function to delete location
             //DeleteLocation($locsqid, $con); - NOT IMPLEMENTED YET
             echo "<script>alert('Location with ID: " . $locsqid . " TO be deleted (NOT IMPLEMENTED YET).');</script>"; // Debugging line
-            echo "<script>window.location.href='masterdata.php?part=locations';</script>"; // Redirect to locations page
+            echo "<script>window.location.href='masterdata.php?part=locations&uid=<?php echo $userid; ?>';</script>"; // Redirect to locations page
         } else {
             echo "<script>alert('No Location ID provided for deletion.');</script>"; // Debugging line
         }
@@ -538,7 +536,7 @@
       <h1>Countries</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Countries</li>
         </ol>
@@ -678,10 +676,10 @@
       <h1>Product</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup">Product Group</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=productunit">Product Unit</a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>">Product Group</a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>">Product Unit</a></li>
         </ol>
       </nav>
       </div>
@@ -829,8 +827,8 @@
       <h1>Product Group</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=product">Product</a></li> 
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">Product</a></li> 
           <li class="breadcrumb-item active">Product Group</li>
         </ol>
       </nav>
@@ -947,8 +945,8 @@
       <h1>Product Unit</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=product">Product</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">Product</a></li>
           <li class="breadcrumb-item active">Product Unit</li>
         </ol>
       </nav>
@@ -1061,6 +1059,61 @@
         }
     }
   ?>
+  <!-- ======= *************** Approvers ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='approvers') {
+      // PK: Product part: product=edit&id=$productid
+      //echo "<script>alert('Product part is not implemented yet.');</script>";
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Approvers</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Approvers</li>
+        </ol>
+      </nav>
+    </div>
+  </div>><!-- End Page Title -->
+    <section class="section"> <!-- DATA TABLE - Approvers -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Approvers</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Approvers</p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Name and surname</th>
+                   <th>Roles</th>
+                   <th>Position</th>
+                   <th>Workplace</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    //Approverslist($con); // List of Approvers
+                  ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section> <!-- End Data Table Approvers -->
+    <?php
+     }
+    ?>
   <!-- ======= *************** Conveyance ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='conveyance') {
@@ -1072,7 +1125,7 @@
       <h1>Conveyance</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Conveyance</li>
         </ol>
@@ -1199,7 +1252,7 @@
       <h1>Inspection Method</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Inspection Method</li>
         </ol>
@@ -1317,7 +1370,7 @@
       <h1>Treatment Method</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li> 
           <li class="breadcrumb-item active">Treatment Method</li>
         </ol>
@@ -1443,7 +1496,7 @@
       <h1>Entity Type</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Entity Type</li>
         </ol>
@@ -1467,6 +1520,7 @@
               <div class="modal-body">
                 <!-- Hidden input for etid -->
                 <input type="hidden" id="entityTypeId" name="entityTypeId">
+                <input type="hidden" name="userid" value="<?php echo $userid; ?>">
                 <div class="mb-3">
                   <label for="entityTypeCode" class="form-label">Code</label>
                   <input type="text" class="form-control" id="entityTypeCode" name="entityTypeCode" required>
@@ -1537,12 +1591,12 @@
         
         if($etid === 'new') {
             // Add new entity type
-            AddEntityType($etCode, $etName, $etDescription, $con); // Function to add new entity type
+            AddEntityType($etCode, $etName, $etDescription, $userid, $con); // Function to add new entity type
             
         } else {
             // Update existing entity type
             echo "<script>alert('Entity type with ID: " . $etid . " updated.');</script>"; // Debugging line
-            UpdateEntityType($etid, $etCode, $etName, $etDescription, $con); // Function to update entity type
+            UpdateEntityType($etid, $etCode, $etName, $etDescription, $userid, $con); // Function to update entity type
            
         }
       } // End of if submitEntityType
@@ -1566,7 +1620,7 @@
       <h1>Modules</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?us=<?php echo $uname; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item active">Modules</li>
         </ol>

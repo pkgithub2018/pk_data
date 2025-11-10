@@ -475,6 +475,25 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav --> 
+    <li class="nav-item">
+        <a class="nav-link " href="#">
+          <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
+        </a>
+      </li><!-- End Application Nav --> 
+       <li class="nav-item">
+        <a class="nav-link " href="#">
+          <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
+        </a>
+      </li><!-- End Inspection Nav --> 
+       <li class="nav-item">
+        <a class="nav-link " href="#">
+          <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
+        </a>
+      </li><!-- End Certificate Nav --> 
+
       <li class="nav-item">
         <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -526,6 +545,11 @@ if (!empty($userid)) {
           <li>
             <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
+            </a>
+          </li>
+           <li>
+            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Pest</span>
             </a>
           </li>
           <li>

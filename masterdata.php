@@ -665,6 +665,120 @@
     }
   }
   ?>
+  <!-- ======= *************** Pest ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='pest') {
+      
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1>Pest</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item">Tables</li>
+          <li class="breadcrumb-item active">Pest</li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPestModal" data-pestid="new">
+          <i class="bi bi-plus-circle"></i>Add New Pest
+        </button>
+      </div> 
+    </div><!-- End Page Title -->
+     <!-- == Modal form - Pest == -->
+      <div class="modal fade" id="addPestModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addPestModalLabel"><b>Add New Pest</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for pid -->
+                <input type="hidden" id="pestId" name="pestId">
+                <div class="mb-3">
+                  <label for="pestName" class="form-label">Pest Name</label>
+                  <input type="text" class="form-control" id="pestName" name="pestName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="pestScientificName" class="form-label">Scientific Name</label>
+                  <input type="text" class="form-control" id="pestScientificName" name="pestScientificName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="pestCategory" class="form-label">Category</label>
+                  <input type="text" class="form-control" id="pestCategory" name="pestCategory" required>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitPest" name="submitPest" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+      <section class="section"> <!-- DATA TABLE - Pest -->
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="card">
+            <div class="card-body">
+              
+              <h5 class="card-title">Pest</h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Pest</p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                   <th><b>N</b>o</th>
+                   <th>Name</th>
+                   <th>Scientific Name</th>
+                   <th>Category</th>
+                   <th>Edit</th>
+                   <th>Delete</th>
+                 </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    PestList($con); // List of Pest
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table Pest -->
+    <?php
+     } 
+     ?>
+     <!-- Submit Pest form processing/submission - MODAL form -->
+    <?php
+    if(isset($_POST['submitPest'])) {
+        // Process the form submission for adding/updating pest
+        $pestid = $_POST['pestId']; // Hidden input for ID
+        $pname = $_POST['pestName'];
+        $pscientificname = $_POST['pestScientificName'];
+        $pcategory = $_POST['pestCategory'];
+
+        if($pestid === 'new') {
+            // Add new pest
+            AddPest($pname, $pscientificname, $pcategory, $userid, $con); // Function to add new pest
+            echo "<script>alert('New pest added-Done');</script>"; // Debugging line
+        } else {
+            // Update existing pest
+            echo "<script>alert('Pest with ID: " . $pestid . " updated.');</script>"; // Debugging line
+            UpdatePest($pestid, $pname, $pscientificname, $pcategory, $userid, $con); // Function to update pest
+
+        }
+    } // End of if submitPest
+    ?>
+    
    <!-- ======= *************** Product ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='product') {
@@ -1062,8 +1176,6 @@
   <!-- ======= *************** Approvers ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='approvers') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1076,7 +1188,63 @@
         </ol>
       </nav>
     </div>
-  </div>><!-- End Page Title -->
+    <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addApproverModal" data-id="new">
+          <i class="bi bi-plus-circle"></i>Add New Approver
+        </button>
+      </div>
+  </div>
+  <!-- End Page Title -->
+  <!-- == Modal form - Approver == -->
+      <div class="modal fade" id="addApproverModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addApproverModalLabel"><b>Add New Approver</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for cid -->
+                <input type="hidden" id="huid" name="huid" value="<?php echo $userid; ?>">
+                <input type="hidden" id="approverId" name="approverId">
+
+                <div class="mb-3">
+                  <label for="approverName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="approverName" name="approverName" value="" required>
+                </div>
+                <div class="mb-3">
+                  <label for="approverSurname" class="form-label">Surname</label>
+                  <input type="text" class="form-control" id="approverSurname" name="approverSurname" required>
+                </div>
+                <div class="mb-3">
+                  <label for="approverRole" class="form-label">Roles</label>
+                  <input type="text" class="form-control" id="approverRole" name="approverRole" required>
+                </div>
+                <div class="mb-3">
+                  <label for="approverPosition" class="form-label">Position</label>
+                  <input type="text" class="form-control" id="approverPosition" name="approverPosition" required>
+                </div>
+                <div class="mb-3">
+                  <label for="approverWorkplace" class="form-label">Workplace</label>
+                  <!--
+                  <select class="form-select" name="approverWorkplace" id="approverWorkplace" aria-label="Default select example">
+                     <option value="">*** Please select one ***</option>
+                      <?php //SelectLocations($locid, $con); ?>
+                    </select>
+                  -->
+                  <input type="text" class="form-control" id="approverWorkplace" name="approverWorkplace" required>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" id="submitApprover" name="submitApprover" class="btn btn-success">Submit</button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+  <!-- End of Modal -->
     <section class="section"> <!-- DATA TABLE - Approvers -->
       <div class="row">
         <div class="col-lg-12">
@@ -1101,7 +1269,7 @@
                 </thead>
                 <tbody>
                   <?php
-                    //Approverslist($con); // List of Approvers
+                    Approverslist($guid, $con); // List of Approvers
                   ?>
                 </tbody>
               </table>
@@ -1114,11 +1282,53 @@
     <?php
      }
     ?>
+    <!-- Approvers form processing/submission - MODAL form -->
+    <?php
+      if(isset($_POST['submitApprover'])) {  // ADD/UPDATE Approver
+        // Process the form submission for adding/updating approver
+        
+        // Debug: Check database connection
+        if (!$con) {
+            echo "<script>alert('Error: Database connection is not available.');</script>";
+            exit;
+        }
+        
+        $aid = $_POST['approverId']; // Hidden input for ID
+        $aname = $_POST['approverName'];
+        $asurname = $_POST['approverSurname'];
+        $arole = $_POST['approverRole'];
+        $aposition = $_POST['approverPosition'];
+        $aworkplace = $_POST['approverWorkplace'];
+        
+        if($aid === 'new' || empty($aid)) {
+            // Add new approver
+            $result = AddApprover($aname, $asurname, $arole, $aposition, $aworkplace, $userid, $guid, $con); // Function to add new approver
+
+            if ($result) {
+               // echo "<script>alert('New approver added successfully!');</script>"; // Success message
+                echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "';</script>"; // Redirect to refresh the page
+            } 
+        } else {
+            // Update existing approver
+            UpdateApprover($aid, $aname, $asurname, $arole, $aposition, $aworkplace, $con); // Function to update approver
+           // echo "<script>alert('Approver with ID: " . $aid . " updated.');</script>"; // Debugging line
+            echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "';</script>"; // Redirect to refresh the page
+        }
+    } // End of if submitApprover
+    // DELETE approver
+    if((isset($_GET['part']) && $_GET['part']==='approvers') && (isset($_GET['del']) && $_GET['del'] === 'yes')) {
+        if(isset($_GET['aid']) && !empty($_GET['aid'])) {
+            $approverId = $_GET['aid']; // Approver ID to delete
+            // Call the function to delete approver
+          //  DeleteApprover($approverId, $con); // Function to delete approver 
+            echo "<script>alert('Approver with ID: " . $approverId . " deleted.');</script>"; // Debugging line
+            echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "';</script>"; // Redirect to approvers page
+    }
+  }
+  ?>
   <!-- ======= *************** Conveyance ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='conveyance') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1244,8 +1454,6 @@
     <!--============= Inspection methods =============-->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='inspectionmethod') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1362,8 +1570,6 @@
    <!--============= Treatment methods =============-->    
     <?php
      if(isset($_GET['part']) && $_GET['part']==='treatmentmethod') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1488,8 +1694,6 @@
     <!-- ======= *************** Entity Type ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='entitytype') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1612,8 +1816,6 @@
    <!-- ======= *************** Modules ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='modules') {
-      // PK: Product part: product=edit&id=$productid
-      //echo "<script>alert('Product part is not implemented yet.');</script>";
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
@@ -1878,6 +2080,33 @@
         submitButton.text('Update');
       }
     });
+
+    // Pest Modals and form processing done in pests.php
+    $('#addPestModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      var pestid = button.data('pestid'); // Extract info from data-* attributes
+      var modal = $(this);
+      var pestNameInput = modal.find('#pestName');
+      var pestScientificNameInput = modal.find('#pestScientificName');
+      var pestCategoryInput = modal.find('#pestCategory');
+      var submitButton = modal.find('#submitPest');
+
+      modal.find('#pestId').val(pestid); // Set the hidden input value
+      if (pestid === 'new') {
+        pestNameInput.val(''); // Clear inputs
+        pestScientificNameInput.val('');
+        pestCategoryInput.val('');
+        modal.find('.modal-title').text('Add New Pest');
+        submitButton.text('Submit');
+      } else {
+        pestNameInput.val(button.data('pname')); // Set the pest name (corrected from 'name' to 'pname')
+        pestScientificNameInput.val(button.data('scientificname')); // Set the pest scientific name
+        pestCategoryInput.val(button.data('category')); // Set the category
+        modal.find('.modal-title').text('Edit Pest');
+        submitButton.text('Update');
+      }
+    });
+
     // 6) process the form submission for adding/updating conveyance
     $('#addConveyenceModal').on('show.bs.modal', function (event) {
       var button = $(event.relatedTarget); // Button that triggered the modal
@@ -2126,6 +2355,48 @@
         // Submit the form automatically on each input
         this.form.submit();
       });
+      }
+    });
+
+    // Handle edit approver modal population
+    $('#addApproverModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget); // Button that triggered the modal
+      
+      // Extract data from data-* attributes
+      var id = button.data('id');
+      var name = button.data('name');
+      var surname = button.data('surname');
+      var role = button.data('role');
+      var position = button.data('position');
+      var workplace = button.data('workplace');
+      
+      // Debug: Show what data we extracted
+     // console.log('Modal data extracted:', {id: id, name: name, surname: surname, role: role, position: position, workplace: workplace});
+      
+      // Get the modal
+      var modal = $(this);
+      
+      // Check if we're editing an existing approver or adding a new one
+      if (id && id !== 'new') {
+        // Editing existing approver - populate form fields
+        modal.find('.modal-title').text('Edit Approver');
+        modal.find('#approverId').val(id);
+        modal.find('#approverName').val(name);
+        modal.find('#approverSurname').val(surname);
+        modal.find('#approverRole').val(role);
+        modal.find('#approverPosition').val(position);
+        modal.find('#approverWorkplace').val(workplace);
+        modal.find('#submitApprover').text('Update');
+      } else {
+        // Adding new approver - clear form fields
+        modal.find('.modal-title').text('Add New Approver');
+        modal.find('#approverId').val('');
+        modal.find('#approverName').val('');
+        modal.find('#approverSurname').val('');
+        modal.find('#approverRole').val('');
+        modal.find('#approverPosition').val('');
+        modal.find('#approverWorkplace').val('');
+        modal.find('#submitApprover').text('Submit');
       }
     });
   </script>

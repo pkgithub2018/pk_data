@@ -1,4 +1,44 @@
 <?php
+
+// === CLOUD SERVER DIAGNOSTIC FUNCTION ===
+function checkCloudServerCompatibility() {
+    $issues = [];
+    
+    // Check PostgreSQL extension
+    if (!extension_loaded('pgsql')) {
+        $issues[] = 'PostgreSQL extension (php-pgsql) not loaded - CRITICAL';
+    }
+    
+    // Check if pg functions exist
+    if (!function_exists('pg_connect')) {
+        $issues[] = 'pg_connect function not available';
+    }
+    
+    if (!function_exists('pg_query')) {
+        $issues[] = 'pg_query function not available';
+    }
+    
+    // Check other extensions
+    if (!extension_loaded('json')) {
+        $issues[] = 'JSON extension not loaded';
+    }
+    
+    // Check PHP version
+    if (version_compare(PHP_VERSION, '7.4.0', '<')) {
+        $issues[] = 'PHP version ' . PHP_VERSION . ' may be too old (recommend 7.4+)';
+    }
+    
+    return $issues;
+}
+
+// Log compatibility issues for debugging
+$compatibility_issues = checkCloudServerCompatibility();
+if (!empty($compatibility_issues)) {
+    error_log('Cloud Server Compatibility Issues: ' . implode(' | ', $compatibility_issues));
+    // Add HTML comment for debugging
+    echo "<!-- CLOUD SERVER DIAGNOSTICS: " . implode(' | ', $compatibility_issues) . " -->\n";
+}
+
 /*
   Grouplist: Show list of users group from tbusersgroup table
 */
@@ -124,10 +164,26 @@ function Userpermit($userlogin,$con){ // userlogin is the email
 }
 
 /*
+  UserByEmail: Get user ID by email address
+*/
+function UserByEmail($email, $con) {
+    $email = pg_escape_string($con, $email);
+    $sql = "SELECT id FROM tbusers WHERE email='$email' AND enabled='yes'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_array($result);
+        return $row['id'];
+    } else {
+        return null;
+    }
+}
+
+/*
   Addnewuser: Add new users into tbusers table
 */
 
-function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con) {
+function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con, $userid = null) {
     // Escape all inputs
     $name = pg_escape_string($con, $name);
     $surname = pg_escape_string($con, $surname);
@@ -163,7 +219,11 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
             // ADD USER PROFILE with UID
             InitializeProfile($last_id, $con); // Initialize user profile with default values
             // Redirect to the user list page
-            echo "<script>window.location.href = 'users.php?part=userslist';</script>";
+            $redirect_url = 'users.php?part=userslist';
+            if ($userid) {
+                $redirect_url .= '&uid=' . $userid;
+            }
+            echo "<script>window.location.href = '$redirect_url';</script>";
         } else {
             echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
         }
@@ -172,11 +232,26 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
 /*
  Deleteuser: Delete users from tbusers
 */
-function Deleteuser($uid,$con){
+function Deleteuser($uid,$con, $current_userid = null){
+    // Validate uid parameter - must be numeric and not empty
+    if (empty($uid) || !is_numeric($uid)) {
+        echo "<script>alert('Invalid user ID provided.');</script>";
+        $redirect_url = 'users.php?part=userslist';
+        if ($current_userid) {
+            $redirect_url .= '&uid=' . $current_userid;
+        }
+        echo "<script>window.location.href = '$redirect_url';</script>";
+        return;
+    }
+    
     $sql = "DELETE FROM tbusers WHERE id='$uid'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if ($result) {
-        echo "<script>window.location.href = 'users.php?part=userslist';</script>";
+        $redirect_url = 'users.php?part=userslist';
+        if ($current_userid) {
+            $redirect_url .= '&uid=' . $current_userid;
+        }
+        echo "<script>window.location.href = '$redirect_url';</script>";
     } else {
         echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
     }
@@ -219,8 +294,8 @@ function Userlist($con){
                       <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleUserCheckboxChange(this)'>
                     </div>
                     </td>
-                    <td><a href='users.php?frm=userupdate&uid=$uid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td><a href='users.php?frm=userdelete&uid=$uid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
+                    <td><a href='users.php?frm=userupdate&uidup=$uid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td><a href='users.php?frm=userdelete&uidup=$uid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
                   </tr>";
        } // end of while loop     
     }
@@ -229,6 +304,11 @@ function Userlist($con){
   Userdata: Get user data from tbusers table
 */
 function Userdata($uid, $con) {
+    // Validate uid parameter - must be numeric and not empty
+    if (empty($uid) || !is_numeric($uid)) {
+        return null;
+    }
+    
     $sql = "SELECT * FROM tbusers WHERE id='$uid'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
 
@@ -237,11 +317,55 @@ function Userdata($uid, $con) {
     }
     return null;
 }
+/*
+  Userconnect: Get user connection data from tbuserconnections table
+*/
+function Userconnect($getuid,$postuid,$posthuid,$cookieuid,$serveruid,$con) {
+    // Dynamic Authentication System - same as entity.php and main.php
+    $userid = '';
+    // Try multiple sources for userid (Dynamic Authentication System)
+    // First, try to get from GET parameter (most reliable for sessionless)
+    if (isset($getuid) && !empty($getuid)) {
+        $userid = $getuid; // GET from URL in EntityExportList function in supports.php
+    }
+    // Try to get from POST parameter (form submissions)
+    elseif (isset($postuid) && !empty($postuid)) {
+        $userid = $postuid;
+    }
+    elseif (isset($posthuid) && !empty($posthuid)) {
+        $userid = $posthuid;
+    }
+    // Try to get from cookies if set
+    elseif (isset($cookieuid) && !empty($cookieuid)) {
+        $userid = $cookieuid;
+    }
+    // Last resort: try to get from HTTP_REFERER if coming from other pages
+    elseif (isset($serveruid) && !empty($serveruid)) {
+    $referer = $serveruid;
+    if (preg_match('/[?&]uid=([^&]+)/', $referer, $matches)) {
+        $userid = urldecode($matches[1]);
+        
+    }
+ }
+    // Authentication check
+    if(empty($userid)){
+        // If user ID is not set, redirect to login page
+        echo "<script>alert('Dynamic Authentication Required. Please log in to access this page.');</script>"; 
+        echo "<script>window.location.href = 'index.php';</script>";
+        exit();
+    }
+    return $userid;
+}
 
 /*
   Updateuser_values: Update user from tbusers table
 */
 function Updateuser_values($uid,$con){
+  
+  // Validate uid parameter - must be numeric and not empty
+  if (empty($uid) || !is_numeric($uid)) {
+      return array('', '', '', '', '', '', '', '', '', '', '', '');
+  }
   
   $sql = "SELECT * FROM tbusers WHERE id = '$uid'"; // Use the sanitized input in the query
   $result = pg_query($con, $sql) or die(pg_last_error());
@@ -272,7 +396,13 @@ function Updateuser_values($uid,$con){
   Updateuser-submit: Submit the updates on users from data form into tbusers table
 */
 
-function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con) {
+function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $con, $current_userid = null) {
+    // Validate uid parameter - must be numeric and not empty
+    if (empty($uid) || !is_numeric($uid)) {
+        echo "<script>alert('Invalid user ID provided.');</script>";
+        return;
+    }
+    
     // Fetch current user data
     $sqlolduser = "SELECT * FROM tbusers WHERE id='$uid'";
     $result = pg_query($con, $sqlolduser) or die(pg_last_error($con));
@@ -313,13 +443,21 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
             $updateresult = pg_query($con, $sqlupdate);
 
             if ($updateresult) {
-                echo "<script>window.location.href='users.php?part=userslist';</script>";
+                $redirect_url = 'users.php?part=userslist';
+                if ($current_userid) {
+                    $redirect_url .= '&uid=' . $current_userid;
+                }
+                echo "<script>window.location.href='$redirect_url';</script>";
             } else {
                 echo "<script>alert('Error updating user: " . pg_last_error($con) . "');</script>";
             }
         } else {
             // No changes detected
-            echo "<script>alert('No changes detected.');window.location.href='users.php?part=userslist';</script>";
+            $redirect_url = 'users.php?part=userslist';
+            if ($current_userid) {
+                $redirect_url .= '&uid=' . $current_userid;
+            }
+            echo "<script>alert('No changes detected.');window.location.href='$redirect_url';</script>";
         }
     } else {
         echo "<script>alert('User not found.');</script>";
@@ -1054,6 +1192,92 @@ function SelectCurrency($currency, $con) {
     }
 }
 
+/*
+  PestList: List all pest from tbpest table
+*/
+function PestList($con) {
+    $sqlpest = "SELECT * FROM tbpest ORDER BY id ASC";
+    $result = pg_query($con, $sqlpest) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $id = $row['id'];
+            $name = $row['pestname'];
+            $scientific_name = $row['scientificname'];
+            $category = $row['category'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>$name</td>
+                    <td>$scientific_name</td>
+                    <td>$category</td>
+                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addPestModal' 
+                         data-pestid='$id' 
+                         data-pname='" . htmlspecialchars($name, ENT_QUOTES) . "' 
+                         data-scientificname='" . htmlspecialchars($scientific_name, ENT_QUOTES) . "'
+                         data-category='" . htmlspecialchars($category, ENT_QUOTES) . "'>
+                      <i class='bi bi-pencil-square table-icon'></i></button>
+                    </td>
+                    <td><a href='masterdata.php?part=pest&pestid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                    </tr>"; 
+        } // end of while loop
+    }
+}
+
+/*
+ AddPest: Add new pest into tbpest table
+*/
+function AddPest($pname, $scientificname, $category, $userid, $con) {
+    // Escape all inputs
+    $pname = pg_escape_string($con, $pname);
+    $scientificname = pg_escape_string($con, $scientificname);
+    $category = pg_escape_string($con, $category);
+
+    // Check if the pest name already exists
+    $sqlpest = "SELECT pestname FROM tbpest WHERE pestname='$pname'";
+    $result = pg_query($con, $sqlpest) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Pest name already exists. Please choose a different pest name.');</script>";
+        return "yes"; // Indicate that the pest already exists
+    } else {
+        // Reset the sequence to avoid duplicate key errors
+        $reset_seq = "SELECT setval('tbpest_id_seq', COALESCE((SELECT MAX(id)+1 FROM tbpest), 1), false)";
+        pg_query($con, $reset_seq);
+        
+        // Insert new pest
+        $sqladdpest = "INSERT INTO \"tbpest\" (\"pestname\", \"scientificname\", \"category\") 
+                       VALUES ('".$pname."', '".$scientificname."', '".$category."') RETURNING id";
+        $result = pg_query($con, $sqladdpest) or die(pg_last_error($con));
+        if ($result) {
+            echo "<script>window.location.href = 'masterdata.php?part=pest&uid=".$userid."';</script>";
+            exit();
+        } else {
+            echo "<script>alert('Error adding pest: " . pg_last_error($con) . "');</script>";
+        }
+    }
+}
+
+/*
+ UpdatePest: Update pest from tbpest table
+*/
+function UpdatePest($id, $pname, $scientificname, $category,  $userid, $con) {
+    // Escape all inputs
+    $id = pg_escape_string($con, $id);
+    $pname = pg_escape_string($con, $pname);
+    $scientificname = pg_escape_string($con, $scientificname);
+    $category = pg_escape_string($con, $category);
+
+    // Update pest
+    $sqlupdate = "UPDATE \"tbpest\" SET \"pestname\"='$pname', \"scientificname\"='$scientificname', \"category\"='$category' WHERE \"id\"='$id'";
+    $result = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=pest&pestid=".$id."&uid=".$userid."&success=pest_updated&name=".urlencode($pname)."';</script>";
+    } else {
+        echo "<script>alert('Error updating pest: " . pg_last_error($con) . "');</script>";
+    }
+}
+
 /* 
   ProductList: List all product  from tbproduct table
 */
@@ -1756,6 +1980,18 @@ function SelectTreatmentMethod($selectedId, $con) {
 }
 
 /*
+ TreatmentMethodInfo: Get treatment method information from tbtreatmentmethod table
+*/
+function TreatmentMethodInfo($id, $con) {
+    $sql = "SELECT * FROM tbtreatment_method WHERE id = '$id'";
+    $result = pg_query($con, $sql);
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    }
+    return null;
+}
+
+/*
  EntityTypeList: Show list of entity types from tbentitytype table
 */
 function EntityTypeList($con) {
@@ -1795,7 +2031,7 @@ function EntityTypeList($con) {
 /*
  AddEntityType: Add new entity type into tbentitytype table 
 */
-function AddEntityType($code, $type, $desc, $con) {
+function AddEntityType($code, $type, $desc, $userid, $con) {
     // Escape all inputs
     $code = pg_escape_string($con, $code);
     $type = pg_escape_string($con, $type);
@@ -1813,7 +2049,7 @@ function AddEntityType($code, $type, $desc, $con) {
                        VALUES ('".$code."', '".$type."', '".$desc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdtype) or die(pg_last_error($con));
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=entitytype';</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=entitytype&uid=$userid';</script>";
         } else {
             echo "<script>alert('Error adding entity type: " . pg_last_error($con) . "');</script>";
         }
@@ -1822,7 +2058,7 @@ function AddEntityType($code, $type, $desc, $con) {
 /*
  UpdateEntityType: Update entity type from tbentitytype table 
 */
-function UpdateEntityType($etid, $code, $type, $desc, $con) {
+function UpdateEntityType($etid, $code, $type, $desc, $userid, $con) {
     // Escape all inputs
     $etid = pg_escape_string($con, $etid); // Get entity type ID from POST data
     $code = pg_escape_string($con, $code);
@@ -1833,7 +2069,7 @@ function UpdateEntityType($etid, $code, $type, $desc, $con) {
     $sqlupdatetype = "UPDATE tbentity_type SET code='$code', title='$type', description='$desc' WHERE id='$etid'";
     $result = pg_query($con, $sqlupdatetype) or die(pg_last_error($con));
     if ($result) {
-        echo "<script>window.location.href = 'masterdata.php?part=entitytype';</script>";
+        echo "<script>window.location.href = 'masterdata.php?part=entitytype&uid=$userid';</script>";
     } else {
         echo "<script>alert('Error updating entity type: " . pg_last_error($con) . "');</script>";
     }
@@ -1855,8 +2091,12 @@ function DeleteEntityType($etid, $con) {
 /*
  EntityExportList($con): Show list of entities from tbentity table
 */
-function EntityExportList($con) {
-    $guid = $_SESSION['groupid']; // already defined in entity.php
+function EntityExportList($con, $guid, $userid) {   
+    // Additional validation to ensure guid is valid
+    if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID. Please log in again.');</script>";
+        return;
+    }
 
     $sqle = "SELECT * FROM tbentity_export WHERE created_guid='$guid' ORDER BY id DESC";
     $result = pg_query($con, $sqle) or die(pg_last_error());
@@ -1873,6 +2113,7 @@ function EntityExportList($con) {
             $email = $row['email'];
             $contactperson = $row['contact_name'];
 
+            $uid = $userid;
             print "<tr>
                     <td>$i</td>
                     <td>$title</td>
@@ -1881,8 +2122,8 @@ function EntityExportList($con) {
                     <td>$phone</td>
                     <td>$email</td>
                     <td>$province</td>
-                    <td><a href='entity.php?part=entity&frm=editEntity_export&id=$id' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td align='center'><a href='transaction.php?part=application&id=$id' class='btn btn-danger btn-sm'><i class='bi bi-caret-right-square-fill table-icon'></i></a></td>
+                    <td><a href='entity.php?part=entity&frm=editEntity_export&id=$id&uid=$uid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td align='center'><a href='transaction.php?part=application&id=$id&uid=$uid' class='btn btn-danger btn-sm'><i class='bi bi-caret-right-square-fill table-icon'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -1949,7 +2190,7 @@ function EntityExportInfo($id, $con) {
 /*
   UpdateEntityExport: Update entity export by ID
 */
- function UpdateEntityExport($id, $bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $con) {
+ function UpdateEntityExport($id, $bstype, $enttype, $title, $address, $zipcode, $pid, $did, $phone, $email, $contactperson, $isregister, $regdate1, $regdate2, $checkreg, $gap, $license_export, $userid, $con) {
     // Escape all inputs
     $id = pg_escape_string($con, $id);
     $bstype = pg_escape_string($con, $bstype);
@@ -1989,27 +2230,72 @@ function EntityExportInfo($id, $con) {
     }
 */
     $isregister = pg_escape_string($con, $isregister);
-    $regdate1 = pg_escape_string($con, $regdate1);
-    $regdate2 = pg_escape_string($con, $regdate2);
+    
+    // Handle date formatting - remove existing quotes and reformat properly
+    $regdate1_clean = str_replace("'", "", $regdate1);
+    $regdate2_clean = str_replace("'", "", $regdate2);
+    
+    // Format dates properly for PostgreSQL
+    if ($regdate1_clean === '1990-01-01' || empty($regdate1_clean)) {
+        $regdate1_formatted = 'NULL';
+    } else {
+        $regdate1_formatted = "'" . pg_escape_string($con, $regdate1_clean) . "'";
+    }
+    
+    if ($regdate2_clean === '1990-01-01' || empty($regdate2_clean)) {
+        $regdate2_formatted = 'NULL';
+    } else {
+        $regdate2_formatted = "'" . pg_escape_string($con, $regdate2_clean) . "'";
+    }
+    
     $checkreg = pg_escape_string($con, $checkreg);
     $gap = pg_escape_string($con, $gap);
     $license_export = pg_escape_string($con, $license_export);
    
     // Update the entity export information
-    $sqlupdateentity = "UPDATE tbentity_export SET business_type='$bstype', entity_type='$enttype', title='$title', address='$address', zipcode='$zipcode', province='$province', district='$district', phone='$phone', email='$email', contact_name='$contactperson', registered='$isregister', registered_date_from='$regdate1', registered_date_to='$regdate2', check_list_registered='$checkreg', license_export='$license_export', gap='$gap' WHERE id='$id'";
+    $sqlupdateentity = "UPDATE tbentity_export SET business_type='$bstype', entity_type='$enttype', title='$title', address='$address', zipcode='$zipcode', province='$province', district='$district', phone='$phone', email='$email', contact_name='$contactperson', registered='$isregister', registered_date_from=$regdate1_formatted, registered_date_to=$regdate2_formatted, check_list_registered='$checkreg', license_export='$license_export', gap='$gap' WHERE id='$id'";
 
-    $result = pg_query($con, $sqlupdateentity) or die(pg_last_error($con));
+    // Enhanced debugging
+    echo "<!-- Debug UpdateEntityExport: 
+    ID: $id
+    Business Type: $bstype 
+    Entity Type: $enttype
+    Title: $title
+    Address: $address
+    Phone: $phone
+    Email: $email
+    Registration: $isregister
+    Reg Date From: $regdate1_formatted
+    Reg Date To: $regdate2_formatted
+    SQL: $sqlupdateentity 
+    -->";
+    
+    echo "<script>console.log('UpdateEntityExport SQL: $sqlupdateentity');</script>";
+    
+    $result = pg_query($con, $sqlupdateentity);
     if ($result) {
-        echo "<script>window.location.href = 'entity.php?entity=export';</script>";
+        $affected_rows = pg_affected_rows($result);
+        echo "<!-- Debug: Affected rows: $affected_rows -->";
+        if ($affected_rows > 0) {
+            $uid_param = $userid ? "?entity=export&uid=$userid" : "?entity=export";
+            echo "<script>
+                alert('Entity export updated successfully! Affected rows: $affected_rows');
+                window.location.href = 'entity.php$uid_param';
+            </script>";
+        } else {
+            echo "<script>alert('Update executed but no rows were affected. Please check if the entity ID exists.');</script>";
+        }
     } else {
-        echo "<script>alert('Error updating entity export: " . pg_last_error($con) . "');</script>";
+        $error = pg_last_error($con);
+        echo "<script>alert('Error updating entity export: $error');</script>";
+        echo "<!-- PostgreSQL Error: $error -->";
     }
 }
 
 /*
  EntityImportList($con): Show list of entities from tbentity_import table
 */
-function EntityImportList($con) {
+function EntityImportList($con, $userid = null) {
    // $guid = $_SESSION['groupid']; // already defined in entity.php
 
     $sqle = "SELECT * FROM tbentity_import ORDER BY id DESC";
@@ -2027,6 +2313,7 @@ function EntityImportList($con) {
             $email = $row['email'];
             $contactperson = $row['contact_name'];
 
+            $uid_param = $userid ? "&uid=$userid" : "";
             print "<tr>
                     <td>$i</td>
                     <td>$countryname</td>
@@ -2035,7 +2322,7 @@ function EntityImportList($con) {
                     <td>$phone</td>
                     <td>$email</td>
                     <td>$contactperson</td>
-                    <td><a href='entity.php?part=entity&frm=editEntity_import&id=$id' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                    <td><a href='entity.php?part=entity&frm=editEntity_import&id=$id$uid_param' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2282,11 +2569,121 @@ function ApplicationNo($exporter_id, $uid, $con) {
   ApplicationUpdate: Update application information by application ID
 */
 function ApplicationUpdate($app_id, $data, $con) {
+   
+    $nfield = count($data);
+   
+    $rgno = $data['reg_no'] ?? '';
+    $exportpoint = $data['export_point'] ?? '';
+    $contactperson = $data['contact_person'] ?? '';
+    $addressperson = $data['address_person'] ?? '';
+    $phone = $data['phone'] ?? '';
+    $countryimport = $data['country_import'] ?? '';
+    $importpoint = $data['import_point'] ?? '';
+    $certificatetype = $data['certificate_type'] ?? '';
+    $multiitem = $data['multi_item'] ?? '';
+    $printsupport = $data['print_support'] ?? '';
+    $commodityid = $data['commodity_id'] ?? '';
+    $nameoncertificate = $data['name_oncertificate'] ?? '';
+    $namescientific = $data['name_scientific'] ?? '';
+    $commoditydescription = $data['commodity_description'] ?? '';
+    $quantitynet = $data['quantity_net'] ?? '';
+    $quantitygross = $data['quantity_gross'] ?? '';
+    $unitid = $data['unit_id'] ?? '';
+    $marksitem = $data['marks_item'] ?? '';
+    $placeorigin = $data['place_origin'] ?? '';
+    $conveyanceid = $data['conveyance_id'] ?? '';
+    $conveyancesign = $data['conveyance_sign'] ?? '';
+    $addressexporter = $data['address_exporter'] ?? '';
+    $addressimporter = $data['address_importer'] ?? '';
+    $purpose = $data['purpose'] ?? '';
+    $placequarantine = $data['place_quarantine'] ?? '';
+    $placetreatment = $data['place_treatment'] ?? '';
+    $datecertificate = $data['date_certificate'] ?? '';
+    $placequarantineother = $data['place_quarantine_other'] ?? '';
+    $placetreatmentother = $data['place_treatment_other'] ?? '';
+    $importerid = $data['importerid'] ?? '';
+/*
+  phone = " . (empty($phone) ? "NULL" : "'" . pg_escape_string($con, $phone) . "'") . ",
+                    country_import = " . (empty($countryimport) ? "NULL" : "'" . pg_escape_string($con, $countryimport) . "'") . ",
+                    import_point = " . (empty($importpoint) ? "NULL" : "'" . pg_escape_string($con, $importpoint) . "'") . ",
+                    certificate_type = " . (empty($certificatetype) ? "NULL" : "'" . pg_escape_string($con, $certificatetype) . "'") . ",
+                    multi_item = " . (empty($multiitem) ? "NULL" : "'" . pg_escape_string($con, $multiitem) . "'") . ",
+                    print_support = " . (empty($printsupport) ? "NULL" : "'" . pg_escape_string($con, $printsupport) . "'") . ",
+                    commodity_id = " . (empty($commodityid) ? "NULL" : "'" . pg_escape_string($con, $commodityid) . "'") . ",
+                    name_scientific = " . (empty($namescientific) ? "NULL" : " '" . pg_escape_string($con, $namescientific) . "'") . ",
+                    commodity_description = " . (empty($commoditydescription) ? "NULL" : " '" . pg_escape_string($con, $commoditydescription) . "'") . ",
+                    quantity_net = " . (empty($quantitynet) ? "NULL" : " '" . pg_escape_string($con, $quantitynet) . "'") . ",
+                    quantity_gross = " . (empty($quantitygross) ? "NULL" : " '" . pg_escape_string($con, $quantitygross) . "'") . ",
+                    unit_id = " . (empty($unitid) ? "NULL" : " '" . pg_escape_string($con, $unitid) . "'") . ",
+                    marks_item = " . (empty($marksitem) ? "NULL" : " '" . pg_escape_string($con, $marksitem) . "'") . ",
+                    place_origin = " . (empty($placeorigin) ? "NULL" : " '" . pg_escape_string($con, $placeorigin) . "'") . ",
+                    conveyance_id = " . (empty($conveyanceid) ? "NULL" : " '" . pg_escape_string($con, $conveyanceid) . "'") . ",
+                    conveyance_sign = " . (empty($conveyancesign) ? "NULL" : " '" . pg_escape_string($con, $conveyancesign) . "'") . ",
+                    address_exporter = " . (empty($addressexporter) ? "NULL" : " '" . pg_escape_string($con, $addressexporter) . "'") . ",
+                    address_importer = " . (empty($addressimporter) ? "NULL" : " '" . pg_escape_string($con, $addressimporter) . "'") . ",
+                    purpose = " . (empty($purpose) ? "NULL" : " '" . pg_escape_string($con, $purpose) . "'") . ",
+                    place_quarantine = " . (empty($placequarantine) ? "NULL" : " '" . pg_escape_string($con, $placequarantine) . "'") . ",
+                    place_treatment = " . (empty($placetreatment) ? "NULL" : " '" . pg_escape_string($con, $placetreatment) . "'") . ",
+                    date_certificate = " . (empty($datecertificate) ? "NULL" : " '" . pg_escape_string($con, $datecertificate) . "'") . ",
+                    place_quarantine_other = " . (empty($placequarantineother) ? "NULL" : " '" . pg_escape_string($con, $placequarantineother) . "'") . ",
+                    place_treatment_other = " . (empty($placetreatmentother) ? "NULL" : " '" . pg_escape_string($con, $placetreatmentother) . "'") . ",
+                    importerid = " . (empty($importerid) ? "NULL" : " '" . pg_escape_string($con, $importerid) . "'") . "
+*/
+    echo "<script>alert('Processing field for application_Updated: $rgno, $exportpoint, $contactperson, $addressperson, $phone, $countryimport, $importpoint, $conveyanceid');</script>";
+    $sqlupdate = "UPDATE tbapplication SET 
+                    reg_no = " . (empty($rgno) ? "NULL" : "'" . pg_escape_string($con, $rgno) . "'") . ",
+                    export_point = " . (empty($exportpoint) ? "NULL" : "'" . pg_escape_string($con, $exportpoint) . "'") . ",
+                    contact_person = " . (empty($contactperson) ? "NULL" : "'" . pg_escape_string($con, $contactperson) . "'") . ",
+                    address_person = " . (empty($addressperson) ? "NULL" : "'" . pg_escape_string($con, $addressperson) . "'") . ",
+                    phone = " . (empty($phone) ? "NULL" : "'" . pg_escape_string($con, $phone) . "'") . ",
+                    country_import = " . (empty($countryimport) ? "NULL" : "'" . pg_escape_string($con, $countryimport) . "'") . ",
+                    import_point = " . (empty($importpoint) ? "NULL" : "'" . pg_escape_string($con, $importpoint) . "'") . ",
+                    certificate_type = " . (empty($certificatetype) ? "NULL" : "'" . pg_escape_string($con, $certificatetype) . "'") . ",
+                    multi_item = " . (empty($multiitem) ? "NULL" : "'" . pg_escape_string($con, $multiitem) . "'") . ",
+                    print_support = " . (empty($printsupport) ? "NULL" : "'" . pg_escape_string($con, $printsupport) . "'") . ",
+                    commodity_id = " . (empty($commodityid) ? "NULL" : "'" . pg_escape_string($con, $commodityid) . "'") . ", 
+                    name_oncertificate = " . (empty($nameoncertificate) ? "NULL" : " '" . pg_escape_string($con, $nameoncertificate) . "'") . ",
+                    name_scientific = " . (empty($namescientific) ? "NULL" : " '" . pg_escape_string($con, $namescientific) . "'") . ",
+                    commodity_description = " . (empty($commoditydescription) ? "NULL" : " '" . pg_escape_string($con, $commoditydescription) . "'") . ",
+                    quantity_net = " . (empty($quantitynet) ? "NULL" : " '" . pg_escape_string($con, $quantitynet) . "'") . ",
+                    quantity_gross = " . (empty($quantitygross) ? "NULL" : " '" . pg_escape_string($con, $quantitygross) . "'") . ",
+                    unit_id = " . (empty($unitid) ? "NULL" : " '" . pg_escape_string($con, $unitid) . "'") . ",
+                    marks_item = " . (empty($marksitem) ? "NULL" : " '" . pg_escape_string($con, $marksitem) . "'") . ",
+                    place_origin = " . (empty($placeorigin) ? "NULL" : " '" . pg_escape_string($con, $placeorigin) . "'") . ",
+                    conveyance_id = " . (empty($conveyanceid) ? "NULL" : " '" . pg_escape_string($con, $conveyanceid) . "'") . ",
+                    conveyance_sign = " . (empty($conveyancesign) ? "NULL" : " '" . pg_escape_string($con, $conveyancesign) . "'") . ",
+                    address_exporter = " . (empty($addressexporter) ? "NULL" : " '" . pg_escape_string($con, $addressexporter) . "'") . ",
+                    address_importer = " . (empty($addressimporter) ? "NULL" : " '" . pg_escape_string($con, $addressimporter) . "'") . ",
+                    purpose = " . (empty($purpose) ? "NULL" : " '" . pg_escape_string($con, $purpose) . "'") . ",
+                    place_quarantine = " . (empty($placequarantine) ? "NULL" : " '" . pg_escape_string($con, $placequarantine) . "'") . ",
+                    place_treatment = " . (empty($placetreatment) ? "NULL" : " '" . pg_escape_string($con, $placetreatment) . "'") . ",
+                    date_certificate = " . (empty($datecertificate) ? "NULL" : " '" . pg_escape_string($con, $datecertificate) . "'") . ",
+                    place_quarantine_other = " . (empty($placequarantineother) ? "NULL" : " '" . pg_escape_string($con, $placequarantineother) . "'") . ",
+                    place_treatment_other = " . (empty($placetreatmentother) ? "NULL" : " '" . pg_escape_string($con, $placetreatmentother) . "'") . ",
+                    importerid = " . (empty($importerid) ? "NULL" : " '" . pg_escape_string($con, $importerid) . "'") . "
+                    WHERE id = '" . pg_escape_string($con, $app_id) . "'";
+
+    $result = pg_query($con, $sqlupdate);
+    if ($result) {
+        $affected_rows = pg_affected_rows($result); 
+        if ($affected_rows > 0) { 
+            return $result;
+        } else {  
+            return false;
+        }
+    } else {
+        $error = pg_last_error($con);
+        return false;
+    }
+    /*
     // Escape application ID
     $sql = "UPDATE tbapplication SET ";
     $sets = [];
+    
     foreach ($data as $key => $value) {
-        if (is_null($value) || ($value === '' && in_array($key, ['importerid', 'company_id', 'export_point', 'country_import', 'commodity_id', 'unit_id', 'place_origin', 'conveyance_id', 'purpose', 'place_quarantine', 'place_treatment']))) {
+        $i++;
+        
+        if (is_null($value) || ($value === '' && in_array($key, ['reg_no', 'export_point', 'contact_person', 'address_person', 'phone', 'country_import', 'import_point', 'certificate_type', 'multi_item', 'print_support', 'commodity_id', 'name_oncertificate', 'name_scientific', 'commodity_description', 'quantity_net', 'quantity_gross', 'unit_id', 'marks_item', 'place_origin', 'conveyance_id', 'conveyance_sign', 'address_exporter', 'address_importer', 'purpose', 'place_quarantine', 'place_treatment', 'date_certificate', 'place_quarantine_other', 'place_treatment_other', 'importerid']))) {
             $sets[] = "$key = NULL";
         } else {
             $sets[] = "$key = '" . pg_escape_string($con, $value) . "'";
@@ -2294,8 +2691,21 @@ function ApplicationUpdate($app_id, $data, $con) {
     }
     $sql .= implode(", ", $sets);
     $sql .= " WHERE id = '" . pg_escape_string($con, $app_id) . "'";
-    $result = pg_query($con, $sql) or die(pg_last_error($con));
-    return $result;
+    
+    $result = pg_query($con, $sql);
+    if ($result) {
+        $affected_rows = pg_affected_rows($result); 
+        if ($affected_rows > 0) { 
+            return $result;
+        } else {  
+            return false;
+        }
+    } else {
+        $error = pg_last_error($con);
+        return false;
+    }
+    */
+ 
 }
 
 /*
@@ -2347,7 +2757,12 @@ function ApplicationProductList($con) {
 /*
  ApplicationList: Show list of applications and their status from tbapplication
 */
-function ApplicationList($guid, $con) {
+function ApplicationList($guid, $con, $userid = null) {
+    // Validate guid parameter - must be numeric and not empty
+    if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID provided.');</script>";
+        return;
+    }
 
     $sql = "SELECT * FROM tbapplication WHERE guid = '$guid' ORDER BY id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
@@ -2375,17 +2790,19 @@ function ApplicationList($guid, $con) {
             }
              // Certificate status - to be implemented later
             if ($certificate_status == "Add" || $certificate_status == "View/Edit") {
-                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status'>$certificate_status</a>";
+                $uid_param = $userid ? "&uid=$userid" : "";
+                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status$uid_param'>$certificate_status</a>";
             } else {
                 $certificate_link = "<span class='text-muted'>Not ready</span>";
             }
           
+            $uid_param = $userid ? "&uid=$userid" : "";
             print "<tr>
                     <td>$appno</td>
                     <td>$exporter</td>
                     <td>$appdate</td>
-                    <td><a href='transaction.php?part=application&appid_edit=$id'>View/Edit</a></td>
-                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status'>$inspection_status</a></span></td>
+                    <td><a href='transaction.php?part=application&appid_edit=$id$uid_param'>View/Edit</a></td>
+                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param'>$inspection_status</a></span></td>
                     <td>$certificate_link</td>
                     <td><span>n/a</span></td>
                    </tr>";
@@ -2485,6 +2902,14 @@ function InspectionInfo($app_id, $con) {
   function CertificateNo($application_id, $uid, $con)
 */
 function CertificateNo($application_id, $uid, $guid, $con) {
+    // Validate parameters
+    if (empty($application_id) || !is_numeric($application_id) || 
+        empty($uid) || !is_numeric($uid) || 
+        empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid parameters for certificate generation.');</script>";
+        return array(null, null);
+    }
+    
     // Add user ID into tbcertificate table first to get running number-id
     $date_issued = date('Y-m-d');
     $cstatus = 'registered'; // certificate status - to be defined later
@@ -2644,10 +3069,10 @@ function CertificateImporterInfo($importer_id, $con) {
 }
 
 /*
-  CertificateApprovedBy: Get list of approvers from tbapprovers table
+  CertificateApprovedBy: SELECT -Get list of approvers from tbapprovers table
 */
-function CertificateApprovedBy($con, $selectedId = null) {
-    $sql = "SELECT id, name, surname FROM tbapprovers WHERE enabled = 'yes' ORDER BY name ASC";
+function CertificateApprovedBy($con, $groupId, $selectedId = null) {
+    $sql = "SELECT id, name, surname, gid FROM tbapprovers WHERE enabled = 'yes' AND gid = '$groupId' ORDER BY name ASC";
     $result = pg_query($con, $sql);
     if ($result && pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
@@ -2659,6 +3084,232 @@ function CertificateApprovedBy($con, $selectedId = null) {
         // Debug: Show if no approvers found
         echo "<option value=\"\" disabled>No approvers available</option>";
     }
+}
+
+/*
+  GenerateCertificatePDF: Generate PDF from certificate view
+*/
+function GenerateCertificatePDF($appid, $uid, $gid, $con) {
+    // Include TCPDF
+    require_once __DIR__ . '/../vendor/autoload.php';
+    
+    try {
+        // Get certificate data
+        $app_info = ApplicationInfo($appid, $con);
+        $cert_info = CertificateInfo($appid, $con);
+        
+        if (!$app_info || !$cert_info) {
+            return ['success' => false, 'error' => 'Application or certificate not found'];
+        }
+        
+        // Generate filename
+        $certificate_no = $cert_info['certificate_no'] ?? 'CERT_' . $appid;
+        // Sanitize filename by replacing invalid characters
+        $safe_cert_no = preg_replace('/[\/\\:*?"<>|]/', '_', $certificate_no);
+        $filename = 'certificate_' . $safe_cert_no . '_' . date('Y-m-d_H-i-s') . '.pdf';
+        $filepath = __DIR__ . '/../certificate_sources/' . $filename;
+        
+        // Get the certificate HTML content
+        ob_start();
+        include(__DIR__ . '/../certificate_view_pdf.php');
+        $html = ob_get_clean();
+        
+        // Create TCPDF instance
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        
+        // Set document information
+        $pdf->SetCreator('Phytosanitary Certificate System');
+        $pdf->SetAuthor('Ministry of Agriculture and Forestry');
+        $pdf->SetTitle('Phytosanitary Certificate - ' . $certificate_no);
+        $pdf->SetSubject('Phytosanitary Certificate');
+        
+        // Remove default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        
+        // Set margins (minimal for exact positioning)
+        $pdf->SetMargins(0, 0, 0);
+        $pdf->SetAutoPageBreak(false, 0);
+        
+        // Add a page
+        $pdf->AddPage();
+        
+        // Write HTML content
+        $pdf->writeHTML($html, true, false, true, false, '');
+        
+        // Save PDF file
+        $pdf->Output($filepath, 'F');
+        
+        // Save record to database
+        $db_result = SaveCertificateSource($appid, $cert_info['id'] ?? null, $uid, $gid, $filename, $con);
+        
+        if ($db_result['success']) {
+            return [
+                'success' => true,
+                'filename' => $filename,
+                'filepath' => $filepath,
+                'filelink' => 'certificate_sources/' . $filename,
+                'db_id' => $db_result['id']
+            ];
+        } else {
+            // Delete file if database save failed
+            if (file_exists($filepath)) {
+                unlink($filepath);
+            }
+            return ['success' => false, 'error' => 'Failed to save to database: ' . $db_result['error']];
+        }
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => 'PDF Generation failed: ' . $e->getMessage()];
+    }
+}
+
+/*
+  SaveCertificateSource: Save certificate source record to database
+*/
+function SaveCertificateSource($application_id, $certificate_id, $uid, $gid, $filename, $con) {
+    try {
+        $application_id = (int)$application_id;
+        $certificate_id = $certificate_id ? (int)$certificate_id : null;
+        $uid = (int)$uid;
+        $gid = (int)$gid;
+        $filename = pg_escape_string($con, $filename);
+        
+        $cert_id_part = $certificate_id ? $certificate_id : 'NULL';
+        
+        $sql = "INSERT INTO tbcertificate_sources (application_id, certificate_id, uid, gid, filelink, enabled) 
+                VALUES ($application_id, $cert_id_part, $uid, $gid, '$filename', 'yes') 
+                RETURNING id";
+        
+        $result = pg_query($con, $sql);
+        
+        if ($result && pg_num_rows($result) > 0) {
+            $row = pg_fetch_assoc($result);
+            return ['success' => true, 'id' => $row['id']];
+        } else {
+            return ['success' => false, 'error' => pg_last_error($con)];
+        }
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/*
+  GetCertificateSourceInfo: Get certificate source information by application ID
+*/
+function GetCertificateSourceInfo($application_id, $con) {
+    try {
+        $application_id = pg_escape_string($con, $application_id);
+        
+        $sql = "SELECT * FROM tbcertificate_sources 
+                WHERE application_id = '$application_id' AND enabled = 'yes' 
+                ORDER BY created_at DESC LIMIT 1";
+        
+        $result = pg_query($con, $sql);
+        
+        if ($result && pg_num_rows($result) > 0) {
+            return pg_fetch_assoc($result);
+        } else {
+            return null;
+        }
+        
+    } catch (Exception $e) {
+        return null;
+    }
+}
+
+/*
+  GetAllCertificateSources: Get all certificate sources for an application
+*/
+function GetAllCertificateSources($application_id, $con) {
+    try {
+        $application_id = pg_escape_string($con, $application_id);
+        
+        $sql = "SELECT * FROM tbcertificate_sources 
+                WHERE application_id = '$application_id' AND enabled = 'yes' 
+                ORDER BY created_at DESC";
+        
+        $result = pg_query($con, $sql);
+        $sources = [];
+        
+        if ($result && pg_num_rows($result) > 0) {
+            while ($row = pg_fetch_assoc($result)) {
+                $sources[] = $row;
+            }
+        }
+        
+        return $sources;
+        
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/*
+ Approverslist: Get list of approvers from tbapprovers table
+*/
+ function Approverslist($gid, $con) {
+    $sql = "SELECT * FROM tbapprovers WHERE enabled='yes' AND gid = '" . pg_escape_string($con, $gid) . "' ORDER BY id DESC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $i++;
+            $aid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $aname = htmlspecialchars($row['name'], ENT_QUOTES);
+            $asurname = htmlspecialchars($row['surname'], ENT_QUOTES);
+            $arole = htmlspecialchars($row['roles'], ENT_QUOTES);
+            $aposition = htmlspecialchars($row['position'], ENT_QUOTES);
+            $aworkplace = htmlspecialchars($row['workplace'], ENT_QUOTES);
+           
+            print "<tr>
+                    <td align='center'>".$i."</td>
+                    <td>".$aname." ".$asurname."</td>
+                    <td>".$arole."</td>
+                    <td>".$aposition."</td>
+                    <td>".$aworkplace."</td>
+                    <td><button type='button' name='$aid' id='$aid' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addApproverModal' 
+  data-id='$aid' data-name='$aname' data-surname='$asurname' data-role='$arole' data-position='$aposition' data-workplace='$aworkplace'><i class='bi bi-pencil-square table-icon'></i></button></td>
+                    <td><a href='masterdata.php?part=approvers&aid=$aid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                 </tr>";
+        }
+    }
+}
+
+/*
+  AddApprovers: Add new approver into tbapprovers table
+*/
+function AddApprover($name, $surname, $roles, $position, $workplace,$uid,$gid, $con) {
+    $sql = "INSERT INTO tbapprovers (name, surname, roles, position, workplace, uid, gid, enabled) 
+            VALUES (
+                '" . pg_escape_string($con, $name) . "',
+                '" . pg_escape_string($con, $surname) . "',
+                '" . pg_escape_string($con, $roles) . "',
+                '" . pg_escape_string($con, $position) . "',
+                '" . pg_escape_string($con, $workplace) . "',
+                '" . pg_escape_string($con, $uid) . "',
+                '" . pg_escape_string($con, $gid) . "',
+                'yes'
+            )";
+       
+    $result = pg_query($con, $sql);
+    return $result;
+}
+
+/*
+  UpdateApprover: Update existing approver in tbapprovers table
+*/
+function UpdateApprover($id, $name, $surname, $roles, $position, $workplace, $con) {
+    $sql = "UPDATE tbapprovers SET 
+                name = '" . pg_escape_string($con, $name) . "',
+                surname = '" . pg_escape_string($con, $surname) . "',
+                roles = '" . pg_escape_string($con, $roles) . "',
+                position = '" . pg_escape_string($con, $position) . "',
+                workplace = '" . pg_escape_string($con, $workplace) . "'
+            WHERE id = '" . pg_escape_string($con, $id) . "'";
+    $result = pg_query($con, $sql);
+    return $result;
 }
 
 ?>

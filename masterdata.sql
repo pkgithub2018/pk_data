@@ -259,34 +259,6 @@ CREATE TABLE IF NOT EXISTS "public"."tbcertificate" (
     date_issued date NOT NULL, /* Date of issue */
     certificate_status text NOT NULL, /* Status of the certificate: tbstatus - 1=issued, 2=cancelled, 3=amended, 4= printed, 5=ongoing */
     enabled text NOT NULL /* yes/no */
-/*
-    exporter_id INTEGER NOT NULL, /* Exported ID from lao*/
-    importer_id INTEGER NOT NULL, /* Imported ID from overseas */
-    package_qty_unit INTEGER NOT NULL, /* Quantity of packages in unit */
-    marks text NOT NULL, /* Marks on the package */
-    place_of_origin INTEGER NOT NULL, /* Place of origin- Country ID */
-    conveyance_id INTEGER NOT NULL, /* Conveyance ID from tbconveyance */
-    conveyance_sign text, /* Signature of conveyance */
-    purpose_type INTEGER NOT NULL, /* Purpose of certificate (tbpurpose_type-ID) - 1=export, 2=transit, 3=import */
-    place_quarantine INTEGER, /* Place of quarantine - ID */
-    date_quarantine date, /* Date of quarantine */
-    place_treatment INTEGER, /* Place of treatment - ID */
-    no_origin text, /* ??? */
-    no_copy text, /* ??? */
-    location_quarantine_id INTEGER NOT NULL, /* Location ID from tblocations for quarantine */
-    product_id INTEGER NOT NULL, /* Product ID from tbproduct */
-    declaration text NOT NULL, /* Declaration of the certificate */
-    financial_value real NOT NULL, /* Financial value of the product */
-    currency text NOT NULL, /* Currency from tbcountries */
-    certificate_type INTEGER NOT NULL, /* Certificate type from tbcertificate_type */
-    location_id INTEGER NOT NULL, /* Location ID from tblocations - where certificate is issued */
-    alternate_location text, /* Alternate location if applicable */
-    internal_note text, /* Internal notes for certificate */
-    inspection text NOT NULL, /* yes/no - if inspection is required */
-    updated_by INTEGER NOT NULL, /* User ID who updated the record */
-    
-    printing_template_id INTEGER NOT NULL, /* Printing template ID from tbprinting_template */
- */
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbproduct_unit" (
@@ -362,8 +334,35 @@ CREATE TABLE IF NOT EXISTS "public"."tbapprovers" (
     roles text NOT NULL, /* Officer, Director */
     position text NOT NULL, /* 1=Yes, 2=No */
     workplace text NOT NULL, /* DOA, PAF */
-    uid INTEGER NOT NULL, /* user_id from tbusers */
+    uid INTEGER NOT NULL, /* login-user: approvers are not users- user_id from tbusers */
     gid INTEGER NOT NULL, /* group_id from tbusergroup */
     enabled text NOT NULL /* yes/no */
 )
 
+CREATE TABLE IF NOT EXISTS "public"."tbpest" (
+    id SERIAL PRIMARY KEY,
+    pestname text NULL, /* Common name of the pest - Lao name */
+    scientificname text NULL,
+    category text NULL 
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbpest_detected" (
+    id SERIAL PRIMARY KEY,
+    pestid INTEGER NOT NULL, /* ID from tbpest to get Name, general name and specific name  */
+    infestation_level text NOT NULL, /* 1=Low, 2=Medium, 3=High */
+    alive_status text NOT NULL, /* 1=Alive, 2=Dead */
+    risk_category text NOT NULL, /* Quarantine pest, Regulated None Quarantine pest, None Quarantine pest */
+    result_measure text NOT NULL /* Immediately implement the treatment as specified, Regulated article was not accordance. Return to the original place */
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbcertificate_sources" (
+    id SERIAL PRIMARY KEY,
+    application_id INTEGER NOT NULL,
+    certificate_id INTEGER NOT NULL,
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of creation */
+    updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
+    uid INTEGER NOT NULL, /* user_id from tbusers */
+    gid INTEGER NOT NULL, /* group_id from tbusergroup */
+    filelink text NOT NULL, /* Link to the source file */
+    enabled text NOT NULL /* yes/no */
+)

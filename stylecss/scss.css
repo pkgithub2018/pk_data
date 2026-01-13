@@ -117,3 +117,8 @@ footer .footer-icon {
     color: #000 !important;
     background-color: #fff !important;
 }
+
+/* Official font for system - Arial, sans-serif */
+body {
+    font-family: Arial, sans-serif;
+}

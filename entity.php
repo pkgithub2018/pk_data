@@ -1,31 +1,26 @@
 <?php
-/*
-ini_set('session.cookie_secure', 1);
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_samesite', 'Lax');
-
-session_start();  // NOT WORKING FOR NOW - FOR CLOUD SERVER
-
-// Check if a language is selected via the query parameter
-if (isset($_GET['lang'])) {
-  $selectedLang = $_GET['lang'];
-  $_SESSION['lang'] = $selectedLang; // Store the selected language in the session
-} else {
-  // Default to English if no language is selected
-  if (!isset($_SESSION['lang'])) {
-      $_SESSION['lang'] = 'en';
-  }
+// Language handling (session-first, falls back to GET, then 'en')
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
 }
 
-// Include the appropriate language file
-$langFile = "php-bin/lang_" . $_SESSION['lang'] . ".php";
+$lang = 'en';
+if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
+    $lang = $_SESSION['lang'];
+} elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
+    $lang = $_GET['lang'];
+}
+// Persist and expose for templates
+$_SESSION['lang'] = $lang;
+$selectedLang = $lang;
+
+// Include translations (fallback to empty array)
+$langFile = "php-bin/lang_" . $lang . ".php";
 if (file_exists($langFile)) {
-  $translations = include($langFile);
+    $translations = include($langFile);
 } else {
-  die("Language file not found.");
+    $translations = array();
 }
-*/
 // connection to database
  require("php-bin/connection.php");
  require("php-bin/supports.php");
@@ -62,16 +57,20 @@ $uprofile = Profiledata($userid, $con);
 // User group ID - get from user data instead of session
 $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $userinfo['group_id'] : '0';
 
+// Build main link preserving uid and lang
+$mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => isset($lang) ? $lang : 'en'];
+$mainHref = 'main.php?' . http_build_query($mainParams);
+
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo ($lang == 'la') ? 'lo' : 'en'; ?>">
 
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Entity</title>
+  <title><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Entity'; ?></title>
   <meta content="" name="description">
   <meta content="" name="keywords">
   
@@ -98,6 +97,7 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
@@ -207,34 +207,34 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="<?php echo htmlspecialchars($mainHref); ?>">
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
       
       <li class="nav-item">
         <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'export') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
         <a class="nav-link <?php echo (isset($_GET['entity']) && $_GET['entity'] == 'import') ? 'active' : 'collapsed'; ?>" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
 
        <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
@@ -285,33 +285,33 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
         </ul>
       </li><!-- End Master Data Nav -->     
 
-      <li class="nav-heading">Users' Management</li>
+      <li class="nav-heading"><?php echo isset($translations['USERS MANAGEMENT']) ? $translations['USERS MANAGEMENT'] : "Users' Management"; ?></li>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i>
-          <span>Users</span>
+          <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
@@ -327,18 +327,18 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
      <section class="section">
       <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Export entity</h1>
+        <h1><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item">Tables</li>
-            <li class="breadcrumb-item">Export entity</li>
+            <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+            <li class="breadcrumb-item"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></li>
           </ol>
           </nav>
         </div>
         <div>
           <a href="entity.php?frm=newEntity_export&uid=<?php echo $userid; ?>" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> Add New export entity
+            <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?> 
           </a>
         </div>
       </div><!-- End Page Title - Users list -->
@@ -346,26 +346,26 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Export entity</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Export entity</p>
+              <h5 class="card-title"><?php echo isset($translations['Export entity list']) ? $translations['Export entity list'] : 'Export entity list'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
                 <thead>
                   <tr>
                    <th>
-                      <b>N</b>o
+                      <?php echo isset($translations['No']) ? $translations['No'] : '<b>N</b>o'; ?>
                     </th>
                     <th>
-                      <b>N</b>ame
+                      <?php echo isset($translations['Name']) ? $translations['Name'] : '<b>N</b>ame'; ?>
                     </th>
-                    <th>Address</th>
-                    <th style="white-space: nowrap;">Contact person</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Province</th>
-                    <th>Edit</th>
-                    <th>Application</th>
+                    <th><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></th>
+                    <th style="white-space: nowrap;"><?php echo isset($translations['Contact person']) ? $translations['Contact person'] : 'Contact person'; ?></th>
+                    <th><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></th>
+                    <th><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></th>
+                    <th><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></th>
+                    <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                    <th><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -432,7 +432,8 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
    <?php
    // EXPORT ENTITY/COMPANY-FORM  *******************
      if (isset($_GET['frm']) && ($_GET['frm'] === 'newEntity_export' || $_GET['frm'] === 'editEntity_export')) {
-       echo "<script>document.title = 'Export Entity/Company Form';</script>";
+         echo "<script>document.title = '" . (isset(
+           $translations['Export entity']) ? $translations['Export entity'] . " / Company Form" : 'Export Entity/Company Form') . "';</script>";
        if(isset($_GET['id'])) { 
          $sbupdate = 'update';
          // Fetch the entity data for editing
@@ -463,12 +464,12 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
        }
     ?>
     <div class="pagetitle">
-      <h1>Export Entity</h1>
+      <h1><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export Entity'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item"><a href="entity.php?entity=export">Export entity-List</a></li>
-          <li class="breadcrumb-item active">Export Entity</li>
+          <li class="breadcrumb-item"><a href="main.php"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="entity.php?entity=export"><?php echo isset($translations['Export entity list']) ? $translations['Export entity list'] : 'Export entity-List'; ?></a></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export Entity'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -479,7 +480,7 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Entity Data Form</h5>
+              <h5 class="card-title"><?php echo isset($translations['Entity Data Form']) ? $translations['Entity Data Form'] : 'Entity Data Form'; ?></h5>
                <!-- Entity/Company Form -->
               <form action="" method="POST">
                 <!-- Hidden inputs to preserve parameters -->
@@ -491,7 +492,7 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                 <input type="hidden" name="frm" value="<?php echo $_GET['frm']; ?>">
                 <?php endif; ?>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Business Type</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Business Type']) ? $translations['Business Type'] : 'Business Type'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="business_type" aria-label="Default select example">
                       <option selected></option>
@@ -499,7 +500,7 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                       <option value="2" <?php echo (isset($bustype) && $bustype == '2') ? 'selected' : ''; ?>>Company</option>
                     </select>
                   </div>
-                  <label class="col-sm-2 col-form-label">Entity Type</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="entity_type" aria-label="Default select example">
                       <option selected></option>
@@ -509,13 +510,13 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Entity Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Name']) ? $translations['Entity Name'] : 'Entity Name'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputPassword" class="col-sm-2 col-form-label">Address</label>
+                  <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                   <div class="col-sm-10">
                     <textarea class="form-control" name="address" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
@@ -523,33 +524,33 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
 
                 <div class="row mb-3">
                   <!-- Zip Code -->
-                  <label class="col-sm-2 col-form-label">Zip Code</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Zip Code']) ? $translations['Zip Code'] : 'Zip Code'; ?></label>
                   <div class="col-sm-2">
                     <input type="text" name="zipcode" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>">
                   </div>
 
                   <!-- Phone -->
-                  <label class="col-sm-1 col-form-label">Phone</label>
+                  <label class="col-sm-1 col-form-label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></label>
                   <div class="col-sm-7">
                     <input type="text" name="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
                   </div>
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Email</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="email" id="email" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Province</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="province" id="province" aria-label="Default select example" onchange="SelectProvinceOnChange(this)"> <!-- this function is in users-validate.js -->
                       <option selected></option>
                       <?php SelectProvinces($pid, $con); ?>
                     </select>
                   </div>
-                  <label class="col-sm-2 col-form-label">District</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'District'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="district" id="district" aria-label="Default select example">
                       <option selected></option>
@@ -559,54 +560,54 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Contact Person</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Contact person']) ? $translations['Contact person'] : 'Contact Person'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="contact_person" id="contact_person" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3 align-items-center">
-                    <label class="col-sm-2 col-form-label">Is it registered?</label>
+                    <label class="col-sm-2 col-form-label"><?php echo isset($translations['Is it registered?']) ? $translations['Is it registered?'] : 'Is it registered?'; ?></label>
                     <div class="col-sm-1 d-flex align-items-center">
                       <input type="checkbox" name="isregister" id="isregister" value="1" <?php echo (isset($isregister) && $isregister) ? 'checked' : ''; ?>>
-                      <label for="isregister" class="ms-2 mb-0">Yes</label>
+                      <label for="isregister" class="ms-2 mb-0"><?php echo isset($translations['Yes']) ? $translations['Yes'] : 'Yes'; ?></label>
                     </div>
-                    <label class="col-sm-2 col-form-label">Register date from</label>
+                    <label class="col-sm-2 col-form-label"><?php echo isset($translations['Register date from']) ? $translations['Register date from'] : 'Register date from'; ?></label>
                     <div class="col-sm-3">
                       <input type="date" name="register_date_from" class="form-control" value="<?php echo isset($regdate1) ? $regdate1 : ''; ?>">
                     </div>
-                    <label class="col-sm-1 col-form-label">to</label>
+                    <label class="col-sm-1 col-form-label"><?php echo isset($translations['to']) ? $translations['to'] : 'to'; ?></label>
                     <div class="col-sm-3">
                       <input type="date" name="register_date_to" class="form-control" value="<?php echo isset($regdate2) ? $regdate2 : ''; ?>">
                     </div>
                  </div>
                  <div class="row mb-3 align-items-center">
-                    <label class="col-sm-2 col-form-label">Checklist registered?</label>
+                    <label class="col-sm-2 col-form-label"><?php echo isset($translations['Checklist registered?']) ? $translations['Checklist registered?'] : 'Checklist registered?'; ?></label>
                     <div class="col-sm-2 d-flex align-items-center">
                       <input type="checkbox" name="checklist_registered" id="checklist_registered" value="1" <?php echo (isset($checklist_registered) && $checklist_registered) ? 'checked' : ''; ?>>
-                      <label for="checklist_registered" class="ms-2 mb-0">Yes</label>
+                      <label for="checklist_registered" class="ms-2 mb-0"><?php echo isset($translations['Yes']) ? $translations['Yes'] : 'Yes'; ?></label>
                     </div>
                   </div>
                   
                 <div class="row mb-3">
-                   <label class="col-sm-2 col-form-label">License export?</label>
+                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['License export?']) ? $translations['License export?'] : 'License export?'; ?></label>
                   <div class="col-sm-2 d-flex align-items-center">
                     <input type="checkbox" name="license_export" id="license_export" value="1" <?php echo (isset($license_export) && $license_export) ? 'checked' : ''; ?>>
-                    <label for="license_export" class="ms-2 mb-0">Yes</label>
+                    <label for="license_export" class="ms-2 mb-0"><?php echo isset($translations['Yes']) ? $translations['Yes'] : 'Yes'; ?></label>
                   </div>
                 </div>
                 
                 <div class="row mb-3 align-items-center">
-                    <label class="col-sm-2 col-form-label">Is GAP?</label>
+                    <label class="col-sm-2 col-form-label"><?php echo isset($translations['Is GAP?']) ? $translations['Is GAP?'] : 'Is GAP?'; ?></label>
                     <div class="col-sm-2 d-flex align-items-center">
                       <input type="checkbox" name="gap" id="gap" value="1" <?php echo (isset($gap) && $gap) ? 'checked' : ''; ?>>
-                      <label for="gap" class="ms-2 mb-0">Yes</label>
+                      <label for="gap" class="ms-2 mb-0"><?php echo isset($translations['Yes']) ? $translations['Yes'] : 'Yes'; ?></label>
                     </div>
                   </div>
 
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10">
-                    <button type="submit" name="btnsubEntityExport" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate) ? 'Update' : 'Submit'; ?></button>
+                    <button type="submit" name="btnsubEntityExport" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate) ? (isset($translations['Update']) ? $translations['Update'] : 'Update') : (isset($translations['Submit']) ? $translations['Submit'] : 'Submit'); ?></button>
                   </div>
                 </div>
               </form><!-- End Export entity Form -->
@@ -745,12 +746,12 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
           }
     ?>
     <div class="pagetitle">
-      <h1>Import Entity</h1>
+      <h1><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item"><a href="entity.php?entity=import&uid=<?php echo $userid; ?>">Import entity list</a></li>
-          <li class="breadcrumb-item active">Import Entity</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="entity.php?entity=import&uid=<?php echo $userid; ?>"><?php echo isset($translations['Import entity list']) ? $translations['Import entity list'] : 'Import entity list'; ?></a></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -761,13 +762,13 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Import Entity</h5>
+              <h5 class="card-title"><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></h5>
               <!-- Import Entity/Company Form -->
               <form action="" method="POST">
                 <!-- Hidden inputs to preserve parameters -->
                  <input type="hidden" name="huid" value="<?php echo $userid; ?>">
                  <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Business Type</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Business Type']) ? $translations['Business Type'] : 'Business Type'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="businesstype_import" aria-label="Default select example">
                       <option selected></option>
@@ -775,7 +776,7 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                       <option value="2" <?php echo (isset($bustype) && $bustype == '2') ? 'selected' : ''; ?>>Company</option>
                     </select>
                   </div>
-                  <label class="col-sm-2 col-form-label">Entity Type</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="entitytype_import" aria-label="Default select example">
                       <option selected></option>
@@ -785,13 +786,13 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Entity Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Name']) ? $translations['Entity Name'] : 'Entity Name'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="name_import" id="name_import" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputPassword" class="col-sm-2 col-form-label">Address</label>
+                  <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                   <div class="col-sm-10">
                     <textarea class="form-control" name="address_import" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
@@ -799,26 +800,26 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
 
                 <div class="row mb-3">
                   <!-- Zip Code -->
-                  <label class="col-sm-2 col-form-label">Zip Code</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Zip Code']) ? $translations['Zip Code'] : 'Zip Code'; ?></label>
                   <div class="col-sm-2">
                     <input type="text" name="zipcode_import" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>">
                   </div>
 
                   <!-- Phone -->
-                  <label class="col-sm-1 col-form-label">Phone</label>
+                  <label class="col-sm-1 col-form-label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></label>
                   <div class="col-sm-7">
                     <input type="text" name="phone_import" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
                   </div>
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Email</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="email_import" id="email_import" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Country</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Country']) ? $translations['Country'] : 'Country'; ?></label>
                   <div class="col-sm-10">
                      <select class="form-select" name="country_import" aria-label="Default select example">
                       <option selected></option>
@@ -827,18 +828,18 @@ $guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $use
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Province</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
                   <div class="col-sm-4">
                     <input type="text" name="province_import" id="province_import" class="form-control" value="<?php echo isset($province) ? $province : ''; ?>">
                   </div>
-                  <label class="col-sm-2 col-form-label">District/City</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'District/City'; ?></label>
                   <div class="col-sm-4">
                     <input type="text" name="district_import" id="district_import" class="form-control" value="<?php echo isset($district) ? $district : ''; ?>">
                   </div> 
                 </div>
 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Contact Person</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Contact person']) ? $translations['Contact person'] : 'Contact Person'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="contactperson_import" id="contactperson_import" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>">
                   </div>

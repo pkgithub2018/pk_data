@@ -1,17 +1,33 @@
 <?php
       // Pk: 2025-07-03
+      // $_SESSION is not working, so we will use a workaround by passing user ID in the URL
+  /*
+  ini_set('session.cookie_secure', 1);
+  ini_set('session.cookie_httponly', 1);
+  ini_set('session.use_strict_mode', 1);
+  ini_set('session.cookie_samesite', 'Lax');
+
   session_start();
+  */
 
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
 
-  $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // User ID
-  $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
-  $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
-  //echo "<script>alert('Username: " . $uname . "'+'".$userid."');</script>"; // Debugging line
-  
+ // $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // User ID
   // USER DATA
+ $userid = '';
+  $userid = Userconnect(
+        isset($_GET['uid']) ? $_GET['uid'] : '',
+        isset($_POST['uid']) ? $_POST['uid'] : '',
+        isset($_POST['huid']) ? $_POST['huid'] : '',
+        isset($_COOKIE['ephyto_uid']) ? $_COOKIE['ephyto_uid'] : '',
+        isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+        $con
+    );
   $userinfo = Userdata($userid, $con);
+  $loginuser = isset($userinfo['name']) ? $userinfo['name'] : ''; // Name of user
+  $uname = isset($userinfo['email']) ? $userinfo['email'] : ''; // Use email as login name
+
   $usname = isset($userinfo['surname']) ? $userinfo['surname'] : ''; // Surname
   $ufullname = $loginuser."  ".$usname;  // Full name
   $position = isset($userinfo['position']) ? $userinfo['position'] : '';
@@ -105,20 +121,20 @@
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
             <img src="<?php echo $pimagfilepath; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
-              <span><?php echo $_SESSION['position']; ?></span>
+              <h6><?php echo $loginuser; ?></h6>
+              <span><?php echo $position; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -128,7 +144,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -168,79 +184,43 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php">
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
-      </li><!-- End Import Entity/Company form Nav -->
-
-    <!--
-      <li class="nav-item">
-        <a class="nav-link collapsed" data-bs-target="#forms-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span>Modules</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Entity/Company</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=sample">
-              <i class="bi bi-circle"></i><span>Sample</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=certificate">
-              <i class="bi bi-circle"></i><span>Certificate</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=printing">
-              <i class="bi bi-circle"></i><span>Printing</span>
-            </a>
-          </li>
-        </ul>
       </li>
-    -->
-      <!-- End Module Nav -->
-
+      <!-- End Import Entity/Company form Nav -->
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
-            <a href="masterdata.php?part=product">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
@@ -250,32 +230,33 @@
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=modules">
+            <a href="masterdata.php?part=modules&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Module List</span>
             </a>
           </li>
+          
           <li>
-            <a href="masterdata.php?part=provinces">
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
@@ -285,28 +266,28 @@
       <li class="nav-heading">Pages</li>
 
       <li class="nav-item">
-        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF']) == 'users-profile.php') echo 'active'; ?>" href="users-profile.php">
+        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF']) == 'users-profile.php') echo 'active'; ?>" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li><!-- End Users Page Nav -->
@@ -320,7 +301,7 @@
       <h1>Profile</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Users</li>
           <li class="breadcrumb-item active">Profile</li>
         </ol>
@@ -420,7 +401,7 @@
                 <div class="tab-pane fade profile-edit pt-3" id="profile-edit">
 
                   <!-- Profile Edit Form -->
-                  <form method="POST" action="#" enctype="multipart/form-data">
+                  <form method="POST" action="users-profile.php?uid=<?php echo $userid; ?>" enctype="multipart/form-data">
                     <div class="row mb-3">
                       <label for="profileImage" class="col-md-4 col-lg-3 col-form-label">Profile Image</label>
                       <div class="col-md-8 col-lg-9">
@@ -573,7 +554,7 @@
                 <div class="tab-pane fade pt-3" id="profile-change-password">
 
                   <!-- Change Password Form -->
-                  <form method="POST" action="#">
+                  <form method="POST" action="users-profile.php?uid=<?php echo $userid; ?>">
 
                     <div class="row mb-3">
                       <label for="currentPassword" class="col-md-4 col-lg-3 col-form-label">Current Password</label>
@@ -639,14 +620,25 @@
         if(!empty($ufname) && !empty($userid)){
           
           if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-              echo "<script>alert('Invalid email format');</script>";
-              exit;
+              echo "<script>
+                alert('Invalid email format');
+                window.location.href = 'users-profile.php?uid=" . $userid . "';
+              </script>";
+              exit();
           }
 
           if (UpdateProfile($userid, $about, $address, $twitter, $facebook, $instagram, $linkedin, $position, $workunit, $phone, $email, $con)) {
-              echo "<script>alert('Profile updated successfully!');</script>";
+              echo "<script>
+                alert('Profile updated successfully!');
+                window.location.href = 'users-profile.php?uid=" . $userid . "';
+              </script>";
+              exit();
           } else {
-              echo "<script>alert('Error updating profile. Please try again.');</script>";
+              echo "<script>
+                alert('Error updating profile. Please try again.');
+                window.location.href = 'users-profile.php?uid=" . $userid . "';
+              </script>";
+              exit();
           }
           // Update tbusers table with position, unit, phone, and email
        } // End of if empty check - user ID and full name
@@ -673,7 +665,7 @@
          if (move_uploaded_file($fileTmpPath, $filepath)) {
               // Update the profile image in the database
               ProfileImageUpload($userid_img, $fileName, $filepath, $con); 
-             echo "<script>window.location.href='users-profile.php';</script>";
+             echo "<script>window.location.href='users-profile.php?uid=" . $userid . "';</script>";
          } else {
              echo "<script>alert('Error uploading profile image. Please try again.');</script>";
          }
@@ -696,7 +688,7 @@
             if (!$cpsw) {
                 echo "<script>
                         alert('Current password is incorrect.');
-                        window.location.href='users-profile.php';
+                        window.location.href='users-profile.php?uid=" . $userid . "';
                       </script>";
             }
           }
@@ -708,24 +700,33 @@
           $renewpassword = trim($renewpassword);
 
          if (empty($_POST['newpassword']) || empty($_POST['renewpassword'])) {
-            
-            echo "<script>alert('New password is required.');</script>";
-            
-             exit;
+            echo "<script>
+                alert('New password is required.');
+                window.location.href = 'users-profile.php?uid=" . $userid . "';
+            </script>";
+            exit();
          } 
         // $showChangePasswordTab = false; // Show change password tab if form is submitted
          if ($_POST['newpassword'] !== $_POST['renewpassword']) {
-         // $showChangePasswordTab = true; // Show change password tab if passwords do not match
              echo "<script>
                       alert('New passwords do not match.');
+                      window.location.href = 'users-profile.php?uid=" . $userid . "';
                    </script>";
+             exit();
          } else {
              //echo "<script>alert('New password: " . $newpassword . "');</script>"; // Debugging line
               if (UpdateProfileChangePassword($userid, $newpassword, $con)) {
-                  echo "<script>alert('Password changed successfully!');</script>";
-                    
+                  echo "<script>
+                    alert('Password changed successfully!');
+                    window.location.href = 'users-profile.php?uid=" . $userid . "';
+                  </script>";
+                  exit();
               } else {
-                    echo "<script>alert('Error changing password. Please try again.');</script>";
+                    echo "<script>
+                      alert('Error changing password. Please try again.');
+                      window.location.href = 'users-profile.php?uid=" . $userid . "';
+                    </script>";
+                    exit();
               }
          } // End of new password validation check
          

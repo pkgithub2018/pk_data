@@ -1,4 +1,4 @@
-function passCommodity(pid, pname, spname, dproduct) {
+function passCommodity(pid, pname, spname, dproduct) { // for application in transaction.php
    
    // alert("Commodity with Name " + pname + " has been passed successfully.");
    document.querySelector('input[name="proid"]').value = pid;
@@ -10,6 +10,21 @@ function passCommodity(pid, pname, spname, dproduct) {
     // close the modal
     // Close the modal (Bootstrap 5)
     var modalEl = document.getElementById('commodityModal');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+}
+
+function passMulitpleCommodity(pid, pname, sfname, dproduct) { // Multiple product for application in application.php
+    // alert("Commodity with Name " + pname + " has been passed successfully.");
+    document.querySelector('input[name="product_id"]').value = pid; // hidden input
+    document.querySelector('input[name="product_name"]').value = pname
+    document.querySelector('input[name="scientific_name"]').value = sfname;
+    var modalEl = document.getElementById('productSearchModal');
     if (modalEl) {
         var modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) {

@@ -1,11 +1,45 @@
 <?php
       // Pk: 2025-04-30
-  session_start();
+  /* NOT WORKING *************
+  ini_set('session.cookie_secure', 1);
+  ini_set('session.cookie_httponly', 1);
+  ini_set('session.use_strict_mode', 1);
+  ini_set('session.cookie_samesite', 'Lax');
 
+  session_start();
+*/
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
 
- //echo "<script>alert('uname: " . $uname . "');</script>"; // Debugging line
+  // Authentication check with dynamic detection
+ 
+ // USER DATA
+  $userid = '';
+  $userid = Userconnect(
+        isset($_GET['uid']) ? $_GET['uid'] : '',
+        isset($_POST['uid']) ? $_POST['uid'] : '',
+        isset($_POST['huid']) ? $_POST['huid'] : '',
+        isset($_COOKIE['ephyto_uid']) ? $_COOKIE['ephyto_uid'] : '',
+        isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+        $con
+    );
+  $userinfo = Userdata($userid, $con);
+  $loginuser = isset($userinfo['name']) ? $userinfo['name'] : ''; // Name of user
+  $uname = isset($userinfo['email']) ? $userinfo['email'] : ''; // Use email as login name
+
+  $usname = isset($userinfo['surname']) ? $userinfo['surname'] : ''; // Surname
+  $ufullname = $loginuser."  ".$usname;  // Full name
+  $position = isset($userinfo['position']) ? $userinfo['position'] : '';
+  // Get and store user profile image
+    $uprofile = Profiledata($userid, $con);
+    if (!$uprofile) {
+    // Initialize profile if it doesn't exist
+    InitializeProfile($userid, $con);
+        $uprofile = Profiledata($userid, $con);
+    }
+    if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+    $uimage = $uprofile['imgfilepath'];
+    }
 ?>
 
 <!DOCTYPE html>
@@ -65,7 +99,7 @@
     <div class="d-flex align-items-center justify-content-between">
       <a href="main.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+        <span class="d-none d-lg-block">e-Phytosanitary</span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -88,20 +122,20 @@
         </li><!-- End Search Icon-->
         <li class="nav-item dropdown pe-3">
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
+            <img src="<?php echo $uimage; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
           </a><!-- End Profile Iamge Icon -->
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
-              <span><?php echo $_SESSION['position']; ?></span>
+              <h6><?php echo $loginuser; ?></h6>
+              <span><?php echo $position; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
               </a>
@@ -111,7 +145,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -151,105 +185,44 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php" >
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>" >
           <i class="bi bi-grid"></i>
           <span>Dashboard</span>
         </a>
       </li><!-- End Dashboard Nav -->
-    <!--  
-      <li class="nav-item">
-        <a class="nav-link" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-folder"></i>
-          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="transaction-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Application</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection's results</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-  -->
-      <!-- End Transaction Nav -->
-
+ 
       
       <li class="nav-item">
-        <a class="nav-link active" href="entity.php?entity=export" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
       </li><!-- End Import Entity Nav -->
-    <!--
-      <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php" >
-          <i class="bi bi-collection"></i>
-          <span>Entity/Company form</span>
-        </a>
-      </li>
-    -->
-      <!-- End Entity/Company form Nav -->
-    <!--
-       <li class="nav-item">
-        <a class="nav-link <?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' collapsed' : ''; ?>" data-bs-target="#Modules-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-journal-text"></i><span>Modules</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="Modules-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="modules.php?part=entity">
-              <i class="bi bi-circle"></i><span>Entity/Company</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=inspection">
-              <i class="bi bi-circle"></i><span>Inspection</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=sample">
-              <i class="bi bi-circle"></i><span>Sample</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=certificate">
-              <i class="bi bi-circle"></i><span>Certificate</span>
-            </a>
-          </li>
-          <li>
-            <a href="modules.php?part=printing">
-              <i class="bi bi-circle"></i><span>Printing</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-    -->
-      <!-- End Module Nav -->
 
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#M-masterdata-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="M-masterdata-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-
           <li>
-            <a href="masterdata.php?part=conveyance">
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
@@ -259,38 +232,39 @@
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
+          <!--
           <li>
-            <a href="masterdata.php?part=modules">
+            <a href="masterdata.php?part=modules&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Module List</span>
             </a>
           </li>
-          
+  -->
           <li>
-            <a href="masterdata.php?part=product">
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?> ">
               <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces">
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
@@ -300,28 +274,28 @@
       <li class="nav-heading">Users' Management</li>
         
       <li class="nav-item">
-        <a class="nav-link<?php echo (basename($_SERVER['PHP_SELF']) === 'users-profile.php') ? ' active' : ''; ?>" href="users-profile.php">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
       
       <li class="nav-item">
-        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'ugroup') ? ' active' : ''; ?>" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span>Users group</span>
         </a>
       </li> <!-- End Users group -->
       
        <li class="nav-item">
-        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'upermits') ? ' active' : ''; ?>" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span>Group permits</span>
         </a>
       </li> <!-- End User Group permit -->
       
       <li class="nav-item">
-        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' active' : ''; ?>" href="users.php?part=userslist">
+        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' active' : ''; ?>" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  <!-- End Users Nav -->
@@ -341,7 +315,7 @@
       <h1>Users Group</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
           <li class="breadcrumb-item">Tables</li>
           <li class="breadcrumb-item">Users Group</li>
         </ol>
@@ -457,7 +431,7 @@
         <h1>Users</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item">Tables</li>
             <li class="breadcrumb-item">Users List</li>
           </ol>
@@ -514,18 +488,18 @@
      // USERS DELETE ********
       
       if (isset($_GET['frm']) && $_GET['frm'] === 'userdelete') {
-        if (isset($_GET['uid']) && !empty($_GET['uid'])) {
-            $duid = htmlspecialchars($_GET['uid']); // Sanitize the input
+        if (isset($_GET['uidup']) && !empty($_GET['uidup']) && is_numeric($_GET['uidup'])) {
+            $duid = htmlspecialchars($_GET['uidup']); // Sanitize the input
             //Deleteuser($duid, $con); // Delete user and back to list
             // TESTING
             echo "<script>alert('User ID to delete: " . $duid . "');</script>"; // Debugging line
-            Deleteuser($duid,$con);
+            Deleteuser($duid,$con,$userid);
             //echo "<script>window.location.href = 'users.php?part=userslist';</script>"; // Redirect to users list
         }
       }
      // USERS UPDATE AND ADD new user form - SUBMIT ******
      if ($_SERVER["REQUEST_METHOD"] == "POST" && $_GET["part"]==='userslist') {  // Form submission for BOTH NEW and UPDATE
-          $huid = htmlspecialchars($_POST['huid']); // Sanitize the input
+          $huid = isset($_POST['huid']) ? htmlspecialchars($_POST['huid']) : ''; // Sanitize the input
           $name = htmlspecialchars($_POST['name']); // Sanitize the input
           $surname = htmlspecialchars($_POST['surname']);
           $sex = htmlspecialchars($_POST['gender']);
@@ -540,35 +514,52 @@
           
         if(isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'submit') { // New user submission
             $sbupdate = 'submit'; // Set submit button value
-            Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con);
+            Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con, $userid);
            // echo "<script>alert('Submit button clicked- New User');</script>"; // Debugging line
 
         } elseif (isset($_POST['btnsubuser']) && $_POST['btnsubuser'] === 'update') { // Update user submission
-            $sbupdate = 'update'; // Set update button value
-            UpdateuserSubmit($huid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con);
+            if (!empty($huid) && is_numeric($huid)) {
+                $sbupdate = 'update'; // Set update button value
+                UpdateuserSubmit($huid, $name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid,$admingroup, $location, $con, $userid);
+            } else {
+                echo "<script>alert('Invalid user ID for update.');</script>";
+            }
         }    
 
      }
      // FIRST LINK - add or update user 
  if((isset($_GET['frm']) && ($_GET['frm']==='userupdate' || $_GET['frm']==='newuser'))){
-       // Update user
-        if((isset($_GET['uid']) && !empty($_GET['uid']))){
-            $sbupdate = 'update'; 
-            $uid = htmlspecialchars($_GET['uid']); // Sanitize the input
-           /*
+       // Update user - Check multiple sources for uid (dynamic detection)
+       $uid_update = '';
+       
+       // Try to get uid from GET parameter (direct link)
+       if(isset($_GET['uidup']) && !empty($_GET['uidup']) && is_numeric($_GET['uidup'])){
+            $uid_update = htmlspecialchars($_GET['uidup']); // Sanitize the input
+       }
+       // Try to get uid from POST parameter (form submission)  
+       elseif(isset($_POST['huid']) && !empty($_POST['huid']) && is_numeric($_POST['huid'])){
+            $uid_update = htmlspecialchars($_POST['huid']); // Sanitize the input
+       }
+       
+       if(!empty($uid_update)){
+            $sbupdate = 'update';
+            $uid = $uid_update; // Set uid for form usage
+            /*
             echo "<script>
                    var uid = '" . $uid . "';
                     document.getElementById('huid').value = uid; 
                   </script>"; 
             */
-            list($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $status) = Updateuser_values($uid,$con); // Get user data for update
-            $key = '1234567890abcdef'; // Make xampp happy.
-            $iv = 'abcdef1234567890';
-            $psw = openssl_decrypt($psw, 'AES-128-CTR', $key, 0, $iv); // Decrypt the password
+            list($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $location, $status) = Updateuser_values($uid_update,$con); // Get user data for update
+          
+            // Decrypt password - PK: 2024-06-10
+            // $key = '1234567890abcdef'; // Make xampp happy.
+           // $iv = 'abcdef1234567890';
+           // $psw = openssl_decrypt($psw, 'AES-128-CTR', $key, 0, $iv); // Decrypt the password
 
         // New user
         } else { 
-            $uid = '';
+            $uid_update = '';
             // Initialize variables for new user
             $name = $surname = $sex = $psw = $position = $unit = $phone = $email = $groupid = $admingroup = $location = $status = '';
         } // end of if uid
@@ -578,7 +569,7 @@
         <h1>Add/Update Users</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item">Forms</li>
             <li class="breadcrumb-item">Users</li>
           </ol>
@@ -591,7 +582,7 @@
             <div class="card-body">
               <h5 class="card-title"><?php echo (isset($_GET['frm']) && $_GET['frm'] == 'userupdate') ? 'Users Update' : 'New Users'; ?></h5>
               <!-- Users Form -->
-              <form action="users.php?part=userslist" method="POST">
+              <form action="users.php?part=userslist&uid=<?php echo $userid; ?>" method="POST">
                 <!-- Hidden input for uid : User ID -->
                 <input type="hidden" id="huid" name="huid" value="<?php echo isset($uid) ? $uid : ''; ?>">
                 <div class="row mb-3">
@@ -719,7 +710,7 @@
         <h1>Group Permits</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
             <li class="breadcrumb-item">Tables</li>
             <li class="breadcrumb-item">Group Permits</li>
           </ol>

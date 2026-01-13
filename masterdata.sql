@@ -300,7 +300,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbtransaction" (
     location_id INTEGER NOT NULL, /* borderpoint_id */
     tbtransaction_type INTEGER NOT NULL, /* 1=import, 2=export */
     destination_id INTEGER NOT NULL /* company_id */
-)
+);
 
 
 CREATE TABLE IF NOT EXISTS "public"."tblabresults" (
@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS "public"."tblabresults" (
     treat_ability INTEGER NOT NULL, /* 1=Yes, 2=No */
     result_needs INTEGER NOT NULL, /* 1=Yes, 2=No */
     result_descption text NOT NULL
-)
+);
 
 /* if chemical method, then chemical_id is needed */
 CREATE TABLE IF NOT EXISTS "public"."tbmethod_chemical" (
@@ -348,11 +348,22 @@ CREATE TABLE IF NOT EXISTS "public"."tbpest" (
 
 CREATE TABLE IF NOT EXISTS "public"."tbpest_detected" (
     id SERIAL PRIMARY KEY,
+    application_id INTEGER NOT NULL, /* application_id - auto increment from tbapplication */
     pestid INTEGER NOT NULL, /* ID from tbpest to get Name, general name and specific name  */
     infestation_level text NOT NULL, /* 1=Low, 2=Medium, 3=High */
     alive_status text NOT NULL, /* 1=Alive, 2=Dead */
     risk_category text NOT NULL, /* Quarantine pest, Regulated None Quarantine pest, None Quarantine pest */
     result_measure text NOT NULL /* Immediately implement the treatment as specified, Regulated article was not accordance. Return to the original place */
+)
+
+CREATE TABLE IF NOT EXISTS "public"."tbmultiple_product" (
+    id SERIAL PRIMARY KEY,
+    application_id INTEGER NOT NULL, /* application_id - auto increment from tbapplication */
+    product_id INTEGER NOT NULL, /* ID from tbproduct */
+    number_description text NULL,
+    quantity_net real NOT NULL,
+    quantity_gross real NOT NULL,
+    unit_id INTEGER NOT NULL /* product_unit */ 
 )
 
 CREATE TABLE IF NOT EXISTS "public"."tbcertificate_sources" (
@@ -365,4 +376,32 @@ CREATE TABLE IF NOT EXISTS "public"."tbcertificate_sources" (
     gid INTEGER NOT NULL, /* group_id from tbusergroup */
     filelink text NOT NULL, /* Link to the source file */
     enabled text NOT NULL /* yes/no */
-)
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbcertificate_print_log" (
+    id SERIAL PRIMARY KEY,
+    application_id INTEGER NOT NULL, 
+    certificate_id  INTEGER NOT NULL,
+    current_status  TEXT NOT NULL, /*get data from tbcertificate (Register) and print_log*/
+    /* 1=ongoing if data is being processed- added into tbcertificate, 
+    2=issued/printed- if button: Print Certificate is clicked, 
+    3=amended/edited if button: Update on the form is clicked and carbon paper is updated,
+     4=cancelled/rejected */
+    current_carbonpaper_id TEXT NULL, /* ID from carbon paper - K */
+    original_carbonpaper_id TEXT NULL, /* ID from carbon paper - K */
+    updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, /* Date and time of last update */
+    updated_by INTEGER NOT NULL /* User ID who updated the record */
+);
+
+CREATE TABLE IF NOT EXISTS "public"."tbcertificate_qr" (
+    id SERIAL PRIMARY KEY,
+    certificate_id INTEGER NOT NULL, 
+    application_id INTEGER NOT NULL,
+    qr_code_data TEXT NOT NULL, /* Data encoded in QR (e.g., URL or JSON) */
+    qr_code_image TEXT, /* Base64 encoded image or file path */
+    qr_format VARCHAR(10) DEFAULT 'PNG', /* Image format: PNG, SVG, etc. */
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   
+);
+
+
+

@@ -1,7 +1,47 @@
 <?php
 session_start();
+
+// AJAX handler for certificate status
+if (isset($_GET['action']) && $_GET['action'] === 'get_certificate_status') {
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+    
+    // Clean output buffer
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('Content-Type: application/json');
+    
+    $appid = isset($_GET['appid']) ? $_GET['appid'] : '';
+    
+    if (empty($appid) || !is_numeric($appid)) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Invalid application ID'
+        ]);
+        exit;
+    }
+    
+    $logs = CertificateStatusInfo($appid, $con);
+    
+    if ($logs === null) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Error retrieving certificate status'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => true,
+            'logs' => $logs
+        ]);
+    }
+    exit;
+}
+
 require("php-bin/connection.php");
 require("php-bin/supports.php");
+
 $_SESSION['lang'] = 'en'; // NOT WORKING -FIX- Default to English
 if (isset($_GET['lang'])) {
   $selectedLang = $_GET['lang'];
@@ -31,6 +71,18 @@ if (file_exists($langFile)) {
         'Dashboard' => 'Dashboard'
     );
 }
+// Build language switch URLs preserving current query parameters
+$__lang_params = $_GET;
+if (!isset($__lang_params['uid']) || empty($__lang_params['uid'])) {
+  $__lang_params['uid'] = isset($userid) ? $userid : '';
+}
+$__lang_params_la = $__lang_params; $__lang_params_la['lang'] = 'la';
+$__lang_params_en = $__lang_params; $__lang_params_en['lang'] = 'en';
+
+$langHrefLa = '?' . http_build_query($__lang_params_la);
+$langHrefEn = '?' . http_build_query($__lang_params_en);
+// Ensure legacy variable is defined for templates expecting it
+$selectedLang = $lang;
 // echo "<script>alert('Login-Updated with User id: " . (isset($_GET["uid"]) ? $_GET["uid"] : 'not set') . "');</script>"; 
 // Dynamic Authentication System - same as entity.php
 $userid = '';
@@ -109,9 +161,9 @@ if (!empty($userid)) {
  }
  // SUBMIT/SAVE application by UPDATING tbapplication with the form data - CLICK ON SUBMIT BUTTON
     if (isset($_POST['btnsubApplication_save']) && ($_POST['btnsubApplication_save'] === "submit" || $_POST['btnsubApplication_save'] === "update")) {  // Submit from application form in transaction.php    
-       echo "<script>alert('Hello, submit application');</script>";
+      // echo "<script>alert('Hello, submit application');</script>";
         $app_id = isset($_POST['app_id']) ? $_POST['app_id'] : ''; // hidden input
-        echo "<script>alert('Application ID (hidden input): " . $app_id . "');</script>";  
+       // echo "<script>alert('Application ID (hidden input): " . $app_id . "');</script>";  
         $app_no = isset($_POST['application_no']) ? $_POST['application_no'] : '';
         $reg_no = isset($_POST['reg_no']) ? $_POST['reg_no'] : '';
         $entry_point = isset($_POST['entry_point']) ? $_POST['entry_point'] : '';
@@ -197,7 +249,7 @@ if (!empty($userid)) {
         ]; 
         $result = ApplicationUpdate($app_id, $data, $con); // Update tbapplication with the form data
         if ($result) {
-            echo "<script>alert('Application updated successfully!');</script>";
+           // echo "<script>alert('Application updated successfully!');</script>";
         } else {
             echo "<script>alert('Failed to update application. Please check the console for details.');</script>";
         }
@@ -223,13 +275,27 @@ if (!empty($userid)) {
         $pest_detected = isset($_POST['detected_pest']) ? 1 : 0;
         $treat_ability = isset($_POST['treatment_ability']) ? 1 : 0;
         $lab_required = isset($_POST['lab_analysis']) ? 1 : 0;  
-        $treatment_method = isset($_POST['treatment_method']) && $_POST['treatment_method'] !== '' ? (int)$_POST['treatment_method'] : null;
-        $treatment_date = isset($_POST['treatment_date']) ? $_POST['treatment_date'] : null;
-        $chemical_used = isset($_POST['chemical_used']) ? $_POST['chemical_used'] : '';
-        $chemical_fortreat = isset($_POST['chemical_fortreat']) ? $_POST['chemical_fortreat'] : '';
-        $duration_temp = isset($_POST['duration_temp']) ? $_POST['duration_temp'] : '';
-        $concentration = isset($_POST['concentration']) ? $_POST['concentration'] : '';
-        $sample_inspectedby = isset($_POST['sample_inspectedby']) ? $_POST['sample_inspectedby'] : '';
+
+        // No treatment for pest detected
+         if(empty($treat_ability)){
+            $treat_ability = 0;
+            $treatment_method = null;
+            $treatment_date = '1900-01-01';
+            $chemical_used = '';
+            $chemical_fortreat = '';
+            $duration_temp = '';
+            $concentration = '';
+            $sample_inspectedby = '';
+         } else {
+            $treat_ability = 1;
+            $treatment_method = isset($_POST['treatment_method']) && $_POST['treatment_method'] !== '' ? (int)$_POST['treatment_method'] : null;
+            $treatment_date = isset($_POST['treatment_date']) ? $_POST['treatment_date'] : null;
+            $chemical_used = isset($_POST['chemical_used']) ? $_POST['chemical_used'] : '';
+            $chemical_fortreat = isset($_POST['chemical_fortreat']) ? $_POST['chemical_fortreat'] : '';
+            $duration_temp = isset($_POST['duration_temp']) ? $_POST['duration_temp'] : '';
+            $concentration = isset($_POST['concentration']) ? $_POST['concentration'] : '';
+            $sample_inspectedby = isset($_POST['sample_inspectedby']) ? $_POST['sample_inspectedby'] : '';
+         }
         $additional_info = isset($_POST['additional_info']) ? $_POST['additional_info'] : '';
         $treatment_reason = isset($_POST['reason']) ? $_POST['reason'] : '';
         $post_treatment_details = isset($_POST['post_details']) ? $_POST['post_details'] : '';
@@ -333,6 +399,20 @@ if (!empty($userid)) {
          // SUBMIT AND UPDATE ARE THE SAME- certificate data because certificate no is generated when application is submitted
          if($_POST['btnSubmitCertificate'] === 'submit' || $_POST['btnSubmitCertificate'] === 'update'){
            $result = CertificateUpdate($certificate_id, $certificate_data, $con);
+            
+            // Also update importer information in tbapplication
+            if ($result && $app_id) {
+                $importer_id = isset($_POST['importer_id']) ? $_POST['importer_id'] : null;
+                
+                // Update both importerid and address_importer
+                $update_app_sql = "UPDATE tbapplication SET importerid = $1, address_importer = $2 WHERE id = $3";
+                $update_app_result = pg_query_params($con, $update_app_sql, [$importer_id, $importer_address, $app_id]);
+                
+                if (!$update_app_result) {
+                    error_log("Failed to update importer info in tbapplication for app_id: $app_id - " . pg_last_error($con));
+                }
+            }
+            
             if ($result) {
                 $appid_for_cert = isset($_POST['appid_certificate']) ? $_POST['appid_certificate'] : 0;
                 echo "<script>
@@ -386,7 +466,7 @@ if (!empty($userid)) {
     <div class="d-flex align-items-center justify-content-between">
       <a href="index.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">e-Phytosanitary</span>
+        <span class="d-none d-lg-block"><?php echo isset($translations['e-Phytosanitary']) ? $translations['e-Phytosanitary'] : 'e-Phytosanitary'; ?></span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -399,15 +479,25 @@ if (!empty($userid)) {
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
-        <li class="nav-item">
-          <a href="?lang=la" class="nav-link nav-icon">
-          <img src="assets/img/flags/lao.png" alt="Lao" style="width: 24px; height: 16px;">
+        <li class="nav-item dropdown">
+          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+            <img src="assets/img/flags/<?php echo ($lang === 'en') ? 'english' : 'lao'; ?>.png" alt="<?php echo ($lang === 'en') ? 'English' : 'ລາວ'; ?>" style="width: 24px; height: 16px;">
+            <span style="font-size: 14px;"><?php echo ($lang === 'en') ? 'English' : 'ລາວ'; ?></span>
           </a>
-        </li>
-        <li class="nav-item">
-          <a href="?lang=en" class="nav-link nav-icon">
-          <img src="assets/img/flags/english.png" alt="English" style="width: 24px; height: 16px;">
-          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="<?php echo htmlspecialchars($langHrefLa); ?>">
+                <img src="assets/img/flags/lao.png" alt="Lao" style="width: 24px; height: 16px; margin-right: 10px;">
+                <span>ລາວ</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="<?php echo htmlspecialchars($langHrefEn); ?>">
+                <img src="assets/img/flags/english.png" alt="English" style="width: 24px; height: 16px; margin-right: 10px;">
+                <span>English</span>
+              </a>
+            </li>
+          </ul>
         </li>
     <!-- End Language Switcher -->
         <li class="nav-item d-block d-lg-none">
@@ -431,7 +521,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-person"></i>
-                <span>My Profile</span>
+                <span><?php echo isset($translations['My Profile']) ? $translations['My Profile'] : 'My Profile'; ?></span>
               </a>
             </li>
             <li>
@@ -440,7 +530,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
                 <i class="bi bi-gear"></i>
-                <span>Account Settings</span>
+                <span><?php echo isset($translations['Account Settings']) ? $translations['Account Settings'] : 'Account Settings'; ?></span>
               </a>
             </li>
             <li>
@@ -449,7 +539,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
                 <i class="bi bi-question-circle"></i>
-                <span>Need Help?</span>
+                <span><?php echo isset($translations['Need Help?']) ? $translations['Need Help?'] : 'Need Help?'; ?></span>
               </a>
             </li>
             <li>
@@ -458,7 +548,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
               </a>
             </li>
           </ul><!-- End Profile Dropdown Items -->
@@ -476,122 +566,133 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Dashboard Nav --> 
     <li class="nav-item">
-        <a class="nav-link " href="#">
+        <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
         </a>
       </li><!-- End Application Nav --> 
        <li class="nav-item">
-        <a class="nav-link " href="#">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link " href="#">
+        <a class="nav-link collapsed" href="#">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="<?php echo htmlspecialchars('entity.php?entity=export&uid='.$userid.'&lang='.$lang); ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
-      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
          <li>
             <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
+        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Countries</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
             <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Districts</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity_type']) ? $translations['Entity_type'] : 'Entity_type'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection Method']) ? $translations['Inspection Method'] : 'Inspection Method'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
             <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Pest</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Product</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Provinces</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
+         <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->
-      <?php } // End of Admin group check ?>
-      <li class="nav-heading">Users' Management</li>
+
+      <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
+    
+      <li class="nav-heading"><?php echo isset($translations['USERS MANAGEMENT']) ? $translations['USERS MANAGEMENT'] : "Users' Management"; ?></li>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
-          <i class="bi bi-person-plus"></i><span>Users</span>
+          <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
@@ -599,14 +700,45 @@ if (!empty($userid)) {
   </aside><!-- End Sidebar-->
   <main id="main" class="main">
     <div class="pagetitle">
-      <h1>Dashboard</h1>
+      <h1><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="#">Home</a></li>
-          <li class="breadcrumb-item active">Dashboard</li>
+          <li class="breadcrumb-item"><a href="#"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
+    
+    <?php
+    // Get chart data from the function
+    $chartData = ChartDocTracking($guid, $con);  // this function in supports.php
+    
+    // Debug: Log the data
+    error_log("Chart Data Result: " . print_r($chartData, true));
+    
+    // Ensure we always have valid JSON
+    if (!$chartData) {
+        $chartData = [
+            'success' => false,
+            'error' => 'No data returned from ChartDocTracking'
+        ];
+    }
+    
+    $chartDataJson = json_encode($chartData, JSON_NUMERIC_CHECK);
+    
+    // Debug: Log the JSON
+    error_log("Chart Data JSON: " . $chartDataJson);
+    
+    // Check for JSON encoding errors
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("JSON Encode Error: " . json_last_error_msg());
+        $chartDataJson = json_encode([
+            'success' => false,
+            'error' => 'JSON encoding failed: ' . json_last_error_msg()
+        ]);
+    }
+    ?>
+    
     <!-- Charts Section -->
     <section class="section">
       <div class="row">  
@@ -614,47 +746,132 @@ if (!empty($userid)) {
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Application Status <span>| This Month</span></h5>
+              <h5 class="card-title"><?php echo isset($translations['Document status']) ? $translations['Document status'] : 'Document status'; ?> <span>| <?php echo isset($translations['Total']) ? $translations['Total'] : 'Total'; ?></span></h5>
               <!-- Donut Chart -->
               <div id="donutChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#donutChart")).setOption({
-                    tooltip: {
-                      trigger: 'item'
-                    },
-                    legend: {
-                      top: '5%',
-                      left: 'center'
-                    },
-                    series: [{
-                      name: 'Applications',
-                      type: 'pie',
-                      radius: ['40%', '70%'],
-                      avoidLabelOverlap: false,
-                      label: {
-                        show: false,
-                        position: 'center'
+                  // Get PHP data
+                  const chartData = <?php echo $chartDataJson; ?>;
+                  
+                  // Debug: Log the data
+                  console.log('Chart Data:', chartData);
+                  console.log('Chart Data Type:', typeof chartData);
+                  console.log('Has success?', chartData ? chartData.success : 'no chartData');
+                  console.log('Has data?', chartData && chartData.data ? 'yes' : 'no');
+                  
+                  let chartDataArray = [];
+                  if (chartData && chartData.success && chartData.data) {
+                    console.log('Using real data:', chartData.data);
+                    console.log('Application count:', chartData.data.application);
+                    console.log('Inspection count:', chartData.data.inspection);
+                    console.log('Certificate count:', chartData.data.certificate);
+                    
+                    const appCount = parseInt(chartData.data.application) || 0;
+                    const inspCount = parseInt(chartData.data.inspection) || 0;
+                    const certCount = parseInt(chartData.data.certificate) || 0;
+                    
+                    // Check if all values are zero
+                    if (appCount === 0 && inspCount === 0 && certCount === 0) {
+                      console.log('All values are zero - using sample data for visualization');
+                      chartDataArray = [
+                        { value: 10, name: 'Applications' },
+                        { value: 7, name: 'Inspections' },
+                        { value: 5, name: 'Certificates' }
+                      ];
+                    } else {
+                      chartDataArray = [
+                        { value: appCount, name: 'Applications' },
+                        { value: inspCount, name: 'Inspections' },
+                        { value: certCount, name: 'Certificates' }
+                      ];
+                    }
+                  } else {
+                    console.log('Using fallback data. Error:', chartData ? chartData.error : 'No data');
+                    // Fallback data if function fails
+                    chartDataArray = [
+                      { value: 5, name: 'Applications' },
+                      { value: 3, name: 'Inspections' },
+                      { value: 2, name: 'Certificates' }
+                    ];
+                  }
+                  
+                  console.log('Final chart data array:', chartDataArray);
+                  console.log('Chart data values:', chartDataArray.map(d => `${d.name}: ${d.value}`));
+                  
+                  const chartElement = document.querySelector("#donutChart");
+                  console.log('Chart element:', chartElement);
+                  
+                  if (!chartElement) {
+                    console.error('Chart element #donutChart not found!');
+                    return;
+                  }
+                  
+                  console.log('Chart element dimensions:', {
+                    width: chartElement.offsetWidth,
+                    height: chartElement.offsetHeight,
+                    clientWidth: chartElement.clientWidth,
+                    clientHeight: chartElement.clientHeight
+                  });
+                  
+                  try {
+                    const chart = echarts.init(chartElement);
+                    console.log('ECharts instance created:', chart);
+                    
+                    const option = {
+                      tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b}: {c} ({d}%)'
                       },
-                      emphasis: {
+                      legend: {
+                        top: '1%',
+                        left: 'center'
+                      },
+                      series: [{
+                        name: 'Documents',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        minShowLabelAngle: 0,
                         label: {
                           show: true,
-                          fontSize: '18',
-                          fontWeight: 'bold'
-                        }
-                      },
-                      labelLine: {
-                        show: false
-                      },
-                      data: [
-                        { value: 1048, name: 'Submitted' },
-                        { value: 735, name: 'Under Review' },
-                        { value: 580, name: 'Approved' },
-                        { value: 484, name: 'Rejected' },
-                        { value: 300, name: 'Pending' }
-                      ]
-                    }]
-                  });
+                          position: 'outside',
+                          formatter: '{c}',
+                          fontSize: 14,
+                          fontWeight: 'bold',
+                          minMargin: 5,
+                          distanceToLabelLine: 5
+                        },
+                        emphasis: {
+                          label: {
+                            show: true,
+                            fontSize: '16',
+                            fontWeight: 'bold'
+                          }
+                        },
+                        labelLine: {
+                          show: true,
+                          length: 15,
+                          length2: 25,
+                          minTurnAngle: 90
+                        },
+                        data: chartDataArray
+                      }]
+                    };
+                    
+                    console.log('Setting chart option:', option);
+                    chart.setOption(option);
+                    console.log('Chart initialized successfully');
+                    
+                    // Force resize after a short delay
+                    setTimeout(() => {
+                      chart.resize();
+                      console.log('Chart resized');
+                    }, 100);
+                    
+                  } catch (error) {
+                    console.error('Error initializing chart:', error);
+                  }
                 });
               </script>
               <!-- End Donut Chart -->
@@ -776,21 +993,21 @@ if (!empty($userid)) {
         <!-- Left side columns -->
         <div class="col-lg-8" style="width: 100%;">
           <div class="row">           
-            <!-- Recent Sales -->
+            <!-- Dashboard - main -->
             <div class="col-12">
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
-                  <h5 class="card-title">Phytosanitary Certificates <span>| Today</span></h5>
+                  <h5 class="card-title"><?php echo isset($translations['Document list']) ? $translations['Document list'] : 'Document list'; ?> <span>| <?php echo isset($translations['Today']) ? $translations['Today'] : 'Today'; ?></span></h5>
                   <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
-                        <th scope="col">Application No</th>
-                        <th scope="col">Exporters</th>
-                        <th scope="col">Submission date</th>
-                        <th scope="col">Application</th>
-                        <th scope="col">Inspection</th>
-                        <th scope="col">Certificate</th>
-                        <th scope="col">Certificate status</th>
+                        <th scope="col"><?php echo isset($translations['Application No']) ? $translations['Application No'] : 'Application No'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Exporter']) ? $translations['Exporter'] : 'Exporters'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Submission date']) ? $translations['Submission date'] : 'Submission date'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Certificate status']) ? $translations['Certificate status'] : 'Certificate status'; ?></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -799,12 +1016,47 @@ if (!empty($userid)) {
                   </table>
                 </div>
               </div>
-            </div><!-- End Recent Sales -->
+            </div><!-- End Dashboard - main -->
           </div>
         </div><!-- End Left side columns -->
         <!-- Right side columns *****************PK************************ -->
       </div>
-    </section>
+      
+    </section> <!-- End Dashboard Section -->
+    
+  <!-- Modal for Certificate Status -->
+  <div class="modal fade" id="certificateStatusModal" tabindex="-1" aria-labelledby="certificateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="certificateStatusModalLabel">Certificate Print Status</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="certificateStatusContent">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End Modal for Certificate Status -->
+  
+  <script>
+    // Reload page when modal is closed
+    document.getElementById('certificateStatusModal').addEventListener('hidden.bs.modal', function () {
+      location.reload();
+    });
+  </script>
+
+  
   </main><!-- End #main -->
   <!-- ======= Footer ======= -->
   <!-- PK: no need for footer for this page
@@ -827,5 +1079,68 @@ if (!empty($userid)) {
   <script src="assets/vendor/php-email-form/validate.js"></script>
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
+  
+  <script>
+    // Function to view certificate status
+    function viewCertificateStatus(appid) {
+      var modal = new bootstrap.Modal(document.getElementById('certificateStatusModal'));
+      modal.show();
+      
+      document.getElementById('certificateStatusContent').innerHTML = 
+        '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+      
+      fetch('main.php?action=get_certificate_status&appid=' + appid)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            let html = '<div class="table-responsive">';
+            
+            if (data.logs && data.logs.length > 0) {
+              html += '<table class="table table-bordered table-striped">';
+              html += '<thead><tr>';
+              html += '<th>Print Count</th>';
+              html += '<th>Status</th>';
+              html += '<th>Current Carbon No</th>';
+              html += '<th>Original Carbon No</th>';
+              html += '<th>Printed date</th>';
+              html += '<th>Printed By</th>';
+              html += '</tr></thead><tbody>';
+              
+              data.logs.forEach(function(log) {
+                html += '<tr>';
+                html += '<td>' + log.print_count + '</td>';
+                html += '<td><span class="badge bg-' + (log.current_status === 'Ongoing' ? 'info' : log.current_status === 'Printed/Updated' ? 'warning' : 'success') + '">' + log.current_status + '</span></td>';
+                html += '<td>' + (log.current_carbonpaper_id || '-') + '</td>';
+                html += '<td>' + (log.original_carbonpaper_id || '-') + '</td>';
+                html += '<td>' + log.print_timestamp + '</td>';
+                html += '<td>' + (log.user_name ? log.user_name + ' ' + log.user_surname : 'User #' + log.updated_by) + '</td>';
+                html += '</tr>';
+              });
+              
+              html += '</tbody></table>';
+              
+              var lastLog = data.logs[data.logs.length - 1];
+              html += '<div class="alert alert-info mt-3">';
+              html += '<strong>Latest Status:</strong> ' + lastLog.current_status + ' | ';
+              html += '<strong>Total Prints:</strong> ' + lastLog.print_count;
+              html += '</div>';
+            } else {
+              html += '<div class="alert alert-warning">No print history found for this certificate.</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('certificateStatusContent').innerHTML = html;
+          } else {
+            document.getElementById('certificateStatusContent').innerHTML = 
+              '<div class="alert alert-danger">' + data.error + '</div>';
+          }
+        })
+        .catch(error => {
+          document.getElementById('certificateStatusContent').innerHTML = 
+            '<div class="alert alert-danger">Error loading certificate status: ' + error + '</div>';
+        });
+    }
+  </script>
+
 </body>
 </html>

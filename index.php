@@ -1,28 +1,42 @@
     <!-- PHP-Pk -->
 <?php
       // Pk: 2025-04-30
-  session_start();
+   // session_start(); // NOT WORKING- Commented out for cloud server compatibility
+
+  // Enable error reporting for debugging
+  error_reporting(E_ALL);
+  ini_set('display_errors', 1);
+
+  // Handle logout
+  if (isset($_GET['logout']) && $_GET['logout'] === 'true') {
+    // Since sessions are not working, just show logout message
+    $message = "You have been logged out successfully.";
+  }
 
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
    // Initialize variables for messages
-  $message = "";
+  if (!isset($message)) {
+    $message = "";
+  }
     // Check if the form is submitted
-  if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['btnlogin'])) {
     $email = isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '';
     $password = isset($_POST['password']) ? htmlspecialchars($_POST['password']) : '';
-
+    // echo "<script>console.log('Email: " . $email . "');</script>"; // Debugging line
    // $message = "Hi, Login: " . $email . "<br>Your password is: " . $password;
-    // Destroy session variables
-    $_SESSION["uid"] = "";
-    $_SESSION["username"] = "";
-    $_SESSION["email"] = "";
-    $_SESSION["passw"] = "";
-    $_SESSION["groupid"] = "";
-    $_SESSION["groupname"] = "";
-    $_SESSION["image"] = "";  // Image path
-    $_SESSION["position"] = "";
-
+    // Since sessions are not working, we'll just clear any old session data conceptually
+    // Variables that would have been session variables
+   /*
+    $session_uid = "";
+    $session_username = "";
+    $session_email = "";
+    $session_passw = "";
+    $session_groupid = "";
+    $session_groupname = "";
+    $session_image = "";  // Image path
+    $session_position = "";
+  */
     // IN CASE OF SUBMISSION THROUGH FORM
   if (!empty($email) && !empty($password)) {
     $sql = "SELECT id, name, psw, position, email, group_id FROM tbusers WHERE email = '$email' AND enabled = 'yes'";
@@ -33,16 +47,12 @@
             
         // If passwords are hashed, use password_verify
         if ($password === $row['psw']) { // Replace with password_verify($password, $row['psw']) if hashed
-            $_SESSION["uid"] = $row['id'];
-            $_SESSION["username"] = $row['name'];
-            $_SESSION["position"] = $row['position']; // Store position in session
-            $_SESSION["email"] = $row['email'];
-            $_SESSION["groupid"] = $row['group_id'];
-            $_SESSION["groupname"] = GroupName($row['group_id'], $con); // Get group name
-            $uprofile = Profiledata($row['id'], $con);
-            $_SESSION["image"] = $uprofile['imgfilepath']; // Store image path in session
+            // Since sessions don't work, redirect with user ID as parameter
+            // $_SESSION['uid'] = $row['id'];
+            $userid = $row['id'];
+            $username = urlencode($row['name']);
            
-            echo "<script type='text/javascript'>window.location.href = 'main.php?us=" . urlencode($row['name']) . "';</script>";
+            echo "<script type='text/javascript'>window.location.href = 'main.php?uid=" . $userid . "';</script>";
             exit();
         } else {
             $message = "Incorrect username or password.";
@@ -107,7 +117,7 @@
               <div class="d-flex justify-content-center py-4">
                 <a href="index.php" class="logo d-flex align-items-center w-auto">
                   <img src="assets/img/logo.png" alt="">
-                  <span class="d-none d-lg-block">ePhyto Certificate</span>
+                  <span class="d-none d-lg-block">e-Phytosanitary</span>
                 </a>
               </div><!-- End Logo -->
 
@@ -144,7 +154,7 @@
                       </div>
                     </div>
                     <div class="col-12">
-                      <button class="btn btn-primary w-100" type="submit">Login</button>
+                      <button class="btn btn-primary w-100" type="submit" name="btnlogin">Login</button>
                     </div>
                     <div class="col-12">
                       <p class="small mb-0">Don't have account? <a href="pages-register.html">Create an account</a></p>

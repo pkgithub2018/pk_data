@@ -1532,7 +1532,7 @@
                 </thead>
                 <tbody>
                   <?php
-                    InspectionMethodList($con); // List of Inspection Method 
+                    InspectionMethodList($userid, $con); // List of Inspection Method 
                   ?>
                 </tbody>
               </table>
@@ -1600,6 +1600,7 @@
               <div class="modal-body">
                 <!-- Hidden input for tmid -->
                 <input type="hidden" id="treatmentMethodId" name="treatmentMethodId">
+                <input type="hidden" id="huid" name="huid" value="<?php echo $userid; ?>">
                 <div class="mb-3">
                   <label for="treatmentMethodCode" class="form-label">Code</label>
                   <input type="text" class="form-control" id="treatmentMethodCode" name="treatmentMethodCode" required> 
@@ -1666,18 +1667,19 @@
         // Process the form submission for adding/updating treatment method
        
         $tmid = $_POST['treatmentMethodId']; // Hidden input for ID
+        $huid = $_POST['huid']; // Hidden input for user ID
         $tmCode = $_POST['treatmentMethodCode'];
         $tmName = $_POST['treatmentMethodName'];
         $tmDescription = $_POST['treatmentMethodDescription'];
         
         if($tmid === 'new') {
             // Add new treatment method
-            AddTreatmentMethod($tmCode, $tmName, $tmDescription, $con); // Function to add new treatment method
+            AddTreatmentMethod($huid, $tmCode, $tmName, $tmDescription, $con); // Function to add new treatment method
             
         } else {
             // Update existing treatment method
            // echo "<script>alert('Treatment method with ID: " . $tmid . " updated.');</script>"; // Debugging line
-            UpdateTreatmentMethod($tmid, $tmCode, $tmName, $tmDescription, $con); // Function to update treatment method
+            UpdateTreatmentMethod($huid, $tmid, $tmCode, $tmName, $tmDescription, $con); // Function to update treatment method
            
         }
       } // End of if submitTreatmentMethod

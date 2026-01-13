@@ -6,6 +6,15 @@
   require("php-bin/supports.php"); // replace include with require
 
   $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // User ID
+  
+  // Authentication check
+  if(empty($userid)){
+    // If user ID is not set, redirect to login page
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+  }
+  
   $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
   $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
   //echo "<script>alert('Username: " . $uname . "'+'".$userid."');</script>"; // Debugging line

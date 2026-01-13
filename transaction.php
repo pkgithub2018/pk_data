@@ -1,6 +1,281 @@
 <?php
-session_start();
+// AJAX endpoint for deleting pest detection data - MUST be at the top
+if (isset($_POST['action']) && $_POST['action'] == 'delete_pest_detected') {
+    // Include database connection and functions
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+    
+    // Clean any output buffers to prevent issues
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    
+    // Debug: Log the incoming request
+    error_log("Delete pest detected request received. POST data: " . print_r($_POST, true));
+    
+    $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+    
+    if ($appid > 0) {
+        try {
+            // Escape the application ID for security
+            $appid_escaped = pg_escape_string($con, (string)$appid);
+            
+            // Delete from tbpest_detected table
+            $delete_sql = "DELETE FROM tbpest_detected WHERE application_id = '$appid_escaped'";          
+            $delete_result = pg_query($con, $delete_sql);
+            
+            if ($delete_result) {
+                $affected_rows = pg_affected_rows($delete_result);
+                // Update on tbinspection to set pest_detected = '0'- to be consistent
+                $sql_update_inspection = "UPDATE tbinspection SET pest_detected = '0' WHERE application_id = '$appid_escaped'";
+                $update_result = pg_query($con, $sql_update_inspection);
+                
+                if ($update_result) {
+                    $inspection_affected = pg_affected_rows($update_result);
+                    error_log("Delete successful. Pest table rows: $affected_rows, Inspection table rows: $inspection_affected");
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Pest detection data deleted successfully', 
+                        'affected_rows' => $affected_rows,
+                        'inspection_updated' => true,
+                        'refresh_checkbox' => true // Signal frontend to refresh checkbox
+                    ]);
+                } else {
+                    error_log("Inspection table update failed: " . pg_last_error($con));
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Pest data deleted but inspection update failed', 
+                        'affected_rows' => $affected_rows,
+                        'warning' => 'Inspection table not updated'
+                    ]);
+                }
+            } else {
+                $error = pg_last_error($con);
+                error_log("Delete failed. Database error: " . $error);
+                echo json_encode(['success' => false, 'error' => 'Database error: ' . $error]);
+            }
+        } catch (Exception $e) {
+            error_log("Delete exception: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Error: ' . $e->getMessage()]);
+        }
+    } else {
+        error_log("Delete failed: Invalid application ID: " . $appid);
+        echo json_encode(['success' => false, 'error' => 'Invalid application ID']);
+    }
+    
+    exit;
+}
 
+// AJAX endpoint for toggling pest detection status
+
+if (isset($_POST['action']) && $_POST['action'] == 'pest_detected_inspectionSave') {
+  
+    // Include database connection and functions
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+        
+   // header('Content-Type: application/json');
+   // header('Cache-Control: no-cache, must-revalidate');
+   // header('Pragma: no-cache');
+       
+    $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+    $inspectiondate = isset($_POST['inspection_date']) ? pg_escape_string($con, $_POST['inspection_date']) : '';
+    $sampleno = isset($_POST['sampleno']) ? pg_escape_string($con, $_POST['sampleno']) : '';
+    $samplequantity = isset($_POST['samplequantity']) ? pg_escape_string($con, $_POST['samplequantity']) : '';
+    $unitid = isset($_POST['unitid']) ? pg_escape_string($con, $_POST['unitid']) : '';
+    $samplecollectedby = isset($_POST['samplecollectedby']) ? pg_escape_string($con, $_POST['samplecollectedby']) : '';
+    $inspectedby = isset($_POST['inspectedby']) ? pg_escape_string($con, $_POST['inspectedby']) : '';
+    $certificatefee = isset($_POST['certificatefee']) ? pg_escape_string($con, $_POST['certificatefee']) : '';
+    $receiptno = isset($_POST['receiptno']) ? pg_escape_string($con, $_POST['receiptno']) : '';
+    $lotno = isset($_POST['lotno']) ? pg_escape_string($con, $_POST['lotno']) : '';
+    $inspectionmethod = isset($_POST['inspectionmethod']) ? pg_escape_string($con, $_POST['inspectionmethod']) : '';
+
+    $treatmentdate = date('Y-m-d'); // current date -temperary
+
+    $dataInspection = [
+        'application_id' => $appid,
+        'inspection_date' => $inspectiondate,
+        'sample_no' => $sampleno,
+        'sample_quantity' => $samplequantity,
+        'unit_id' => $unitid,
+        'sample_collected_by' => $samplecollectedby,
+        'inspected_by' => $inspectedby,
+        'certificate_fee' => $certificatefee,
+        'receipt_no' => $receiptno,
+        'lot_number' => $lotno,
+        'inspection_method' => $inspectionmethod,
+        'pest_detected' => 1,
+        'treat_ability' => '0',
+        'lab_required' => '0',
+        'treatment_method' => 0,
+        'treatment_date' => $treatmentdate,
+        'chemical_used' => 'na',
+        'chemical_fortreat' => 'na',
+        'duration_temp' => '0',
+        'concentration' => '0',
+        'sample_inspectedby' => $inspectedby,
+        'additional_info' => 'na',
+        'treatment_reason' => 'na',
+        'post_treatment_details' => 'na',
+        'enabled' => 'yes'
+    ];
+   // Check if application id exists
+   $appid_exist = 0;
+   $Inspectdata = InspectionInfo($appid, $con);
+   $appid_exist = $Inspectdata ? $Inspectdata['application_id'] : 0;
+
+    if ($appid_exist === 0) {
+        // echo "<script>console.log('PK-Debug application id>0: Received appid = $appid, inspection_date = $inspection_date, sampleno = $sampleno');</script>";
+        $result = InspectionAdd($dataInspection, $con);
+        if(result){
+          echo "<script>console.log('Inspection data added successfully for application ID: $appid');</script>";
+        } else {
+         echo "<script>console.log('Data aleady exists for appid = $appid, inspection_date = $inspection_date, sampleno = $sampleno');</script>";
+        } 
+        
+    } else {     
+      //  error_log("Toggle pest failed: Invalid application ID: " . $appid);   
+    }   
+    exit;
+} // close if condition for pest_detected_inspectionSave
+
+// Save application data before going to multiple commodities - AJAX endpoint
+if (isset($_POST['action']) && $_POST['action'] == 'save_application_before_multiple') {
+    // Include database connection and functions
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+    
+    // Clean any output buffers to prevent issues
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    
+    $appid = $_POST['appid'] ?? '';
+    $app_date = $_POST['app_date'] ?? '';
+    $applicant_name = $_POST['applicant_name'] ?? '';
+    $address = $_POST['address'] ?? '';
+    $reg_no = $_POST['reg_no'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $entry_point = $_POST['entry_point'] ?? '';
+    $import_country = $_POST['import_country'] ?? '';
+    $import_point = $_POST['import_point'] ?? '';
+    $export_certificate = $_POST['export_certificate'] ?? '0';
+    $transit_certificate = $_POST['transit_certificate'] ?? '0';
+    $certificate_type ="";
+    if($export_certificate == '1'){
+        $certificate_type ="export";
+    } else if($transit_certificate == '1'){
+        $certificate_type ="transit";
+    } 
+    
+    // Validate appid
+    if (empty($appid) || !is_numeric($appid)) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Invalid application ID'
+        ]);
+        exit;
+    }
+    
+    try {
+        // Update tbapplication with the form data
+        $sql = "UPDATE tbapplication SET             
+                    contact_person = '". $applicant_name . "',
+                    address_person = '". $address . "',
+                    reg_no = '". $reg_no . "',
+                    phone = '". $phone . "',
+                    export_point = $entry_point,
+                    country_import = $import_country,
+                    import_point = '". $import_point . "',
+                    certificate_type = '". $certificate_type . "'     
+                WHERE id = $appid";
+        
+        $result = pg_query($con, $sql);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Application data saved successfully'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to update application: ' . pg_last_error($con)
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Error updating application: ' . $e->getMessage()
+        ]);
+    }
+    
+    exit;
+}
+
+// Delete multiple transactions - AJAX endpoint
+if(isset($_POST['action']) && $_POST['action'] == 'delete_multiple_commodities') {
+    // Include database connection and functions
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+    
+    // Clean any output buffers to prevent issues
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    
+    $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+    
+    if (!empty($appid)) {
+        // Update the application to set multiple_products = 'no'
+        $appid_escaped = pg_escape_string($con, (string)$appid);
+
+        // Delete data from tbmultiple_product based on application id
+        $appid_escaped = pg_escape_string($con, (string)$appid);
+        $deleteSql = "DELETE FROM tbmultiple_product WHERE application_id = '$appid_escaped'";
+        
+        try {
+            $deleteResult = pg_query($con, $deleteSql);
+            if ($deleteResult) {
+                $affectedRows = pg_affected_rows($deleteResult);
+                $updateSql = "UPDATE tbapplication SET multi_item = '0' WHERE id = '$appid_escaped'";
+                $updateResult = pg_query($con, $updateSql);
+                if ($updateResult) {
+                    $updateAffected = pg_affected_rows($updateResult);
+                } else {
+                    $updateAffected = 0;
+                }
+                echo json_encode(['success' => true, 'message' => 'Transactions deleted successfully', 'affected_rows' => $affectedRows]);
+            } else {
+                $error = pg_last_error($con);
+                echo json_encode(['success' => false, 'error' => 'Database error: ' . $error]);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => 'Error: ' . $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No transaction IDs provided']);
+    }
+    
+    exit;
+} // End of delete_multiple_transactions
+
+// Include database connection and functions
+require("php-bin/connection.php");
+require("php-bin/supports.php");
+/* NOT WORKING FOR NOW - FOR CLOUD SERVER
 // Check if a language is selected via the query parameter
 if (isset($_GET['lang'])) {
   $selectedLang = $_GET['lang'];
@@ -11,7 +286,6 @@ if (isset($_GET['lang'])) {
       $_SESSION['lang'] = 'en';
   }
 }
-
 // Include the appropriate language file
 $langFile = "php-bin/lang_" . $_SESSION['lang'] . ".php";
 if (file_exists($langFile)) {
@@ -19,33 +293,114 @@ if (file_exists($langFile)) {
 } else {
   die("Language file not found.");
 }
-// USER ID
-$userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // use user id
-// User group ID
-$guid = $_SESSION["groupid"];
+*/
+// Dynamic Authentication System - same as entity.php and main.php
+$userid = '';
+// Try multiple sources for userid (Dynamic Authentication System)
+// First, try to get from GET parameter (most reliable for sessionless)
+if (isset($_GET["uid"]) && !empty($_GET["uid"])) {
+  $userid = $_GET["uid"]; // GET from URL in EntityExportList function in supports.php
+}
+// Try to get from POST parameter (form submissions)
+elseif (isset($_POST["uid"]) && !empty($_POST["uid"])) {
+  $userid = $_POST["uid"];
+}
+elseif (isset($_POST["huid"]) && !empty($_POST["huid"])) {
+  $userid = $_POST["huid"];
+}
+// Try to get from cookies if set
+elseif (isset($_COOKIE["ephyto_uid"]) && !empty($_COOKIE["ephyto_uid"])) {
+  $userid = $_COOKIE["ephyto_uid"];
+}
+// Last resort: try to get from HTTP_REFERER if coming from other pages
+elseif (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
+  $referer = $_SERVER['HTTP_REFERER'];
+  if (preg_match('/[?&]uid=([^&]+)/', $referer, $matches)) {
+    $userid = urldecode($matches[1]);
+    
+  }
+}
+// Authentication check
+if(empty($userid)){
+    // If user ID is not set, redirect to login page
+    echo "<script>alert('Dynamic Authentication Required. Please log in to access this page.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+}
+// Language handling for UI (mirror main.php)
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @session_start();
+}
+$lang = 'en';
+if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
+  $lang = $_SESSION['lang'];
+} elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
+  $lang = $_GET['lang'];
+}
 
-// connection to database
- require("php-bin/connection.php");
- require("php-bin/supports.php");
+// Persist selected language in session
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @session_start();
+}
+$_SESSION['lang'] = $lang;
 
+// Include the appropriate language file
+$langFile = "php-bin/lang_" . $lang . ".php";
+if (file_exists($langFile)) {
+    $translations = include($langFile);
+} else {
+    // Fallback minimal translations to avoid notices
+    $translations = array(
+        'dashboard' => 'Dashboard',
+        'Dashboard' => 'Dashboard',
+        'Application' => 'Application',
+        'Export entity' => 'Export entity',
+        'Import entity' => 'Import entity',
+        'Inspection' => 'Inspection',
+        'Certificate' => 'Certificate',
+        'Master data' => 'Master data'
+    );
+}
+
+// Build language switch URLs preserving current query parameters
+$__lang_params = $_GET;
+if (!isset($__lang_params['uid']) || empty($__lang_params['uid'])) {
+    $__lang_params['uid'] = isset($userid) ? $userid : '';
+}
+$__lang_params_la = $__lang_params; $__lang_params_la['lang'] = 'la';
+$__lang_params_en = $__lang_params; $__lang_params_en['lang'] = 'en';
+$langHrefLa = '?' . http_build_query($__lang_params_la);
+$langHrefEn = '?' . http_build_query($__lang_params_en);
+// Link back to main.php preserving uid and current lang
+$mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => $lang];
+$mainHref = 'main.php?' . http_build_query($mainParams);
+// User data
+$loginuser = Userdata($userid, $con)['name']; // User name
+$guid = Userdata($userid, $con)['group_id'];
+$position = Userdata($userid, $con)['position'];       
+// Get and store user profile image
+$uprofile = Profiledata($userid, $con);
+if (!$uprofile) {
+  // Initialize profile if it doesn't exist
+   InitializeProfile($userid, $con);
+    $uprofile = Profiledata($userid, $con);
+}
+if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+   $uimage = $uprofile['imgfilepath'];
+}
 // AJAX endpoint for importer name search
 if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     // Debug: Log the request
-    error_log("Search request received for term: " . $_POST['term']);
-    
+    error_log("Search request received for term: " . $_POST['term']);   
     $searchTerm = pg_escape_string($con, $_POST['term']);
-    
     $sql = "SELECT title, address FROM tbentity_import 
             WHERE title ILIKE '%$searchTerm%' 
             ORDER BY title ASC 
-            LIMIT 10";
-    
+            LIMIT 10";    
     // Debug: Log the SQL query
-    error_log("SQL Query: " . $sql);
-    
+    error_log("SQL Query: " . $sql); 
     $result = pg_query($con, $sql);
-    $importers = array();
-    
+    $importers = array();  
     if ($result && pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
             $importers[] = array(
@@ -54,8 +409,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 'full_text' => $row['title'] . ($row['address'] ? ', ' . $row['address'] : '')
             );
         }
-    }
-    
+    } 
     // Debug: Log the response
     error_log("Search results count: " . count($importers));
     
@@ -65,31 +419,24 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
 }
 
 ?>
-
 <!DOCTYPE html>
-<html lang="<?php echo ($_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
-
+<html lang="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
   <title>Transaction</title>
   <meta content="" name="description">
-  <meta content="" name="keywords">
-  
+  <meta content="" name="keywords"> 
   <!-- Ajax PK -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="jspk/users-validate.js"></script>  
   <script src="jspk/transaction-process.js"></script>
-
   <!-- Favicons -->
   <link href="assets/img/favicon.png" rel="icon">
   <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-
   <!-- Google Fonts -->
   <link href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
-
   <!-- Vendor CSS Files -->
   <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
@@ -98,17 +445,15 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
   <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
-
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
   <link href="stylecss/lang.css" rel="stylesheet">
-
   <!-- Autocomplete CSS -->
   <style>
-    .autocomplete-suggestions {
+     .autocomplete-suggestions {
       position: absolute;
       top: 100%;
       left: 0;
@@ -123,35 +468,29 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       display: none;
     }
-    
     .autocomplete-suggestion {
       padding: 8px 12px;
       cursor: pointer;
       border-bottom: 1px solid #f0f0f0;
       font-size: 14px;
-    }
-    
+    } 
     .autocomplete-suggestion:hover,
     .autocomplete-suggestion.active {
       background-color: #f8f9fa;
-    }
-    
+    } 
     .autocomplete-suggestion:last-child {
       border-bottom: none;
     }
-    
     .suggestion-title {
       font-weight: 500;
       color: #333;
     }
-    
     .suggestion-address {
       font-size: 12px;
       color: #666;
       margin-top: 2px;
     }
   </style>
-
   <!-- =======================================================
   * Template Name: NiceAdmin
   * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
@@ -160,11 +499,10 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
   * License: https://bootstrapmade.com/license/
   ======================================================== -->
 </head>
- 
 <body class="<?php echo ($_SESSION['lang'] == 'la') ? 'lang-lao' : 'lang-en'; ?>">
+  <!-- LANG DEBUG: lang=<?php echo htmlspecialchars($lang); ?> session=<?php echo isset($_SESSION['lang'])?htmlspecialchars($_SESSION['lang']):'none'; ?> hrefLa=<?php echo htmlspecialchars($langHrefLa); ?> hrefEn=<?php echo htmlspecialchars($langHrefEn); ?> -->
   <!-- ======= Header ======= -->
   <header id="header" class="header fixed-top d-flex align-items-center">
-
     <div class="d-flex align-items-center justify-content-between">
       <a href="index.html" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
@@ -172,7 +510,6 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
-    
     <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
@@ -184,6 +521,31 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
 
+        <!-- Language Switcher -->
+        <!--
+        <li class="nav-item dropdown">
+          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+            <img src="assets/img/flags/<?php echo ($lang === 'en') ? 'english' : 'lao'; ?>.png" alt="<?php echo ($lang === 'en') ? 'English' : 'ລາວ'; ?>" style="width: 24px; height: 16px;">
+            <span style="font-size: 14px;"><?php echo ($lang === 'en') ? 'English' : 'ລາວ'; ?></span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="<?php echo htmlspecialchars($langHrefLa); ?>">
+                <img src="assets/img/flags/lao.png" alt="Lao" style="width: 24px; height: 16px; margin-right: 10px;">
+                <span>ລາວ</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="<?php echo htmlspecialchars($langHrefEn); ?>">
+                <img src="assets/img/flags/english.png" alt="English" style="width: 24px; height: 16px; margin-right: 10px;">
+                <span>English</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+    -->
+    <!-- End Language Switcher -->
+
         <li class="nav-item d-block d-lg-none">
           <a class="nav-link nav-icon search-bar-toggle " href="#">
             <i class="bi bi-search"></i>
@@ -193,14 +555,14 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         <li class="nav-item dropdown pe-3">
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="<?php echo $_SESSION['image']; ?>" alt="Profile" class="rounded-circle">
-            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $_SESSION['username']; ?></span>
+            <img src="<?php echo $uimage; ?>" alt="Profile" class="rounded-circle">
+            <span class="d-none d-md-block dropdown-toggle ps-2"><?php echo $loginuser; ?></span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
-              <h6><?php echo $_SESSION['username']; ?></h6>
-              <span><?php echo $_SESSION['position']; ?></span>
+              <h6><?php echo $loginuser; ?></h6>
+              <span><?php echo $position; ?></span>
             </li>
             <li>
               <hr class="dropdown-divider">
@@ -248,78 +610,54 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
 
       </ul>
     </nav><!-- End Icons Navigation -->
-
   </header><!-- End Header -->
-
   <!-- ======= Sidebar ======= -->
   <aside id="sidebar" class="sidebar">
 
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php">
+        <a class="nav-link collapsed" href="<?php echo htmlspecialchars($mainHref); ?>">
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
          <?php
          // $activeParts = ['application', 'application_list', 'inspection']; // Add all relevant parts here
          // $isPartActive = (isset($_GET['part']) && in_array($_GET['part'], $activeParts));
          ?>
-     <!--    
-      <li class="nav-item">
-        <a class="nav-link <?php echo $isPartActive ? '' : 'collapsed'; ?>" data-bs-target="#transaction-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-folder"></i>
-          <span>Transaction</span><i class="bi bi-chevron-down ms-auto"></i>
-        </a>
-        <ul id="transaction-nav" class="nav-content collapse <?php echo $isPartActive ? 'show' : ''; ?>" data-bs-parent="#sidebar-nav">
-          <li>
-            <a href="transaction.php?part=application" class="<?php echo isset($_GET['part']) && ($_GET['part'] === 'application' || $_GET['part'] === 'exportentity_list') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Application</span>
-            </a>
-          </li>
-          <li>
-            <a href="transaction.php?part=inspection" class="<?php echo isset($_GET['part']) && $_GET['part'] === 'inspection' ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Inspection's results</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-      -->
-      <!-- End Transaction Nav -->
 
       <li class="nav-item">
-        <a class="nav-link" href="entity.php?entity=export" >
+        <a class="nav-link" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
 
        <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
-         
-          <li>
-            <a href="masterdata.php?part=product">
-              <i class="bi bi-circle"></i><span>Product</span>
+           <li>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Approvers</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Conveyance</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Countries</span>
             </a>
           </li>
@@ -329,65 +667,65 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
-          <li>
-            <a href="masterdata.php?part=modules">
-              <i class="bi bi-circle"></i><span>Module List</span>
+           <li>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
+              <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces">
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Provinces</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span>Treatment Method</span>
             </a>
           </li>
         </ul>
       </li><!-- End Master Data Nav -->     
 
-      <li class="nav-heading">Users' Management</li>
+      <li class="nav-heading"><?php echo isset($translations["USERS MANAGEMENT"]) ? $translations["USERS MANAGEMENT"] : "Users Management"; ?></li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i>
-          <span>Users</span>
+          <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
@@ -404,18 +742,18 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
      <section class="section">
       <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Application</h1>
+        <h1><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-            <li class="breadcrumb-item">Tables</li>
-            <li class="breadcrumb-item">Application</li>
+            <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+            <li class="breadcrumb-item"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></li>
           </ol>
           </nav>
         </div>
         <div>
           <a href="entity.php?frm=newEntity_export" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> Add New Application
+            <i class="bi bi-plus-circle"></i> Add New Export Entity
           </a>
         </div>
       </div><!-- End Page Title - Users list -->
@@ -423,8 +761,8 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Application</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Application</p>
+              <h5 class="card-title"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></h5>
+              <p>ePhytosanitary by Department of Agriculture, MAF - Export entity</p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
@@ -446,7 +784,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   </tr>
                 </thead>
                 <tbody>
-                  <?php EntityExportList($con); ?>
+                  <?php EntityExportList($con, $guid, $userid); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -458,16 +796,21 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     </section>
     <?php
     }   // End of Export Entity/
-  ?>
-  
+  ?> 
    <!-- Application form  -->
    <?php
    // EXPORT ENTITY/COMPANY-FORM  *******************
      if (isset($_GET['part']) && $_GET['part'] === 'application') {
+          // Initialize variables with default values
+          $reg_no = '';
+          $phone = '';
+          $contact_person = '';
+          $address = '';
+          
           if( isset($_GET['id']) && !empty($_GET['id'])) { // ExporterID -link <a> from Export entity form
             //$_GET['id'] is exporter ID
             $uid = $userid;  // from $_SESSION
-            $guidLogin = $guid; // from $_SESSION
+           // $guidLogin = $guid; // from $_SESSION
           
             // Application Number will generated in FUNCTION: ApplicationNo
             // Application ID (id - auto_increment ($app_id)) along with USER'S ID, are INSERTED INTO tbapplication
@@ -480,8 +823,12 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           //if(isset($_GET['id']) && !empty($_GET['id'])) {
             $exporter_id = $_GET['id'];
             $appdate = date('Y-m-d');  // initial application date
+            
+            // Ensure guid is properly formatted as integer
+            $guid_value = is_numeric($guid) ? $guid : 0;
+            
             // UPDATE tbapplication with exporter ID
-            $sqlupdate = "UPDATE tbapplication SET company_id = '$exporter_id', application_no = '$app_no', application_date = '$appdate', guid = '$guidLogin' WHERE id = '$app_id'";
+            $sqlupdate = "UPDATE tbapplication SET company_id = '$exporter_id', application_no = '$app_no', application_date = '$appdate', guid = '$guid_value' WHERE id = '$app_id'";
             pg_query($con, $sqlupdate) or die(pg_last_error($con));
 
             $app_info = ApplicantInfo_Export($exporter_id, $con);
@@ -565,14 +912,14 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Application</h1>
+      <h1><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></h1>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-          <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
-          <li class="breadcrumb-item active">Application</li>
+          <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars('transaction.php?part=exportentity_list&uid='.$userid.'&lang='.$lang); ?>"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></a></li>
+          <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars('application.php?uid='.$userid.'&lang='.$lang); ?>"><?php echo isset($translations['Application list']) ? $translations['Application list'] : 'Application list'; ?></a></li>
         </ol>
         </div>
-         <a href="main.php?btn=cancelApp&appid=<?php echo isset($app_id) ? $app_id : ''; ?>" class="btn btn-secondary btn-sm ms-3<?php echo (isset($btnSubmit) && $btnSubmit === 'update') ? ' disabled' : ''; ?>"
+         <a href="main.php?btn=cancelApp&appid=<?php echo isset($app_id) ? $app_id : ''; ?>&uid=<?php echo $userid; ?>" class="btn btn-secondary btn-sm ms-3<?php echo (isset($btnSubmit) && $btnSubmit === 'update') ? ' disabled' : ''; ?>"
    <?php if (isset($btnSubmit) && $btnSubmit === 'update') echo 'tabindex="-1" aria-disabled="true" onclick="return false;"'; ?>>Cancel</a>
       </nav>
     </div><!-- End Application -->
@@ -585,9 +932,9 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             <div class="card-body">
               <h5 class="card-title">Application Form</h5>
                <!-- FORM: Entity/Company Form -->
-              <form action="main.php" method="POST">
+              <form action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
                 <!-- Hidden input to store application ID -->
-                <input type="hidden" name="app_id" value="<?php             
+                <input type="hidden" name="app_id" id="appid" value="<?php             
                                           if (!empty($app_id)) {
                                               echo $app_id;
                                           } elseif (isset($_GET['appid_edit']) && is_numeric($_GET['appid_edit']) && $_GET['appid_edit'] > 0) {
@@ -596,6 +943,8 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                                               echo '';
                                           } 
                                           ?>">
+                <!-- Hidden input to preserve userid for dynamic authentication. $userid=$_GET['uid'] from EntityExportList function in supports.php -->
+                <input type="hidden" name="huid" value="<?php echo $userid; ?>">
                 <div class="row mb-3 align-items-center">
                   <!-- Application No -->
                   <label class="col-sm-2 col-form-label">Application No</label>
@@ -605,12 +954,12 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   <!-- Application Date -->
                   <label class="col-sm-1 col-form-label">Date</label>
                   <div class="col-sm-3">
-                    <input type="text" name="app_date" class="form-control" value="<?php echo date('d/m/Y', strtotime($date)); ?>" readonly>
+                    <input type="text" name="app_date" id="app_date" class="form-control" value="<?php echo date('d/m/Y', strtotime($date)); ?>" readonly>
                   </div>
                   <!-- Reg No -->
                   <label class="col-sm-1 col-form-label">Reg No</label>
                   <div class="col-sm-2">
-                    <input type="text" name="reg_no" class="form-control" value="<?php echo isset($reg_no) ? $reg_no : ''; ?>">
+                    <input type="text" name="reg_no" id="reg_no" class="form-control" value="<?php echo isset($reg_no) ? $reg_no : ''; ?>">
                   </div>
                 </div>
                 
@@ -624,21 +973,21 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 <div class="row mb-3">
                   <label for="inputPassword" class="col-sm-2 col-form-label">Address</label>
                   <div class="col-sm-10">
-                    <textarea class="form-control" name="address" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
+                    <textarea class="form-control" name="address" id="address" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
                 </div>
                  <!-- Phone -->
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">Phone</label>
                   <div class="col-sm-4">
-                    <input type="text" name="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
+                    <input type="text" name="phone" id="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
                   </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Export entry point</label>
                   <div class="col-sm-10">
-                    <select class="form-select" name="entry_point" aria-label="Default select example">
+                    <select class="form-select" name="entry_point" id="entry_point" aria-label="Default select example">
                       <option selected></option>
                       <?php SelectLocation($locid, $con); ?>
                     </select>
@@ -648,14 +997,14 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">Import country</label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="import_country" aria-label="Default select example">
+                    <select class="form-select" name="import_country" id="import_country" aria-label="Default select example">
                       <option selected></option>
                       <?php SelectCountry($countryid, $con); ?>
                     </select>
                   </div>
                   <label class="col-sm-2 col-form-label">Import entry point</label>
                   <div class="col-sm-4">
-  <textarea class="form-control" name="import_point" rows="2" placeholder="Enter import entry point"><?php echo isset($import_point) ? $import_point : ''; ?></textarea>
+  <textarea class="form-control" name="import_point" id="import_point" rows="2" placeholder="Enter import entry point"><?php echo isset($import_point) ? $import_point : ''; ?></textarea>
 </div>
                 </div>
 
@@ -663,21 +1012,21 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   <label class="col-sm-2 col-form-label">Export certificate</label>
                   <div class="col-sm-2 d-flex align-items-center">
                     <input type="checkbox" name="export_certificate" id="export_certificate" value="1" <?php echo (isset($export_certificate) && $export_certificate) ? 'checked' : ''; ?>>
-                    <label for="export_certificate" class="ms-2 mb-0">Yes (<i class="bi bi-check-lg"></i>)</label>
+                    <label for="export_certificate" class="ms-2 mb-0">Yes</label>
                   </div>
                   <label class="col-sm-2 col-form-label">Transit certificate</label>
                   <div class="col-sm-2 d-flex align-items-center">
                     <input type="checkbox" name="transit_certificate" id="transit_certificate" value="1" <?php echo (isset($transit_certificate) && $transit_certificate) ? 'checked' : ''; ?>>
-                    <label for="transit_certificate" class="ms-2 mb-0">Yes (<i class="bi bi-check-lg"></i>)</label>
+                    <label for="transit_certificate" class="ms-2 mb-0">Yes</label>
                   </div>
                 </div>
 
  
                 <div class="row mb-3">
                    <label class="col-sm-2 col-form-label">Multiple commodities</label>
-                  <div class="col-sm-2 d-flex align-items-center">
+                  <div class="col-sm-6 d-flex align-items-center">
                     <input type="checkbox" name="multiple_commodities" id="multiple_commodities" value="1" <?php echo (isset($multiple_commodities) && $multiple_commodities) ? 'checked' : ''; ?>>
-                    <label for="multiple_commodities" class="ms-2 mb-0">Yes</label>
+                    <label for="multiple_commodities" class="ms-2 mb-0">Yes</label><span id="span_multiple" class="ms-3 text-muted">, Please go to <a href="application.php?part=multiple_products&appid=<?php echo isset($_GET['appid_edit']) ? $_GET['appid_edit'] : $app_id; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>" id="link_multiple_details">details</a></span>
                   </div>
                 </div>
                 
@@ -685,11 +1034,13 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             <label class="col-sm-2 col-form-label">Print supporting document</label>
             <div class="col-sm-2 d-flex align-items-center">
               <input type="checkbox" name="support_document" id="support_document" value="1" <?php echo (isset($support_document) && $support_document) ? 'checked' : ''; ?>>
+              <!--
               <a href="#" data-bs-toggle="modal" data-bs-target="#spdocModal">
                   <label for="support_document" class="ms-2 mb-0" style="cursor:pointer;">
                     <i class="bi bi-printer"></i>
                   </label>
               </a>
+               -->
             </div>
           </div>
           <div class="row mb-3 align-items-center">
@@ -972,43 +1323,6 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
   </div>
 </div>
 
-<!-- Modal for Supporting Document -->
-<div class="modal fade" id="spdocModal" tabindex="-1" aria-labelledby="spdocModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="spdocModalLabel">Supporting Document Preview</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div id="spdocModalBody" class="modal-body">
-        <!-- Present data in a word-like document style -->
-        <div class="border p-3 bg-white" style="min-height:300px;">
-          <a href="#" onclick="printSupportDoc('spdocModalBody'); return false;" class="position-absolute" style="top: 10px; right: 15px; color: #333;" title="Print">
-            <i class="bi bi-printer" style="font-size: 1.5rem;"></i>
-          </a>
-           <div class="text-center mb-3">
-            <img src="assets/img/national_logo.jpg" alt="National Logo" style="max-height:80px;">
-          </div>
-          <h6 class="text-center" style="white-space: pre-line;"><b>LAO PEOPLE'S DEMOCRATIC REPUBLIC</b>
-            PEACE INDEPENDENCE DEMOCRACY UNITY PROSPERITY
-            MINISTRY OF AGRICULTURE AND FORESTRY
-            DEPARTMENT OF AGRICULTURE
-            LIST OF CONSIGNMENT
-            FOR PHYTOSANITARY CERTIFICATE No: <?php echo isset($certificate_no) ? $certificate_no : ''; ?>
-          </h6>
-          <p><strong>Applicant Name:</strong> <?php echo isset($contact_person) ? $contact_person : ''; ?></p>
-          <p><strong>Address:</strong> <?php echo isset($address) ? $address : ''; ?></p>
-          <p><strong>Phone:</strong> <?php echo isset($phone) ? $phone : ''; ?></p>
-          <p><strong>Commodity:</strong> <?php echo isset($commodities) ? $commodities : ''; ?></p>
-          <!-- Add more fields as needed -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal form for searching for export entity -->
-
 <div class="modal fade" id="exporterModal" tabindex="-1" aria-labelledby="exporterModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
@@ -1040,7 +1354,8 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 $did = $row['district'];
                 $distname = Districtname($did, $con);
 
-                $info = htmlspecialchars($row['title'] . "\n" . $row['address'] . "\n" . $row['phone'] . "\n" . $proname . ", " . $distname . ", Laos");
+                $info = $row['title'] . "\n" . $row['address'] . "\n" . $row['phone'] . "\n" . $proname . ", " . $distname . ", Laos";
+                $info_escaped = str_replace(array("\n", "\r", '"', "'"), array("\\n", "", "&quot;", "&#039;"), $info);
                 echo "<tr>
                   <td>" . htmlspecialchars($row['title']) . "</td>
                   <td>" . htmlspecialchars($row['address']) . "</td>
@@ -1048,7 +1363,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   <td>" . htmlspecialchars($proname) . "</td>
                   <td>" . htmlspecialchars($distname) . "</td>
                   <td>
-                    <button type='button' class='btn btn-success btn-sm' onclick='selectExporter(`$info`)'>Add</button>
+                    <button type='button' class='btn btn-success btn-sm' onclick='selectExporter(\"" . $info_escaped . "\")'>Add</button>
                   </td>
                 </tr>";
               }
@@ -1154,16 +1469,6 @@ function selectExporter(info) {
 
   });
 
-  // Print supporting document: DIV id = spdocModalBody
-  function printSupportDoc(divId) {
-    var printContents = document.getElementById(divId).innerHTML;
-    var originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    location.reload(); // Optional: reload to restore JS and events
-  }
-
 </script>
   <?php
     }  // End of Export Entity Form - $_GET['part'] === 'application'
@@ -1176,7 +1481,7 @@ function selectExporter(info) {
       <h1>Import Entity/Company</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php">Home</a></li>
+          <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
           <li class="breadcrumb-item">Data input form</li>
           <li class="breadcrumb-item active">Import Entity/Company</li>
         </ol>
@@ -1217,11 +1522,74 @@ function selectExporter(info) {
      <?php
       if (isset($_GET['part']) && $_GET['part'] === 'inspection') { // Open form -Get link from main.php - dashboard
         // Code for inspection part
-            if($_GET['inspect'] == 'Add'){
+        $appid_inspection = 0;
+
+        if(isset($_GET['appid']) && $_GET['appid'] != ''){
+           $appid_inspection = (int)$_GET['appid'];
+        } else if(isset($_POST['happid']) && $_POST['happid'] != ''){
+            $appid_inspection = (int)$_POST['happid']; // Hidden input from form submission-pest inspection
+            // Process and save pest data here (add your save logic)
+              $appid_pest = (int)$_POST['happid'];
+              $pestid = (int)$_POST['hpestid'];
+              $pestdetected_id = isset($_POST['pestdetected_id']) ? (int)$_POST['pestdetected_id'] : 0;
+              $infestation_level = pg_escape_string($con, $_POST['infestation_level']);
+              $alive_status = pg_escape_string($con, $_POST['alive_status']);
+              $risk_category = pg_escape_string($con, $_POST['risk_category']);
+              $inspection_result = "";
+              if(isset($_POST['treatment'])){
+                $inspection_result = "treatment";
+              } else if(isset($_POST['return_original'])){
+                $inspection_result = "return_original";
+              } else if(isset($_POST['phytosanitary_requirements'])){
+                $inspection_result = "phytosanitary_requirements";
+              } else if(isset($_POST['other_conclusion'])){
+                $inspection_result = "other_conclusion";
+              }
+           // SAVE/ADD data on pest detected and continue
+            if(isset($_POST['save_continue_pest']) && $_POST['save_continue_pest'] == 'Save & Continue'){
+              $resultSave = PestDetectedSave($appid_pest, $pestid, $infestation_level, $alive_status, $risk_category, $inspection_result, $con);
+              if($resultSave){
+                echo "<script>alert('Pest data saved successfully!');</script>";
+                PestDetectedInspectionUpdate($appid_pest, $con);
+              }
+              echo "<script>window.location.href = 'transaction.php?part=inspection&inspect=View/Edit&appid=" . $appid_inspection . "&uid=" . $userid . "';</script>";
+              exit();
+              // UPDATE data on pest detected and continue
+            } elseif(isset($_POST['save_continue_pest']) && $_POST['save_continue_pest'] == 'Update & Continue') {
+              
+              $resultUpdate = PestDetectedUpdate($pestdetected_id, $pestid, $infestation_level, $alive_status, $risk_category, $inspection_result, $con);
+              if($resultUpdate){
+                echo "<script>alert('Pest data updated successfully!');</script>";
+              }
+              echo "<script>window.location.href = 'transaction.php?part=inspection&inspect=View/Edit&appid=" . $appid_inspection . "&uid=" . $userid . "';</script>";
+              exit();
+            } // End of save and continue and update pest
+
+            // CANCEL and return to inspection form
+             if(isset($_POST['cancel_continue_pest'])){
+              //echo "<script>alert('Returning to inspection form.');</script>";
+              echo "<script>window.location.href = 'transaction.php?part=inspection&inspect=View/Edit&appid=" . $appid_inspection . "&uid=" . $userid . "';</script>";
+              // Do nothing, just return to inspection form
+              exit();
+            }     // End of cancel
+        } 
+
+        // Initialize pest detection status based on database check
+       /*
+          $pest_detected_check_sql = "SELECT COUNT(*) as pest_count FROM tbpest_detected WHERE application_id = '$appid_inspection'";
+          $pest_detected_result = pg_query($con, $pest_detected_check_sql);
+          if($pest_detected_result && pg_fetch_assoc($pest_detected_result)['pest_count'] > 0){
+            $pest_detected_checked = true;
+          } else {
+            $pest_detected_checked = false;
+          }
+        */
+        // End of processing pest data
+
+        if($_GET['inspect'] == 'Add'){
              // echo "<script>alert('Inspection - Add.');</script>";
                 // Button state
-                $btnSubmit = 'submit';
-                $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+                $btnSubmit = 'submit';   
                 $approws = ApplicationInfo($appid_inspection, $con);
                 if ($approws) {
                   $appno_inspection = $approws['application_no']; // Application No, not ID
@@ -1229,8 +1597,33 @@ function selectExporter(info) {
                   $entity_rows = EntityExportInfo($entity_id, $con);
                   $entityexport_name = $entity_rows['title'];
                 }
+                
+                // Initialize all inspection form fields with default empty values for new inspection
+                $inspection_date = '';
+                $sampleno = '';
+                $sample_volume = '';
+                $unitid = '';
+                $sample_collectedby = '';
+                $sample_inspected = '';
+                $certificate_fee = '';
+                $receipt_no = '';
+                $lot_no = '';
+                $inspection_method = '';
+                $detected_pest = 0;
+                $treatment_ability = 0;
+                $lab_analysis = 0;
+                $treatment_method = '';
+                $treatment_date = '';
+                $chemical_used = '';
+                $chemical_fortreat = '';
+                $duration_temp = '';
+                $concentration = '';
+                $sample_inspectedby = '';
+                $additional_info = '';
+                $reason = '';
+                $post_details = '';
             } elseif ($_GET['inspect'] == 'View/Edit') {
-                $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
+               // $appid_inspection = isset($_GET['appid']) ? (int)$_GET['appid'] : 0; // Used the same variable from above
                 $insprows = InspectionInfo($appid_inspection, $con);
                 if ($insprows) {
                   // Button state
@@ -1263,13 +1656,14 @@ function selectExporter(info) {
                   $additional_info = $insprows['additional_info'];
                   $reason = $insprows['treatment_reason'];
                   $post_details = $insprows['post_treatment_details'];
-                
-            }
+                } else {
+                  // No inspection data found, default to submit
+                  $btnSubmit = 'submit';
+                }
         } else {
             // Invalid action
             echo "<div class='alert alert-danger'>Invalid action specified.</div>";
             exit;
-
         }
       ?>
      <div class="pagetitle d-flex justify-content-between align-items-center">
@@ -1277,8 +1671,8 @@ function selectExporter(info) {
         <h1>Inspection</h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
+            <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list&uid=<?php echo $userid; ?>">Export entity</a></li>
             <li class="breadcrumb-item active">Inspection</li>
           </ol>
         </nav>
@@ -1293,9 +1687,11 @@ function selectExporter(info) {
         <div class="card-body">
           <h5 class="card-title">Inspection Form</h5>
           <!-- FORM: Inspection Form -->
-          <form id="inspectionFormID" action="main.php" method="POST">
+            <form id="inspectionFormID" action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
             <!-- Hidden input to store application ID -->
-            <input type="hidden" name="appid" value="<?php echo $appid_inspection; ?>">
+            <input type="hidden" name="appid" id="appid" value="<?php echo $appid_inspection; ?>">
+            <!-- Hidden input to preserve userid for dynamic authentication -->
+            <input type="hidden" name="uid" id="uid" value="<?php echo $userid; ?>">
              <div class="row mb-3 align-items-center">
                   <!-- Application No -->
                   <label class="col-sm-2 col-form-label">Application No</label>
@@ -1356,7 +1752,7 @@ function selectExporter(info) {
                   <!-- Receipt No -->
                   <label class="col-sm-2 col-form-label">Receipt No</label>
                   <div class="col-sm-4">
-                    <input type="text" name="receipt_no" class="form-control" value="<?php echo isset($receipt_no) ? $receipt_no : ''; ?>" >
+                    <input type="text" name="receipt_no" id="receipt_no" class="form-control" value="<?php echo isset($receipt_no) ? $receipt_no : ''; ?>" >
                   </div>  
               </div>
 
@@ -1371,7 +1767,7 @@ function selectExporter(info) {
               <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Inspection Method</label>
                   <div class="col-sm-10">
-                    <select class="form-select" name="inspection_method" aria-label="Default select example">
+                    <select class="form-select" name="inspection_method" id="inspection_method" aria-label="Default select example">
                       <option selected></option>
                       <?php SelectInspectionMethod($inspection_method, $con); ?>
                     </select>
@@ -1382,8 +1778,8 @@ function selectExporter(info) {
                 <label class="col-sm-2 col-form-label">Inspection Findings</label>
                 <div class="col-sm-10">
                   <div class="form-check mb-2">
-                    <input class="form-check-input border border-success" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>>
-                    <label class="form-check-label" for="detected_pest">&nbsp;Detected pest</label>
+                    <input class="form-check-input border border-success" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>> <!-- onclick="pest_inspected();" -->
+                     <label class="form-check-label" for="detected_pest">&nbsp;Detected pest,</label>&nbsp;<span id="span_pest">Please go to&nbsp;</span>&nbsp;&nbsp;<a id="link_pest_details" href="inspection.php?part=pest_detected&appid=<?php echo isset($_GET['appid']) ? $_GET['appid'] : ''; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>" class="text-decoration-none"><i class='bi bi-box-arrow-right'></i>&nbsp;Details</a>
                   </div>
                   <div class="form-check mb-2">
                     <input class="form-check-input border border-warning" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
@@ -1396,7 +1792,13 @@ function selectExporter(info) {
                 </div>
               </div>
 
-               <div class="row mb-3 align-items-center">
+          <div class="card mb-4" id="details_treatment"> <!-- details of treatment -->
+              <div class="card-header">
+                <strong>Details of treatment</strong>
+              </div>
+
+              <div class="card-body">
+                <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label">Treatment Method</label>
                   <div class="col-sm-10">
                     <select class="form-select" name="treatment_method" aria-label="Default select example">
@@ -1404,51 +1806,51 @@ function selectExporter(info) {
                       <?php SelectTreatmentMethod($treatment_method, $con); ?>
                     </select>
                   </div>
-              </div> 
+                </div> 
               
-              <div class="row mb-3">
-                <label for="treatment_date" class="col-sm-2 col-form-label">Treatment Date</label>
-                <div class="col-sm-4">
-                  <input type="date" class="form-control" name="treatment_date" id="treatment_date"
-                    value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>">
-                  <?php if (!empty($treatment_date)) { ?>
-                    <small class="text-muted">Selected: <?php echo date('d/m/Y', strtotime($treatment_date)); ?></small>
-                  <?php } ?>
-                </div>
-            </div>
+                <div class="row mb-3 align-items-center">
+                 <label for="treatment_date" class="col-sm-2 col-form-label">Treatment Date</label>
+                  <div class="col-sm-4">
+                    <input type="date" class="form-control" name="treatment_date" id="treatment_date"
+                      value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>">
+                    <?php if (!empty($treatment_date)) { ?>
+                      <small class="text-muted">Selected: <?php echo date('d/m/Y', strtotime($treatment_date)); ?></small>
+                    <?php } ?>
+                  </div>
 
-          <div class="card mb-4">
-          <div class="card-header">
-            <strong>Details of treatment</strong>
-          </div>
-          <div class="card-body">
+                    <label class="col-sm-2 col-form-label">Treated by</label>
+                  <div class="col-sm-4">
+                    <input type="text" class="form-control" name="chemical_fortreat" id="chemical_fortreat" value="<?php echo isset($chemical_fortreat) ? $chemical_fortreat : ''; ?>">
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                   <label class="col-sm-2 col-form-label">Chemical Used</label>
+                  <div class="col-sm-4">
+                    <input type="text" class="form-control" name="chemical_used" id="chemical_used" value="<?php echo isset($chemical_used) ? $chemical_used : ''; ?>">
+                  </div>
+                </div>
+
             <div class="row mb-3 align-items-center">
-          <label class="col-sm-2 col-form-label">Chemical Used</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" name="chemical_used" id="chemical_used" value="<?php echo isset($chemical_used) ? $chemical_used : ''; ?>">
-          </div>
-          <label class="col-sm-2 col-form-label">Treated by</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" name="chemical_fortreat" id="chemical_fortreat" value="<?php echo isset($chemical_fortreat) ? $chemical_fortreat : ''; ?>">
-          </div>
-        </div>
-        <div class="row mb-3 align-items-center">
-          <label class="col-sm-2 col-form-label">Duration - Temperature</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" name="duration_temp" id="duration_temp" placeholder="e.g., 30 minutes - 50°C" value="<?php echo isset($duration_temp) ? $duration_temp : ''; ?>">
-          </div>
-          <label class="col-sm-2 col-form-label">Concentration</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" name="concentration" id="concentration" placeholder="e.g., 0.5%" value="<?php echo isset($concentration) ? $concentration : ''; ?>">
-          </div>
-        </div>
-        <div class="row mb-3 align-items-center">
-          <label class="col-sm-2 col-form-label">Sample Inspected by</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" name="sample_inspectedby" id="sample_inspectedby" value="<?php echo isset($sample_inspectedby) ? $sample_inspectedby : ''; ?>">
-          </div>
-        </div>
+              <label class="col-sm-2 col-form-label">Duration - Temperature</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="duration_temp" id="duration_temp" placeholder="e.g., 30 minutes - 50°C" value="<?php echo isset($duration_temp) ? $duration_temp : ''; ?>">
+              </div>
+              <label class="col-sm-2 col-form-label">Concentration</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="concentration" id="concentration" placeholder="e.g., 0.5%" value="<?php echo isset($concentration) ? $concentration : ''; ?>">
+              </div>
+            </div>
             <div class="row mb-3 align-items-center">
+              <label class="col-sm-2 col-form-label">Sample Inspected by</label>
+              <div class="col-sm-4">
+                <input type="text" class="form-control" name="sample_inspectedby" id="sample_inspectedby" value="<?php echo isset($sample_inspectedby) ? $sample_inspectedby : ''; ?>">
+              </div>
+            </div>   
+          </div> 
+        </div> <!-- End of details of treatment -->
+
+             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Additional information</label>
               <div class="col-sm-10">
                 <input type="text" class="form-control" name="additional_info" id="additional_info" placeholder="Enter additional information" value="<?php echo isset($additional_info) ? $additional_info : ''; ?>">
@@ -1466,14 +1868,13 @@ function selectExporter(info) {
               <textarea class="form-control" name="post_details" id="post_details" rows="3" placeholder="Enter post treatment details"><?php echo isset($post_details) ? htmlspecialchars($post_details) : ''; ?></textarea>
             </div>
           </div>
-        </div> <!-- details of treatment -->
-        </div>
+
           <div class="row mb-3">
             <div class="col-sm-10 offset-sm-2 d-flex gap-2">
               <button type="submit" name="btnSubmitInspection" value="<?php echo $btnSubmit === 'update' ? 'update' : 'submit'; ?>" class="btn btn-success">
                 <i class="bi bi-save"></i><?php echo $btnSubmit === 'update' ? ' Update' : ' Submit'; ?>
               </button>
-              <a href="main.php" class="btn btn-secondary">
+              <a href="<?php echo htmlspecialchars($mainHref); ?>" class="btn btn-secondary">
                 <i class="bi bi-x-circle"></i> Cancel
               </a>
             </div>
@@ -1580,12 +1981,12 @@ function selectExporter(info) {
  ?>
   <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Certificate</h1>
+        <h1><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php">Home</a></li>
-            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list">Export entity</a></li>
-            <li class="breadcrumb-item active">Certificate</li>
+            <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars('transaction.php?part=exportentity_list&uid='.$userid.'&lang='.$lang); ?>"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></a></li>
+            <li class="breadcrumb-item active"><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></li>
           </ol>
         </nav>
       </div>
@@ -1596,10 +1997,13 @@ function selectExporter(info) {
       <div class="card">
         <div class="card-body">
           <h5 class="card-title">Certificate Form</h5>
-          <form id="certificateFormID" action="main.php" method="POST">
+          <form id="certificateFormID" action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
             <!-- HIDDEN INPUTS -->
             <input type="hidden" name="appid_certificate" value="<?php echo $appid_certificate; ?>">
             <input type="hidden" name="certificate_id" value="<?php echo isset($certificate_id) ? $certificate_id : ''; ?>">
+            <input type="hidden" name="importer_id" id="importer_id" value="<?php echo isset($app_importerid) ? $app_importerid : ''; ?>">
+            <!-- Hidden input to preserve userid for dynamic authentication -->
+            <input type="hidden" name="uid" value="<?php echo $userid; ?>">
 
             <div class="row mb-3 align-items-center">
               <label class="col-sm-2 col-form-label">Cerificate No</label>
@@ -1649,6 +2053,9 @@ function selectExporter(info) {
                   </div>
                   <label class="col-sm-2 col-form-label">Importer's name and address</label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-center position-relative">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal" class="me-2">
+                      <i class="bi bi-plus-circle" style="font-size: 1.2rem; color: #28a745;"></i>
+                    </a>
                     <input type="text" class="form-control" name="importer_name" id="importer_name" required 
                              value="<?php echo isset($importer_name) ? $importer_name : ''; ?>">
                   </div>
@@ -1664,18 +2071,7 @@ function selectExporter(info) {
                     <textarea name="importer_address" id="importer_address" class="form-control" rows="3"><?php echo isset($importer_address) ? $importer_address : ''; ?></textarea>
                   </div>
             </div>
-           <!-- 
-             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">&nbsp;</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" class="form-control" name="exporter_oncertificate" id="exporter_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($exporter_oncertificate) ? $exporter_oncertificate : ''; ?>" style="font-style: italic;">
-              </div>
-              <label class="col-sm-2 col-form-label">&nbsp;</label>
-              <div class="col-sm-4">
-                <input type="text" class="form-control" name="importer_oncertificate" id="importer_oncertificate" placeholder="Name on Certificate" required value="<?php echo isset($importer_oncertificate) ? $importer_oncertificate : ''; ?>" style="font-style: italic;">
-              </div>
-            </div>
-            -->
+         
              <div class="row mb-3 align-items-center"> 
               <label class="col-sm-2 col-form-label">Carbon Paper No</label>
               <div class="col-sm-4">
@@ -1689,7 +2085,7 @@ function selectExporter(info) {
                   <div class="col-sm-4">
                     <select class="form-select" name="approved_by" aria-label="Select approver">
                       <option value="">Select approver...</option>
-                      <?php CertificateApprovedBy($con, isset($approved_by) ? $approved_by : null); ?>
+                      <?php CertificateApprovedBy($con, $guid, isset($approved_by) ? $approved_by : null); ?>
                     </select>
                   </div>
               <label class="col-sm-2 col-form-label">Approver's position</label>
@@ -1731,11 +2127,18 @@ function selectExporter(info) {
                   <i class="bi bi-save"></i> <?php echo $btnSubmitCertificate === 'update' ? ' Update' : ' Submit'; ?>
                 </button>
                 <?php if ($btnSubmitCertificate === 'update'): ?>
-                <button type="button" class="btn btn-success" onclick="viewCertificate(<?php echo $appid_certificate; ?>)">
+                <button type="button" class="btn btn-success" onclick="viewCertificate(<?php echo $appid_certificate; ?>)" title="Open certificate in new window">
                   <i class="bi bi-file-earmark-text"></i> View Certificate
                 </button>
+                <button type="button" class="btn btn-info" onclick="viewCertificateNewFormat(<?php echo $appid_certificate; ?>)" title="View certificate in new format">
+                  <i class="bi bi-file-earmark-ruled"></i> New Format
+                </button>
+                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#spdocModal" title="View supporting document">
+                  <i class="bi bi-file-earmark-pdf"></i> Supporting Document
+                </button>
                 <?php endif; ?>
-                <a href="main.php" class="btn btn-secondary">
+                
+                <a href="<?php echo htmlspecialchars($mainHref); ?>" class="btn btn-secondary">
                   <i class="bi bi-x-circle"></i> Cancel
                 </a>
               </div>
@@ -1747,8 +2150,180 @@ function selectExporter(info) {
   </div>
   </section>
   <?php
+      // Certificate's information for supporting document
+      //$appid_certificate
+      $certinfo = CertificateInfo($appid_certificate, $con);
+      $dateissue = $certinfo ? $certinfo['date_issued'] : '';
+      $placeissue = $certinfo ? $certinfo['place_issued'] : '';
+      $approverid = $certinfo ? $certinfo['approved_by'] : ''; 
+      $Approver = ApproverInfo($approverid,$con);
+      $authorized_name = $Approver ? $Approver['name'] : '';
+      $authorized_surname = $Approver ? $Approver['surname'] : '';
+      $authorized_officer = trim($authorized_name . ' ' . $authorized_surname);
+      // Convert to uppercase (use mb_strtoupper if available for multibyte-safe conversion)
+      if (function_exists('mb_strtoupper')) {
+        $authorized_officer = mb_strtoupper($authorized_officer, 'UTF-8');
+      } else {
+        $authorized_officer = strtoupper($authorized_officer);
+      }
       } // End of if- Certificate
   ?>
+
+<!-- Modal form for Supporting Document -->
+<!-- Hide specific UI elements when printing -->
+<style>
+  @media print {
+    .no-print { display: none !important; }
+  }
+</style>
+<div class="modal fade" id="spdocModal" tabindex="-1" aria-labelledby="spdocModalLabel" aria-hidden="true" style="font-family: Arial, sans-serif;">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="spdocModalLabel">Supporting Document Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div id="spdocModalBody" class="modal-body">
+        <!-- Present data in a word-like document style -->
+        <div class="border p-3 bg-white" style="min-height:300px;">
+          <a href="#" onclick="printSupportDoc('spdocModalBody'); return false;" class="position-absolute no-print" style="top: 10px; right: 15px; color: #333;" title="Print">
+            <i class="bi bi-printer no-print" style="font-size: 1.5rem;"></i>
+          </a>
+           <div class="text-center mb-3">
+            <img src="assets/img/national_logo.jpg" alt="National Logo" style="max-height:80px;">
+          </div>
+          <h6 class="text-center" style="white-space: pre-line;"><b>LAO PEOPLE'S DEMOCRATIC REPUBLIC</b>
+            PEACE INDEPENDENCE DEMOCRACY UNITY PROSPERITY
+            MINISTRY OF AGRICULTURE AND ENVIRONMENT
+            DEPARTMENT OF AGRICULTURE<br>
+            <strong>LIST OF CONSIGNMENTS</strong>
+            FOR PHYTOSANITARY CERTIFICATE No: <?php echo isset($certificate_no) ? $certificate_no : ''; ?>
+          </h6>
+          <table class="table" style="border-top: 2px solid #000; border-bottom: 2px solid #000; border-left: none; border-right: none;">
+            <thead>
+              <tr>
+                <th style="border: none; vertical-align: middle;"><strong>COMMON NAME/VARIETY</strong></th>
+                <th style="border: none; vertical-align: middle;"><strong>BOTANICAL NAME</strong></th>
+                <th style="border: none; vertical-align: middle;"><strong>QUANTITY(WT/No)</strong></th>
+                <th style="border: none; vertical-align: middle;"><strong>NUMBER-PACKAGES</strong></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php 
+              if (isset($appid_certificate) && $appid_certificate > 0) {
+                  CertificateSupportingDocumentList($appid_certificate, $con); 
+              } else {
+                  echo '<tr><td colspan="4" class="text-center">No data available</td></tr>';
+              }
+              ?>
+            </tbody>
+          </table>
+          
+          <table style="width:100%; border:1px solid #000; border-collapse:collapse;">
+            <tr>
+              <td style="width:55%; padding:12px; vertical-align:top;">
+                <div>PLACE OF ISSUE</div>
+                <div style="margin-top:8px; font-weight:700;"><?php echo isset($place_of_issue) ? htmlspecialchars($place_of_issue) : 'DOA'; ?></div>
+              </td>
+              <td rowspan="2" style="width:45%; padding:12px; vertical-align:top; border-left:1px solid #000;">
+                <div>NAME AND SIGNATURE OF AUTHORIZED OFFICER</div>
+                <div style="height:48px;"></div>
+                <div style="text-align:center; font-weight:700;"><?php echo isset($authorized_officer) ? htmlspecialchars($authorized_officer) : 'Na'; ?></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:12px; vertical-align:top; border-top:1px solid #000;">
+                <div>DATE ISSUE</div>
+                <div style="margin-top:8px; font-weight:700;">
+                  <?php echo isset($dateissue) ? htmlspecialchars($dateissue) : date('d-M-Y'); ?>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <p align="center" style="font-size:11px;">Department of Agriculture, P.O. Box:11, Vientiane, Lao PDR, Tel: (856)21 412350, Fax: (856)21 412349, <br>E-mail: doag@hotmail.com</p>
+          
+          <!-- Add more fields as needed -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- close Modal form for Supporting Document -->
+
+  <!-- Modal form for Importer Selection (Certificate) -->
+  <div class="modal fade" id="importerModal" tabindex="-1" aria-labelledby="importerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="importerModalLabel">Search Importer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="importerSearch" class="form-control mb-3" placeholder="Search importer...">
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped" id="importerTable">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Country</th>
+                  <th>Company Name</th>
+                  <th>Address</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Contact Person</th>
+                  <th>Select</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php
+                // Get all import entities for selection
+                $import_sql = "SELECT * FROM tbentity_import ORDER BY title ASC";
+                $import_result = pg_query($con, $import_sql);
+                $i = 0;
+                if ($import_result && pg_num_rows($import_result) > 0) {
+                  while ($import_row = pg_fetch_assoc($import_result)) {
+                    $i++;
+                    $import_id = $import_row['id'];
+                    $import_title = $import_row['title'];
+                    $import_address = $import_row['address'];
+                    $import_phone = $import_row['phone'];
+                    $import_email = $import_row['email'];
+                    $import_contact = $import_row['contact_name'];
+                    $import_country_name = CountryInfo($import_row['country_id'], $con)['title'];
+                    
+                    echo "<tr>";
+                    echo "<td>$i</td>";
+                    echo "<td>$import_country_name</td>";
+                    echo "<td>$import_title</td>";
+                    echo "<td>$import_address</td>";
+                    echo "<td>$import_phone</td>";
+                    echo "<td>$import_email</td>";
+                    echo "<td>$import_contact</td>";
+                    echo "<td><button type='button' class='btn btn-primary btn-sm' onclick='selectImporter(\"$import_id\", \"$import_title\", \"$import_address\")'>Select</button></td>";
+                    echo "</tr>";
+                  }
+                }
+                ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End Modal form for Importer Selection -->
+   <script>
+        // Print supporting document: DIV id = spdocModalBody
+      function printSupportDoc(divId) {
+        var printContents = document.getElementById(divId).innerHTML;
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        location.reload(); // Optional: reload to restore JS and events
+      }
+   </script>
   </main><!-- End #main -->
 
   <!-- ======= Footer ======= -->
@@ -1776,143 +2351,6 @@ function selectExporter(info) {
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
 
-  <!-- Importer Autocomplete Script -->
-  <script>
-   /*
-    $(document).ready(function() {
-      console.log('Autocomplete script loaded'); // Debug line
-      
-      let searchTimeout;
-      let selectedIndex = -1;
-      
-      // Make sure we target all importer_name inputs
-      $(document).on('input', '#importer_name', function() {
-        console.log('Input detected: ' + $(this).val()); // Debug line
-        
-        const searchTerm = $(this).val().trim();
-        const inputElement = $(this);
-        const suggestionsContainer = inputElement.siblings('#importer_suggestions').length > 0 
-          ? inputElement.siblings('#importer_suggestions') 
-          : inputElement.parent().find('#importer_suggestions');
-        
-        clearTimeout(searchTimeout);
-        
-        if (searchTerm.length >= 1) {
-          console.log('Searching for: ' + searchTerm); // Debug line
-          searchTimeout = setTimeout(function() {
-            searchImporters(searchTerm, suggestionsContainer);
-          }, 300); // Delay to avoid too many requests
-        } else {
-          suggestionsContainer.hide().empty();
-          selectedIndex = -1;
-        }
-      });
-      
-      // Handle keyboard navigation
-      $(document).on('keydown', '#importer_name', function(e) {
-        const inputElement = $(this);
-        const suggestionsContainer = inputElement.siblings('#importer_suggestions').length > 0 
-          ? inputElement.siblings('#importer_suggestions') 
-          : inputElement.parent().find('#importer_suggestions');
-        const suggestions = suggestionsContainer.find('.autocomplete-suggestion');
-        
-        if (e.which === 40) { // Down arrow
-          e.preventDefault();
-          selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
-          updateSelection(suggestions);
-        } else if (e.which === 38) { // Up arrow
-          e.preventDefault();
-          selectedIndex = Math.max(selectedIndex - 1, -1);
-          updateSelection(suggestions);
-        } else if (e.which === 13) { // Enter key
-          e.preventDefault();
-          if (selectedIndex >= 0 && suggestions.length > 0) {
-            selectSuggestion(suggestions.eq(selectedIndex), inputElement);
-          }
-        } else if (e.which === 27) { // Escape key
-          suggestionsContainer.hide();
-          selectedIndex = -1;
-        }
-      });
-      
-      // Hide suggestions when clicking outside
-      $(document).on('click', function(e) {
-        if (!$(e.target).closest('#importer_name, #importer_suggestions').length) {
-          $('#importer_suggestions').hide();
-          selectedIndex = -1;
-        }
-      });
-      
-      function searchImporters(term, container) {
-        console.log('Making AJAX request for: ' + term); // Debug line
-        
-        $.ajax({
-          url: window.location.href,
-          type: 'POST',
-          dataType: 'json',
-          data: {
-            action: 'search_importer',
-            term: term
-          },
-          success: function(response) {
-            console.log('AJAX response:', response); // Debug line
-            displaySuggestions(response, container);
-          },
-          error: function(xhr, status, error) {
-            console.error('AJAX error:', status, error); // Debug line
-            container.hide().empty();
-          }
-        });
-      }
-      
-      function displaySuggestions(importers, container) {
-        container.empty();
-        selectedIndex = -1;
-        
-        if (importers.length > 0) {
-          importers.forEach(function(importer, index) {
-            const suggestion = $('<div class="autocomplete-suggestion" data-index="' + index + '">')
-              .html('<div class="suggestion-title">' + escapeHtml(importer.title) + '</div>' +
-                    (importer.address ? '<div class="suggestion-address">' + escapeHtml(importer.address) + '</div>' : ''))
-              .data('full-text', importer.full_text);
-            
-            suggestion.on('click', function() {
-              const inputElement = container.siblings('#importer_name').length > 0 
-                ? container.siblings('#importer_name') 
-                : container.parent().find('#importer_name');
-              selectSuggestion($(this), inputElement);
-            });
-            
-            container.append(suggestion);
-          });
-          
-          container.show();
-        } else {
-          container.hide();
-        }
-      }
-      
-      function updateSelection(suggestions) {
-        suggestions.removeClass('active');
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          suggestions.eq(selectedIndex).addClass('active');
-        }
-      }
-      
-      function selectSuggestion(suggestion, inputElement) {
-        const fullText = suggestion.data('full-text');
-        inputElement.val(fullText);
-        suggestion.closest('#importer_suggestions').hide();
-        selectedIndex = -1;
-      }
-      
-      function escapeHtml(text) {
-        return $('<div>').text(text).html();
-      }
-    });
-    */
-  </script>
-
   <script>
       document.addEventListener('DOMContentLoaded', function() {
         const exportCert = document.getElementById('export_certificate');
@@ -1928,23 +2366,688 @@ function selectExporter(info) {
         }
       });
 
+      // Function to refresh form data from server
+      function refreshInspectionForm(appid) {
+        console.log('Refreshing inspection form for appid:', appid);
+        
+        // You could implement an AJAX call to get fresh form data
+        // fetch('transaction.php?action=get_inspection_data&appid=' + appid)
+        //   .then(response => response.json())
+        //   .then(data => {
+        //     if (data.success) {
+        //       // Update form fields with fresh data
+        //       document.getElementById('detected_pest').checked = data.pest_detected;
+        //       // Update other fields as needed
+        //     }
+        //   });
+        
+        // For now, just reload the page section or entire page
+        // window.location.reload(); // Full page reload
+        
+        // Or reload just the form section if you prefer
+        console.log('Form refresh completed');
+      }
+
       // Function to view certificate in new window
       function viewCertificate(appid) {
-        if (appid) {
+        console.log('viewCertificate called with appid:', appid, 'type:', typeof appid); // Enhanced debug
+        
+        // Convert to string for validation
+        const appidStr = String(appid);
+        
+        if (!appid || appidStr === '' || appidStr === '0' || appidStr === 'undefined' || appidStr === 'null') {
+          console.error('Invalid appid received:', appid);
+          alert('Error: Invalid application ID (' + appidStr + '). Please make sure the certificate is saved first.');
+          return;
+        }
+        
+        // Build the URL
+        const certificateUrl = 'certificate_view.php?appid=' + encodeURIComponent(appid);
+        console.log('Opening certificate URL:', certificateUrl);
+        
+        try {
           const certWindow = window.open(
-            'certificate_view.php?appid=' + appid, 
+            certificateUrl, 
             'certificateView', 
             'width=900,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
           );
+          
+          if (certWindow) {
+            certWindow.focus();
+            
+            // Check if window was closed immediately (popup blocker)
+            setTimeout(function() {
+              if (certWindow.closed) {
+                alert('Popup was blocked. Please allow popups for this site or use the "View PDF" button.');
+              }
+            }, 1000);
+            
+          } else {
+            alert('Popup blocked! Please allow popups for this site to view the certificate, or use the "View PDF" button instead.');
+          }
+        } catch (error) {
+          console.error('Error opening certificate window:', error);
+          alert('Error opening certificate window: ' + error.message + '. Please try the "View PDF" button instead.');
+        }
+      }
+      
+      // Function to view certificate in new format
+      function viewCertificateNewFormat(appid) {
+        console.log('viewCertificateNewFormat called with appid:', appid);
+        
+        const appidStr = String(appid);
+        
+        if (!appid || appidStr === '' || appidStr === '0' || appidStr === 'undefined' || appidStr === 'null') {
+          console.error('Invalid appid received:', appid);
+          alert('Error: Invalid application ID. Please make sure the certificate is saved first.');
+          return;
+        }
+        
+        const certificateUrl = 'certificate_preview_new.php?appid=' + encodeURIComponent(appid);
+        console.log('Opening certificate URL:', certificateUrl);
+        
+        try {
+          const certWindow = window.open(
+            certificateUrl, 
+            'certificateNewFormat', 
+            'width=1000,height=900,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
+          );
+          
           if (certWindow) {
             certWindow.focus();
           } else {
             alert('Popup blocked! Please allow popups for this site to view the certificate.');
           }
-        } else {
-          alert('Invalid application ID');
+        } catch (error) {
+          console.error('Error opening certificate window:', error);
+          alert('Error opening certificate window: ' + error.message);
         }
       }
+      
+      // Function to view certificate in same window (fallback)
+      function viewCertificateInSameWindow(appid) {
+        console.log('viewCertificateInSameWindow called with appid:', appid, 'type:', typeof appid); // Enhanced debug
+        
+        // Convert to string for validation
+        const appidStr = String(appid);
+        
+        if (!appid || appidStr === '' || appidStr === '0' || appidStr === 'undefined' || appidStr === 'null') {
+          console.error('Invalid appid received:', appid);
+          alert('Error: Invalid application ID (' + appidStr + '). Please make sure the certificate is saved first.');
+          return;
+        }
+        
+        // Build the URL and open in same window
+        const certificateUrl = 'certificate_view.php?appid=' + encodeURIComponent(appid);
+        console.log('Navigating to certificate URL:', certificateUrl);
+        
+        try {
+          window.location.href = certificateUrl;
+        } catch (error) {
+          console.error('Error navigating to certificate:', error);
+          alert('Error opening certificate: ' + error.message);
+        }
+      }
+
+      // Function to select importer from modal and populate form fields
+      function selectImporter(importerId, importerName, importerAddress) {
+        // Populate the importer ID hidden field
+        document.getElementById('importer_id').value = importerId;
+        
+        // Populate the importer name field
+        document.getElementById('importer_name').value = importerName;
+        
+        // Populate the importer address field
+        document.getElementById('importer_address').value = importerAddress;
+        
+        // Close the modal
+        var modal = bootstrap.Modal.getInstance(document.getElementById('importerModal'));
+        if (modal) {
+          modal.hide();
+        } else {
+          // If modal instance doesn't exist, create and hide it
+          var modalElement = document.getElementById('importerModal');
+          var newModal = new bootstrap.Modal(modalElement);
+          newModal.hide();
+        }
+      }
+
+      // Search/Filter importer functionality for certificate modal
+      document.addEventListener('DOMContentLoaded', function() {
+        const importerSearch = document.getElementById('importerSearch');
+        const importerTable = document.getElementById('importerTable');
+        
+        if (importerSearch && importerTable) {
+          importerSearch.addEventListener('keyup', function() {
+            const filter = importerSearch.value.toLowerCase();
+            const rows = importerTable.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+              const text = row.textContent.toLowerCase();
+              row.style.display = text.includes(filter) ? '' : 'none';
+            });
+          });
+        }
+
+        // Control visibility of pest details span and link based on checkbox
+        const detectedPestCheckbox = document.getElementById('detected_pest');
+        const spanPest = document.getElementById('span_pest');
+        const linkPestDetails = document.getElementById('link_pest_details');
+        
+        if (detectedPestCheckbox && spanPest && linkPestDetails) {
+          // Function to toggle visibility
+          function togglePestDetails() {
+            if (detectedPestCheckbox.checked) {
+              spanPest.style.display = 'inline';
+              linkPestDetails.style.display = 'inline';
+            } else {
+              spanPest.style.display = 'none';
+              linkPestDetails.style.display = 'none';
+            }
+          }
+          
+          // Set initial state based on current checkbox state
+          togglePestDetails();
+          
+          // Add event listener for checkbox changes
+          detectedPestCheckbox.addEventListener('change', function() {
+            togglePestDetails();
+            
+            // Get application ID for both scenarios
+            const appid = document.querySelector('input[name="appid"]');
+            const inspectionMethod = document.getElementById('inspection_method');
+            const appidValue = appid ? appid.value : '';
+            const inspectionMethodValue = inspectionMethod ? inspectionMethod.value : '';
+
+            if (appidValue && !this.checked) { // the BOX IS BEING UNCHECKED-some data exists
+              // When checkbox is UNCHECKED - delete pest detection data
+              if (confirm('Are you sure you want to delete the pest detection data?')) {
+                // Delete pest detection data
+                fetch('transaction.php', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                  },
+                  body: 'action=delete_pest_detected&appid=' + encodeURIComponent(appidValue)
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.success) {
+                    console.log('Pest detection data deleted successfully');
+                    
+                    // Handle refresh if requested by backend
+                    if (data.refresh_checkbox) {
+                      // Ensure checkbox is unchecked and UI is updated
+                      detectedPestCheckbox.checked = false;
+                      togglePestDetails();
+                      console.log('Checkbox and form refreshed after deletion');
+                    }
+                    
+                    // Show success message if inspection was updated
+                    if (data.inspection_updated) {
+                      // Optional: Show a brief success notification
+                      const successMsg = document.createElement('div');
+                      successMsg.className = 'alert alert-success alert-dismissible fade show';
+                      successMsg.innerHTML = `
+                        <strong>Success!</strong> Pest detection data removed and inspection record updated.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      `;
+                      document.querySelector('.card-body').insertBefore(successMsg, document.querySelector('.card-body').firstChild);
+                      
+                      // Auto-dismiss after 3 seconds
+                      setTimeout(() => {
+                        if (successMsg.parentNode) {
+                          successMsg.remove();
+                        }
+                      }, 3000);
+                    }
+                    
+                    // Show warning if there was an issue
+                    if (data.warning) {
+                      console.warn('Warning:', data.warning);
+                    }
+                  } else {
+                    console.error('Error deleting pest detection data:', data.error);
+                    alert('Error deleting pest detection data: ' + (data.error || 'Unknown error'));
+                    // Recheck the checkbox if deletion failed
+                    detectedPestCheckbox.checked = true;
+                    togglePestDetails();
+                  }
+                })
+                .catch(error => {
+                  console.error('Network error:', error);
+                //  alert('Network error occurred while deleting pest detection data.');
+                  // Recheck the checkbox if deletion failed
+                  detectedPestCheckbox.checked = true;
+                  togglePestDetails();
+                });
+              } else {
+                // User cancelled, recheck the checkbox
+                detectedPestCheckbox.checked = true;
+                togglePestDetails();
+              }
+            } else {
+              // the BOX IS BEING CHECKED - pest detected
+            //  alert('Hello, Pest detected box is being checked.');
+              const appidElementPest = document.getElementById('appid');
+              const appidh = appidElementPest ? appidElementPest.value : ''; // hidden input
+              
+              // Check if inspection form elements exist before accessing them
+              const inspectionDateEl = document.getElementById('inspection_date');
+              const samplenoEl = document.getElementById('sampleno');
+              const sampleVolumeEl = document.getElementById('sample_volume');
+              const unitEl = document.getElementById('unit');
+              const sampleCollectedByEl = document.getElementById('sample_collectedby');
+              const inspectedByEl = document.getElementById('sample_inspectedby');
+              const certificateFeeEl = document.getElementById('certificate_fee');
+              const receiptNoEl = document.getElementById('receipt_no');
+              const lotNoEl = document.getElementById('lot_no');
+              const inspectionMethodEl = document.getElementById('inspection_method');
+              
+              // Only proceed if we have the necessary elements (inspection form)
+              if (appidh && inspectionDateEl && samplenoEl) {
+                const inspectiondate = inspectionDateEl.value;
+                const sampleno = samplenoEl.value;
+                const samplequantity = sampleVolumeEl ? sampleVolumeEl.value : '';
+                const unitid = unitEl ? unitEl.value : '';
+                const samplecollectedby = sampleCollectedByEl ? sampleCollectedByEl.value : '';
+                const inspectedby = inspectedByEl ? inspectedByEl.value : '';
+                const certificatefee = certificateFeeEl ? certificateFeeEl.value : '';
+                const receiptno = receiptNoEl ? receiptNoEl.value : '';
+                const lotno = lotNoEl ? lotNoEl.value : '';
+                const inspectionmethod = inspectionMethodEl ? inspectionMethodEl.value : '';
+
+              $.ajax({
+                  type: 'POST',
+                  url: 'transaction.php',
+                  data: {
+                      action: 'pest_detected_inspectionSave',
+                      appid: appidh,
+                      inspection_date: inspectiondate,
+                      sampleno: sampleno,
+                      samplequantity: samplequantity,
+                      unitid: unitid,
+                      samplecollectedby: samplecollectedby,
+                      inspectedby: inspectedby,
+                      certificatefee: certificatefee,
+                      receiptno: receiptno,
+                      lotno: lotno,
+                      inspectionmethod: inspectionmethod,
+                      detected: 1
+                  },
+                  //dataType: 'json',
+                  success: function(response) {
+                      console.log('AJAX Success Response:', response);
+                     // alert("Pest detection inspection Save - response!");
+                  },
+                  error: function(xhr, status, error) {
+                      console.error('AJAX Error:', error);
+                      alert("Error occurred: " + error);
+                  }
+              }); // Close AJAX call
+                } else {
+                  console.log('Inspection form elements not found, skipping AJAX call');
+                }
+            } // Close the if condition for UNCHECKING
+          }); // Close the change event listener
+        } // Close the if condition for checkbox existence
+
+        // Control visibility of treatment details based on checkbox
+        const appidElement = document.getElementById('appid');
+        const appidhtreat = appidElement ? appidElement.value : ''; // hidden input
+        const treatmentCheckbox = document.getElementById('treatment_ability');
+      
+        if (treatmentCheckbox) {
+          // Create a reusable function to toggle treatment details
+          function toggleTreatmentDetails() {
+            const divTreatment = document.getElementById('details_treatment');
+            if (divTreatment) {
+              if (treatmentCheckbox.checked) {
+                divTreatment.style.display = 'inline';  // show the div/block-details_treatment
+              } else {
+                divTreatment.style.display = 'none';
+              }
+            }
+          }
+          
+          // Set initial state on page load
+          toggleTreatmentDetails();
+          
+          // Add change event listener
+          treatmentCheckbox.addEventListener('change', toggleTreatmentDetails);
+        }    
+
+        // Show modal form for multiple commodities details
+        const multipleCommoditiesCheckbox = document.getElementById('multiple_commodities'); // Checkbox
+        const multiCommoditiesSpan = document.getElementById('span_multiple');
+
+        console.log('Multiple commodities checkbox:', multipleCommoditiesCheckbox);
+        console.log('Multiple commodities span:', multiCommoditiesSpan);
+
+        if (multipleCommoditiesCheckbox && multiCommoditiesSpan) {
+            console.log('Both elements found, setting up functionality');
+            
+            // Function to toggle visibility
+            function toggleMultipleCommoditiesDetails() {
+              console.log('Toggle function called, checkbox checked:', multipleCommoditiesCheckbox.checked);
+              if (multipleCommoditiesCheckbox.checked) {
+                multiCommoditiesSpan.style.display = 'inline';
+                // Update tbapplication with these so that all the data can be back when submitting the form multiple commodities
+                const appidElementMultival = document.getElementById('appid').value;
+                const appdateval = document.getElementById('app_date').value;
+                const applicantnameval = document.getElementById('applicant_name').value;
+                const applicantaddressval = document.getElementById('address').value;
+                const regnoval = document.getElementById('reg_no').value;
+                const phoneval = document.getElementById('phone').value;
+                const entrypointval = document.getElementById('entry_point').value;
+                const importcountryval = document.getElementById('import_country').value;
+                const importpointval = document.getElementById('import_point').value;
+                const exportcertval = document.getElementById('export_certificate').checked ? 1 : 0;
+                const transitcertval = document.getElementById('transit_certificate').checked ? 1 : 0;
+                console.log('Showing span');
+                
+                // Save application data via AJAX
+                if (appidElementMultival) {
+                  fetch('transaction.php', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                      action: 'save_application_before_multiple',
+                      appid: appidElementMultival,
+                      app_date: appdateval,
+                      applicant_name: applicantnameval,
+                      address: applicantaddressval,
+                      reg_no: regnoval,
+                      phone: phoneval,
+                      entry_point: entrypointval,
+                      import_country: importcountryval,
+                      import_point: importpointval,
+                      export_certificate: exportcertval,
+                      transit_certificate: transitcertval
+                    })
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log('Application data saved successfully before multiple commodities');
+                    } else {
+                      console.error('Error saving application data:', data.error);
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Network error while saving application data:', error);
+                  });
+                }
+              } else {
+                multiCommoditiesSpan.style.display = 'none';
+                console.log('Hiding span');
+                // delete existing multiple commodities data if any
+                const appidElementMulti = document.getElementById('appid');
+                const appidhmulti = appidElementMulti ? appidElementMulti.value : ''; // hidden input
+                if (appidhmulti) {
+                  fetch('transaction.php', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete_multiple_commodities&appid=' + encodeURIComponent(appidhmulti)
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log('Multiple commodities data deleted successfully');
+                      // Optionally, refresh the commodities table or UI here
+                      const tableBody = document.getElementById('multiCommodityTableBody');
+                      if (tableBody) {
+                        tableBody.innerHTML = ''; // Clear existing rows
+                      }
+                    } else {
+                      console.error('Error deleting multiple commodities data:', data.error);
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Network error while deleting multiple commodities data:', error);
+                  });
+                }
+              }  // Close the else block-unchecked
+            }
+            
+            // Set initial state based on current checkbox state on page load
+            toggleMultipleCommoditiesDetails();
+            
+            // Add event listener for checkbox changes
+            multipleCommoditiesCheckbox.addEventListener('change', function() {
+              console.log('Checkbox change event fired');
+              toggleMultipleCommoditiesDetails();
+            });
+        } else {
+            console.log('Elements not found - checkbox:', !!multipleCommoditiesCheckbox, 'span:', !!multiCommoditiesSpan);
+        }
+
+        // Multiple Commodities Modal Functionality
+        let commodityCounter = 0;
+        const commodities = [];
+
+        // Product search functionality
+        const productSearchInput = document.getElementById('productSearchInput');
+        const productSearchTable = document.getElementById('productSearchTable');
+        
+        if (productSearchInput && productSearchTable) {
+          productSearchInput.addEventListener('keyup', function() {
+            const filter = productSearchInput.value.toLowerCase();
+            const rows = productSearchTable.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+              const text = row.textContent.toLowerCase();
+              row.style.display = text.includes(filter) ? '' : 'none';
+            });
+          });
+
+          // Add select buttons to product search table
+          setTimeout(function() {
+            const rows = productSearchTable.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+              const cells = row.querySelectorAll('td');
+              if (cells.length >= 3) {
+                const productName = cells[0].textContent.trim();
+                const scientificName = cells[1].textContent.trim();
+                const description = cells[2].textContent.trim();
+                
+                // Create select button
+                const selectBtn = document.createElement('button');
+                selectBtn.type = 'button';
+                selectBtn.className = 'btn btn-primary btn-sm';
+                selectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Select';
+                selectBtn.onclick = function() {
+                  selectMultiProduct('', productName, scientificName, description);
+                };
+                
+                // Add or replace the action cell
+                if (cells.length === 3) {
+                  const actionCell = document.createElement('td');
+                  actionCell.appendChild(selectBtn);
+                  row.appendChild(actionCell);
+                } else if (cells.length >= 4) {
+                  cells[3].innerHTML = '';
+                  cells[3].appendChild(selectBtn);
+                }
+              }
+            });
+          }, 100);
+        }
+
+        // Function to select product from search modal
+        window.selectMultiProduct = function(productId, productName, scientificName, description) {
+          document.getElementById('multiProductId').value = productId;
+          document.getElementById('multiProductName').value = productName;
+          document.getElementById('multiScientificName').value = scientificName || '';
+          
+          // Close only the product search modal, keep main modal open
+          const productSearchModal = bootstrap.Modal.getInstance(document.getElementById('productSearchModal'));
+          if (productSearchModal) {
+            productSearchModal.hide();
+          }
+          
+          // Focus back to the main modal - specifically the description field
+          setTimeout(() => {
+            document.getElementById('multiDescription').focus();
+          }, 300);
+        };
+
+        // Add commodity to table
+        const submitMultiCommodityBtn = document.getElementById('submitMultiCommodity');
+        if (submitMultiCommodityBtn) {
+          submitMultiCommodityBtn.addEventListener('click', function() {
+            const form = document.getElementById('multipleCommodityForm');
+            const formData = new FormData(form);
+            
+            // Get form values
+            const productId = formData.get('product_id');
+            const productName = formData.get('product_name');
+            const scientificName = formData.get('scientific_name');
+            const description = formData.get('description');
+            const netQuantity = formData.get('net_quantity');
+            const grossQuantity = formData.get('gross_quantity');
+            
+            // Validate required fields
+            if (!productName || !description || !netQuantity || !grossQuantity) {
+              alert('Please fill in all required fields: Product Name, Description, Net Quantity, and Gross Quantity');
+              return;
+            }
+            
+            // Add to commodities array
+            commodityCounter++;
+            const commodity = {
+              id: commodityCounter,
+              productId: productId,
+              productName: productName,
+              scientificName: scientificName,
+              description: description,
+              netQuantity: parseFloat(netQuantity),
+              grossQuantity: parseFloat(grossQuantity)
+            };
+            
+            commodities.push(commodity);
+            
+            // Add row to table
+            addCommodityRow(commodity);
+            
+            // Clear form
+            form.reset();
+            document.getElementById('multiProductId').value = '';
+          });
+        }
+
+        // Function to add commodity row to table
+        function addCommodityRow(commodity) {
+          const tableBody = document.getElementById('multiCommodityTableBody');
+          const row = document.createElement('tr');
+          row.setAttribute('data-id', commodity.id);
+          
+          row.innerHTML = `
+            <td>${commodity.id}</td>
+            <td>${commodity.productName}</td>
+            <td>${commodity.scientificName || '-'}</td>
+            <td>${commodity.description}</td>
+            <td>${commodity.netQuantity}</td>
+            <td>${commodity.grossQuantity}</td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm" onclick="removeCommodity(${commodity.id})">
+                <i class="bi bi-trash"></i> Remove
+              </button>
+            </td>
+          `;
+          
+          tableBody.appendChild(row);
+        }
+
+        // Function to remove commodity
+        window.removeCommodity = function(commodityId) {
+          if (confirm('Are you sure you want to remove this commodity?')) {
+            // Remove from array
+            const index = commodities.findIndex(c => c.id === commodityId);
+            if (index > -1) {
+              commodities.splice(index, 1);
+            }
+            
+            // Remove from table
+            const row = document.querySelector(`tr[data-id="${commodityId}"]`);
+            if (row) {
+              row.remove();
+            }
+          }
+        };
+
+        // Save all commodities
+        const saveAllCommoditiesBtn = document.getElementById('saveAllCommodities');
+        if (saveAllCommoditiesBtn) {
+          saveAllCommoditiesBtn.addEventListener('click', function() {
+            if (commodities.length === 0) {
+              alert('Please add at least one commodity before saving.');
+              return;
+            }
+            
+            // Here you can send the commodities data to the server
+            console.log('Saving commodities:', commodities);
+            
+            // For now, show success message and close modal
+            alert(`Successfully saved ${commodities.length} commodities!`);
+            
+            // Close the modal
+            const multiModal = bootstrap.Modal.getInstance(document.getElementById('multipleCommoditiesModal'));
+            if (multiModal) {
+              multiModal.hide();
+            }
+            
+            // Optional: Clear the data after successful save
+            // commodities.length = 0;
+            // document.getElementById('multiCommodityTableBody').innerHTML = '';
+            // commodityCounter = 0;
+          });
+        }
+
+        // Handle modal events
+        const multipleCommoditiesModal = document.getElementById('multipleCommoditiesModal');
+        if (multipleCommoditiesModal) {
+          multipleCommoditiesModal.addEventListener('shown.bs.modal', function() {
+            // Focus on the search button when modal opens
+            const searchBtn = document.getElementById('searchProductBtn');
+            if (searchBtn) {
+              searchBtn.focus();
+            }
+          });
+        }
+
+        const productSearchModal = document.getElementById('productSearchModal');
+        if (productSearchModal) {
+          productSearchModal.addEventListener('shown.bs.modal', function() {
+            // Focus on search input when product search modal opens
+            const searchInput = document.getElementById('productSearchInput');
+            if (searchInput) {
+              searchInput.focus();
+            }
+          });
+          
+          // When product search modal is closed, ensure main modal stays open
+          productSearchModal.addEventListener('hidden.bs.modal', function() {
+            // Ensure the main modal backdrop and focus is maintained
+            document.body.classList.add('modal-open');
+            
+            // Re-focus on the main modal
+            setTimeout(() => {
+              const mainModal = document.getElementById('multipleCommoditiesModal');
+              if (mainModal && mainModal.classList.contains('show')) {
+                const descField = document.getElementById('multiDescription');
+                if (descField) {
+                  descField.focus();
+                }
+              }
+            }, 100);
+          });
+        }
+
+      }); // Close the DOMContentLoaded event listener
+
 </script>
 
 </body>

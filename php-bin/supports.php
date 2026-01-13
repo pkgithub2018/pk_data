@@ -35,8 +35,10 @@ function checkCloudServerCompatibility() {
 $compatibility_issues = checkCloudServerCompatibility();
 if (!empty($compatibility_issues)) {
     error_log('Cloud Server Compatibility Issues: ' . implode(' | ', $compatibility_issues));
-    // Add HTML comment for debugging
-    echo "<!-- CLOUD SERVER DIAGNOSTICS: " . implode(' | ', $compatibility_issues) . " -->\n";
+    // Add HTML comment for debugging (only if not AJAX request)
+    if (!defined('AJAX_REQUEST')) {
+        echo "<!-- CLOUD SERVER DIAGNOSTICS: " . implode(' | ', $compatibility_issues) . " -->\n";
+    }
 }
 
 /*
@@ -554,6 +556,21 @@ function SelectLocationType($ltype, $con){
         }
     }
  }
+
+ /*
+   UnitSymbol: Return unit symbol from tbproduct_unit table
+ */
+    function UnitSymbol($unitid, $con){
+        // Check if the unit ID is set
+        $sql = "SELECT symb FROM tbproduct_unit WHERE id='$unitid'";
+        $result = pg_query($con, $sql);
+        if ($result && pg_num_rows($result) > 0) {
+            $row = pg_fetch_assoc($result);
+            return $row['symb'];
+        } else {
+            return '';
+        }
+    }
 
  /*
   SelectConveyance: Select conveyance from tbconveyance table
@@ -1169,6 +1186,12 @@ function DeleteCountry($cid, $con) {
   CountryInfo: Get country information from tbcountries table
 */
 function CountryInfo($cid, $con) {
+    // Validate country ID is not empty and is numeric
+    if (empty($cid) || !is_numeric($cid)) {
+        return null;
+    }
+    
+    $cid = (int)$cid; // Cast to integer for safety
     $sql = "SELECT * FROM tbcountries WHERE id = '$cid'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if ($result && pg_num_rows($result) > 0) {
@@ -1275,6 +1298,144 @@ function UpdatePest($id, $pname, $scientificname, $category,  $userid, $con) {
         echo "<script>window.location.href = 'masterdata.php?part=pest&pestid=".$id."&uid=".$userid."&success=pest_updated&name=".urlencode($pname)."';</script>";
     } else {
         echo "<script>alert('Error updating pest: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+ PestInfo: Get pest information from tbpest table
+*/
+function PestInfo($pestid, $con) {
+    $sql = "SELECT * FROM tbpest WHERE id = '$pestid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // Return null if no pest found
+    }
+}
+
+/*
+  PestSelectionList: Get list of pests from tbpest table for selection modal
+*/
+function PestSelectionList($con) {
+    $pest_sql = "SELECT * FROM tbpest ORDER BY pestname ASC";
+                $pest_result = pg_query($con, $pest_sql);
+                $pest_counter = 0;
+                
+                if ($pest_result && pg_num_rows($pest_result) > 0) {
+                  while ($pest_row = pg_fetch_assoc($pest_result)) {
+                    $pest_counter++;
+                    $pest_id = $pest_row['id'] ?? '';
+                    $pest_name = htmlspecialchars($pest_row['pestname'] ?? '');
+                    $common_name = htmlspecialchars($pest_row['pestname'] ?? '');
+                    $scientific_name = htmlspecialchars($pest_row['scientificname'] ?? '');
+                    $category = htmlspecialchars($pest_row['category'] ?? '');
+                                        
+                    echo "<tr data-pest-type='" . strtolower($category) . "'>";
+                    echo "<td><em>" . $scientific_name . "</em></td>";
+                    echo "<td>" . $pest_name . "</td>";
+                    echo "<td><span>" . ucfirst($category) . "</span></td>";
+                    echo "<td>";
+                    // Test with actual function call
+                    $pest_id_int = (int)$pest_id;
+                    $pest_name_safe = htmlspecialchars($pest_name, ENT_QUOTES, 'UTF-8');
+                    
+                    echo "<button type='button' class='btn btn-sm btn-danger' onclick='selectPest($pest_id_int, \"$pest_name_safe\", \"$pest_name_safe\", \"$scientific_name\", \"$category\");'>";
+                    echo "Select";
+                    echo "</button>";
+                    echo "</td>";
+                    echo "</tr>";
+                  }
+                  return $pest_counter;
+                } else {
+                  echo "<tr><td colspan='4' class='text-center text-muted'>No pest records found in database</td></tr>";
+                }
+}
+
+/*
+  PestDetectedSave: Save detected pest into tbpest_detected table
+*/
+function PestDetectedSave($appid,$pestid, $infestation, $alivestatus, $riskcategory, $inspectionresult, $con) {
+    // Escape all inputs
+    $appid = pg_escape_string($con, $appid);
+    $pestid = pg_escape_string($con, $pestid);
+    $infestation = pg_escape_string($con, $infestation);
+    $alivestatus = pg_escape_string($con, $alivestatus);
+    $riskcategory = pg_escape_string($con, $riskcategory);
+    $inspectionresult = pg_escape_string($con, $inspectionresult);
+
+    // Insert detected pest
+    $sqladdpest = "INSERT INTO \"tbpest_detected\" (\"application_id\", \"pestid\", \"infestation_level\", \"alive_status\", \"risk_category\", \"result_measure\") 
+                   VALUES ('".$appid."', '".$pestid."', '".$infestation."', '".$alivestatus."', '".$riskcategory."', '".$inspectionresult."') RETURNING id";
+    $result = pg_query($con, $sqladdpest) or die(pg_last_error($con));
+    if ($result) {
+        return true; // Indicate success
+    } else {
+        echo "<script>alert('Error adding detected pest: " . pg_last_error($con) . "');</script>";
+        return false; // Indicate failure
+    }
+}
+
+/*
+ PestDetectedUpdate: Update detected pest from tbpest_detected table
+*/
+function PestDetectedUpdate($pestdetect_id,$pestid, $infestation, $alivestatus, $riskcategory, $inspectionresult, $con) {
+    // Escape all inputs
+    $pestdetect_id = pg_escape_string($con, $pestdetect_id);
+    $pestid = pg_escape_string($con, $pestid);
+    $infestation = pg_escape_string($con, $infestation);
+    $alivestatus = pg_escape_string($con, $alivestatus);
+    $riskcategory = pg_escape_string($con, $riskcategory);
+    $inspectionresult = pg_escape_string($con, $inspectionresult);
+
+    // Update detected pest
+    $sqlupdate = "UPDATE \"tbpest_detected\" SET 
+                    \"pestid\"='$pestid', 
+                    \"infestation_level\"='$infestation', 
+                    \"alive_status\"='$alivestatus', 
+                    \"risk_category\"='$riskcategory', 
+                    \"result_measure\"='$inspectionresult' 
+                  WHERE \"id\"='$pestdetect_id'";
+    $result = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+    if ($result) {
+        return true; // Indicate success
+    } else {
+        echo "<script>alert('Error updating detected pest: " . pg_last_error($con) . "');</script>";
+        return false; // Indicate failure
+    }
+}
+
+/*
+  PestDetectedInspectionUpdate: Update inspection result of detected pest from tbpest_detected table
+*/
+function PestDetectedInspectionUpdate($appid, $con) {
+    // Escape all inputs
+    $appid = pg_escape_string($con, $appid);
+   $sqlpestdetected = "SELECT * FROM tbpest_detected WHERE application_id = '$appid'";
+    $result = pg_query($con, $sqlpestdetected) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        $sqlinspectionupdate = "UPDATE \"tbinspection\" SET 
+                                \"pest_detected\"='1' 
+                              WHERE \"application_id\"='$appid'";
+        $result1 = pg_query($con, $sqlinspectionupdate) or die(pg_last_error($con));
+        if ($result1) {
+            return true; // Indicate success
+        } else {
+            echo "<script>alert('Error updating inspection pest detected: " . pg_last_error($con) . "');</script>";
+            return false; // Indicate failure
+        }
+    } 
+}
+
+/*
+ PesDetectedInfo: Get pest information from tbpest table
+*/
+function PestDetectedInfo($appid, $con) {
+    $sql = "SELECT * FROM tbpest_detected WHERE application_id = '$appid'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result && pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null; // Return null if no pest found
     }
 }
 
@@ -1641,6 +1802,12 @@ function DeleteProductunit($uid, $con) {
  ProductUnitName: Get product unit name from tbproductunit table
 */
 function ProductUnitName($uid, $con) {
+    // Validate unit ID is not empty and is numeric
+    if (empty($uid) || !is_numeric($uid)) {
+        return '';
+    }
+    
+    $uid = (int)$uid; // Cast to integer for safety
     $sqlunit = "SELECT symb FROM tbproduct_unit WHERE id='$uid'";
     $result = pg_query($con, $sqlunit) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
@@ -1765,7 +1932,7 @@ function ConveyanceType($id, $con) {
 /*
  InspectionMethodList: Show list of inspection methods from tbinspectionmethod table
 */
-function InspectionMethodList($con) {
+function InspectionMethodList($userid, $con) {
     $sqlmethod = "SELECT * FROM tbinspection_method ORDER BY id ASC";
     $result = pg_query($con, $sqlmethod) or die(pg_last_error());
     $i = 0;
@@ -1794,7 +1961,7 @@ function InspectionMethodList($con) {
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
                       <i class='bi bi-pencil-square table-icon'></i></button>   
                     </td>
-                    <td><a href='masterdata.php?part=inspectionmethod&mid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    <td><a href='masterdata.php?part=inspectionmethod&mid=$id&del=yes&uid=$userid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -1905,7 +2072,7 @@ function TreatmentMethodList($con) {
 /*
  AddTreatmentMethod: Add new treatment method into tbtreatmentmethod table 
 */
-function AddTreatmentMethod($code, $method, $desc, $con) {
+function AddTreatmentMethod($huid,$code, $method, $desc, $con) {
     // Escape all inputs
     $code = pg_escape_string($con, $code);
     $method = pg_escape_string($con, $method);
@@ -1923,7 +2090,7 @@ function AddTreatmentMethod($code, $method, $desc, $con) {
                          VALUES ('".$code."', '".$method."', '".$desc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdmethod) or die(pg_last_error($con));
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod';</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod&uid=$huid';</script>";
         } else {
             echo "<script>alert('Error adding treatment method: " . pg_last_error($con) . "');</script>";
         }
@@ -1932,7 +2099,7 @@ function AddTreatmentMethod($code, $method, $desc, $con) {
 /*
  UpdateTreatmentMethod: Update treatment method from tbtreatmentmethod table 
 */
-function UpdateTreatmentMethod($tmid, $code, $method, $desc, $con) {
+function UpdateTreatmentMethod($huid, $tmid, $code, $method, $desc, $con) {
     // Escape all inputs
     $tmid = pg_escape_string($con, $tmid); // Get treatment method ID from POST data
     $code = pg_escape_string($con, $code);
@@ -1943,7 +2110,7 @@ function UpdateTreatmentMethod($tmid, $code, $method, $desc, $con) {
     $sqlupdatemethod = "UPDATE tbtreatment_method SET code='$code', title='$method', description='$desc' WHERE id='$tmid'";
     $result = pg_query($con, $sqlupdatemethod) or die(pg_last_error($con));
     if ($result) {
-        echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod';</script>";
+        echo "<script>window.location.href = 'masterdata.php?part=treatmentmethod&uid=$huid';</script>";
     } else {
         echo "<script>alert('Error updating treatment method: " . pg_last_error($con) . "');</script>";
     }
@@ -1983,6 +2150,11 @@ function SelectTreatmentMethod($selectedId, $con) {
  TreatmentMethodInfo: Get treatment method information from tbtreatmentmethod table
 */
 function TreatmentMethodInfo($id, $con) {
+    // Validate ID is not empty and is numeric
+    if (empty($id) || !is_numeric($id)) {
+        return null;
+    }
+    
     $sql = "SELECT * FROM tbtreatment_method WHERE id = '$id'";
     $result = pg_query($con, $sql);
     if ($result && pg_num_rows($result) > 0) {
@@ -2629,7 +2801,7 @@ function ApplicationUpdate($app_id, $data, $con) {
                     place_treatment_other = " . (empty($placetreatmentother) ? "NULL" : " '" . pg_escape_string($con, $placetreatmentother) . "'") . ",
                     importerid = " . (empty($importerid) ? "NULL" : " '" . pg_escape_string($con, $importerid) . "'") . "
 */
-    echo "<script>alert('Processing field for application_Updated: $rgno, $exportpoint, $contactperson, $addressperson, $phone, $countryimport, $importpoint, $conveyanceid');</script>";
+   // echo "<script>alert('Processing field for application_Updated: $rgno, $exportpoint, $contactperson, $addressperson, $phone, $countryimport, $importpoint, $conveyanceid');</script>";
     $sqlupdate = "UPDATE tbapplication SET 
                     reg_no = " . (empty($rgno) ? "NULL" : "'" . pg_escape_string($con, $rgno) . "'") . ",
                     export_point = " . (empty($exportpoint) ? "NULL" : "'" . pg_escape_string($con, $exportpoint) . "'") . ",
@@ -2755,6 +2927,78 @@ function ApplicationProductList($con) {
 }
 
 /*
+    ApplicationMultipleProductList: Product list for application with multiple items
+*/
+  function ApplicationMultipleProductList($con) {  // for searching multiple commodities
+    $sql = "SELECT * FROM tbproduct ORDER BY name ASC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $cid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $cname = htmlspecialchars($row['name'], ENT_QUOTES);
+            $cname_scientific = htmlspecialchars($row['name_scientific'], ENT_QUOTES);
+            $cdesc = htmlspecialchars($row['desc'], ENT_QUOTES);
+            print "<tr>
+                    <td>".$cname."</td>
+                    <td>".$cname_scientific."</td>
+                    <td>".$cdesc."</td>
+                    <td><button type='button' name='$cid' id='$cid' class='btn btn-sm btn-danger' onclick='passMulitpleCommodity(\"$cid\",\"$cname\", \"$cname_scientific\", \"$cdesc\")'>Select</button></td>
+                 </tr>";
+                 $i++;
+        }
+    }
+}
+
+/*
+  MultipleProductInfo: Get multiple commodity information by commodity ID
+*/
+function MultipleProductList($app_id, $con) {
+    // Guard against empty or invalid application IDs to avoid SQL errors
+    if ($app_id === null || $app_id === '' || !is_numeric($app_id)) {
+        return;
+    }
+    $safe_app_id = pg_escape_string($con, $app_id);
+    $sql = "SELECT * FROM tbmultiple_product WHERE application_id='" . $safe_app_id . "'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $i = 0;
+        while ($row = pg_fetch_assoc($result)) {
+            $i++;
+            $dbid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $productid = htmlspecialchars($row['product_id'], ENT_QUOTES);
+            $productName = ProductInfo($productid, $con)['name'];
+            $scientificName = ProductInfo($productid, $con)['name_scientific'];
+            $number_desc = htmlspecialchars($row['number_description'], ENT_QUOTES);
+            $quantitynet = htmlspecialchars($row['quantity_net'], ENT_QUOTES);
+            $quantitygross = htmlspecialchars($row['quantity_gross'], ENT_QUOTES);
+            $unitid = htmlspecialchars($row['unit_id'], ENT_QUOTES);
+            $unitName = ProductUnitName($unitid, $con);
+
+            print "<tr data-db-id='".$dbid."' data-product-id='".$productid."' data-unit-id='".$unitid."'>
+                    <td>".$i."</td>
+                    <td>".$productName."</td>
+                    <td>".$scientificName."</td>
+                    <td>".$number_desc."</td>
+                    <td>".$quantitynet."</td>
+                    <td>".$quantitygross."</td>
+                    <td>".$unitName."</td>
+                    <td>
+                     <button type='button' class='btn btn-sm btn-warning' onclick='editProductFromDb(this)'>
+                      <i class='bi bi-pencil'></i>
+                    </button>
+                    <button type='button' class='btn btn-sm btn-danger' onclick='deleteProductFromDb(this)'>
+                      <i class='bi bi-trash'></i>
+                    </button>
+                    </td>
+                 </tr>";
+        }
+    } else {
+        return null;
+    }
+}
+
+/*
  ApplicationList: Show list of applications and their status from tbapplication
 */
 function ApplicationList($guid, $con, $userid = null) {
@@ -2795,7 +3039,17 @@ function ApplicationList($guid, $con, $userid = null) {
             } else {
                 $certificate_link = "<span class='text-muted'>Not ready</span>";
             }
-          
+            // Check if the certificate is printed
+            $certificate_printed = CertificateStatus($id, $con);
+            $certificate_final = $certificate_printed['current_status'] ?? 'Ongoing';
+            
+            // Create link for certificate status if not Ongoing
+            if ($certificate_final !== 'Ongoing') {
+                $certificate_final_display = "<a href='#' onclick='viewCertificateStatus($id); return false;' style='cursor: pointer;'><span>$certificate_final</span></a>";
+            } else {
+                $certificate_final_display = "<span>$certificate_final</span>";
+            }
+
             $uid_param = $userid ? "&uid=$userid" : "";
             print "<tr>
                     <td>$appno</td>
@@ -2804,7 +3058,7 @@ function ApplicationList($guid, $con, $userid = null) {
                     <td><a href='transaction.php?part=application&appid_edit=$id$uid_param'>View/Edit</a></td>
                     <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param'>$inspection_status</a></span></td>
                     <td>$certificate_link</td>
-                    <td><span>n/a</span></td>
+                    <td>$certificate_final_display</td>
                    </tr>";
         }
     }
@@ -2829,6 +3083,66 @@ function ApplicationInfo($app_id, $con) {
     }
 }
 
+/*
+    ApplicationList_items: Show list of applications with multiple items
+*/
+function ApplicationList_items($guid, $con, $userid = null) {
+    // Validate guid parameter - must be numeric and not empty
+    if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID provided.');</script>";
+        return;
+    }
+
+    $sql = "SELECT id, application_no, application_date, company_id, country_import, commodity_id, quantity_net, quantity_gross, unit_id, importerid 
+            FROM tbapplication WHERE guid = '$guid' ORDER BY application_date DESC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $id = htmlspecialchars($row['id'], ENT_QUOTES);
+            $appno = htmlspecialchars($row['application_no'], ENT_QUOTES);
+            $comid = htmlspecialchars($row['company_id'], ENT_QUOTES);
+            $rows = EntityExportInfo($comid, $con);
+            $exporter = $rows['title'] ?? '';  // Exporter's name
+            $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);   
+            $appdate = date('d/m/Y', strtotime($appdate));  // Format date for display
+           
+            // Get country name
+            $country_info = CountryInfo($row['country_import'], $con);
+            $country_import = $country_info['title'] ?? 'Unknown';
+            
+            // Get importer name
+            $importerid = $row['importerid'];
+            $importer_info = CertificateImporterInfo($importerid, $con);
+            $importer = $importer_info['title'] ?? '';
+            
+            // Combine importer name and country
+          /*
+            if (!empty($importer_name)) {
+                $importer = htmlspecialchars($importer_name . ", " . $country_import, ENT_QUOTES);
+            } else {
+                $importer = htmlspecialchars($country_import, ENT_QUOTES);
+            }
+         */   
+            $commodity_id = htmlspecialchars($row['commodity_id'], ENT_QUOTES);
+            $commodity_name = ProductInfo($commodity_id, $con)['name'] ?? 'Unknown';
+            $quantity_net = htmlspecialchars($row['quantity_net'], ENT_QUOTES);
+            $quantity_gross = htmlspecialchars($row['quantity_gross'], ENT_QUOTES);
+            $unitid = htmlspecialchars($row['unit_id'], ENT_QUOTES);
+            $unitName = ProductUnitName($unitid, $con);
+            $community_name = $commodity_name . " (" .$quantity_net. " & " .$quantity_gross. " " . $unitName . ")";
+
+            $uid_param = $userid ? "&uid=$userid" : "";
+            print "<tr>
+                    <td>$appdate</td>
+                    <td>$exporter</td>
+                    <td>$importer</td>
+                     <td>$country_import</td>
+                    <td>$community_name</td>
+                    <td><a href='transaction.php?part=application&appid_edit=$id$uid_param'>View/Edit</a></td>
+                   </tr>";
+        }
+    }
+}
 /*
  InspectionAdd: Add data on inspection results into tbinspection
  */
@@ -2895,6 +3209,74 @@ function InspectionInfo($app_id, $con) {
         return $row;
     } else {
         return null;
+    }
+}
+
+/*
+ InspectionList_items: Show list of inspections with their status from tbinspection
+*/
+function InspectionList_items($guid, $con, $userid = null) {
+    // Validate guid parameter - must be numeric and not empty
+    if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID provided.');</script>";
+        return;
+    }
+
+    // Query tbinspection joined with tbapplication to filter by guid
+    $sql = "SELECT id, application_id, inspection_date, sample_collected_by, inspected_by, lot_number, 
+                   (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS application_date,
+                   (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS company_id
+            FROM tbinspection
+            WHERE (SELECT guid FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) = '$guid' 
+            ORDER BY inspection_date DESC";
+    
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $id = htmlspecialchars($row['id'], ENT_QUOTES);
+            $application_id = htmlspecialchars($row['application_id'], ENT_QUOTES);
+            
+            // Get application date
+            $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);
+            $appdate = date('d/m/Y', strtotime($appdate));
+
+            // Sample collected by - to be implemented later
+            $sample_collectedby = htmlspecialchars($row['sample_collected_by'], ENT_QUOTES);
+            
+            // Get exporter name
+            $comid = htmlspecialchars($row['company_id'], ENT_QUOTES);
+            $rows = EntityExportInfo($comid, $con);
+            $exporter = $rows['title'] ?? 'Unknown';
+            
+            // Get inspection date
+            $inspection_date = $row['inspection_date'] ? date('d/m/Y', strtotime($row['inspection_date'])) : 'N/A';
+            
+            // Get inspector name
+            $inspected_by = htmlspecialchars($row['inspected_by'], ENT_QUOTES);
+
+            // Lot number - to be implemented later
+            $lot_number = htmlspecialchars($row['lot_number'], ENT_QUOTES);
+
+            // Pest detected - yes/no
+           // $pest_detected = $row['pest_detected'] === '1' ? 'Yes' : 'No';
+           // PestDetectedInfo($application_id, $con);
+            
+            // Lab required - yes/no
+           // $lab_required = $row['lab_required'] === '1' ? 'Yes' : 'No';
+            
+            $uid_param = $userid ? "&uid=$userid" : "";
+            
+            print "<tr>
+                    <td>$appdate</td>
+                    <td>$exporter</td>
+                    <td>$inspection_date</td>
+                    <td>$sample_collectedby</td>
+                    <td>$inspected_by</td>
+                    <td>$lot_number</td>
+                    <td><a href='transaction.php?part=inspection&appid=$application_id$uid_param&inspect=View/Edit'>View/Edit</a></td>
+                   </tr>";
+        }
     }
 }
 
@@ -3051,6 +3433,33 @@ function CertificateImporterList($con) {
 }
 
 /*
+ CertificateSupportingDocumentList (Multiple product): Show list of supporting documents from tbsupporting_document table
+*/
+function CertificateSupportingDocumentList($appid, $con) {
+    $sql = "SELECT * FROM tbmultiple_product WHERE application_id = '$appid' ORDER BY id ASC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $itemid = htmlspecialchars($row['id'], ENT_QUOTES);
+            $prodid = htmlspecialchars($row['product_id'], ENT_QUOTES);
+            $productName = ProductInfo($prodid, $con)['name'] ?? 'NA';
+            $scientificName = ProductInfo($prodid, $con)['name_scientific'] ?? 'NA';
+            $nquantity = htmlspecialchars($row['quantity_net'], ENT_QUOTES);
+            $gquantity = htmlspecialchars($row['quantity_gross'], ENT_QUOTES);
+            $ndescription = htmlspecialchars($row['number_description'], ENT_QUOTES);
+                print "<tr>
+                    <td style=\"border: none;\">" . $productName . "</td>
+                    <td style=\"border: none; font-style: italic;\"><em>" . $scientificName . "</em></td>
+                    <td style=\"border: none;\">W.G:" . $gquantity . "<br>W.N:" . $nquantity . "</td>
+                    <td style=\"border: none;\">" . $ndescription . "</td>
+                 </tr>";
+                 $i++;
+        }
+    }
+}
+
+/*
  CertificateImporterInfo: Get importer information by importer ID
 */
 function CertificateImporterInfo($importer_id, $con) {
@@ -3085,6 +3494,22 @@ function CertificateApprovedBy($con, $groupId, $selectedId = null) {
         echo "<option value=\"\" disabled>No approvers available</option>";
     }
 }
+
+/*
+  CertificateStatus: Get certificate status from tbcertificate_print_log table
+*/
+function CertificateStatus($appid, $con) {
+    $sql = "SELECT * FROM tbcertificate_print_log WHERE application_id = '$appid' ORDER BY updated_at DESC LIMIT 1";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        return $row;
+    } else {
+        return null;
+    }
+}
+
+
 
 /*
   GenerateCertificatePDF: Generate PDF from certificate view
@@ -3310,6 +3735,149 @@ function UpdateApprover($id, $name, $surname, $roles, $position, $workplace, $co
             WHERE id = '" . pg_escape_string($con, $id) . "'";
     $result = pg_query($con, $sql);
     return $result;
+}
+
+/*
+  ApproverInfo: Get data about approver from tbapprovers table
+*/
+function ApproverInfo($id, $con) {
+    // Guard against empty or non-numeric IDs which cause PostgreSQL integer parsing errors
+    if ($id === null || $id === '' || !is_numeric($id)) {
+        return null;
+    }
+    $safe_id = pg_escape_string($con, $id);
+    $sql = "SELECT * FROM tbapprovers WHERE id = '" . $safe_id . "'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        return pg_fetch_assoc($result);
+    } else {
+        return null;
+    }
+}
+
+/*
+  ChartDocTracking: Get document tracking data for chart
+*/
+function ChartDocTracking($guid, $con) {
+    
+    // Get ALL data (not just current month) - uncomment the queries below for all-time data
+    $sqlApplication = "SELECT COUNT(*) AS total_applications FROM tbapplication WHERE guid = '" . pg_escape_string($con, $guid) . "'";
+    $sqlInspection = "SELECT COUNT(*) AS total_inspections FROM tbinspection i INNER JOIN tbapplication a ON i.application_id = a.id WHERE a.guid = '" . pg_escape_string($con, $guid) . "'";
+    $sqlCertificate = "SELECT COUNT(*) AS total_certificates FROM tbcertificate WHERE gid = '" . pg_escape_string($con, $guid) . "'";
+    
+    // For current month only, use these queries instead:
+    /*
+    $sqlApplication = "SELECT COUNT(*) AS total_applications 
+                      FROM tbapplication 
+                      WHERE EXTRACT(MONTH FROM application_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                      AND EXTRACT(YEAR FROM application_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
+
+    $sqlInspection = "SELECT COUNT(*) AS total_inspections 
+                     FROM tbinspection 
+                     WHERE EXTRACT(MONTH FROM inspection_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                     AND EXTRACT(YEAR FROM inspection_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
+    
+    $sqlCertificate = "SELECT COUNT(*) AS total_certificates 
+                      FROM tbcertificate 
+                      WHERE EXTRACT(MONTH FROM date_issued) = EXTRACT(MONTH FROM CURRENT_DATE)
+                      AND EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)";
+    */
+
+    // Execute queries and fetch results
+    $resultApplication = pg_query($con, $sqlApplication);
+    $resultInspection = pg_query($con, $sqlInspection);
+    $resultCertificate = pg_query($con, $sqlCertificate);
+
+    // Check for query errors
+    if (!$resultApplication || !$resultInspection || !$resultCertificate) {
+        error_log("ChartDocTracking Query Error: " . pg_last_error($con));
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . pg_last_error($con)
+        ];
+    }
+
+    // Fetch the counts
+    $rowApplication = pg_fetch_assoc($resultApplication);
+    $rowInspection = pg_fetch_assoc($resultInspection);
+    $rowCertificate = pg_fetch_assoc($resultCertificate);
+
+    // Extract values from the results
+    $applicationCount = $rowApplication['total_applications'] ?? 0;
+    $inspectionCount = $rowInspection['total_inspections'] ?? 0;
+    $certificateCount = $rowCertificate['total_certificates'] ?? 0;
+    
+    // Log the results
+    error_log("ChartDocTracking Results - App: $applicationCount, Insp: $inspectionCount, Cert: $certificateCount");
+    
+    // If all counts are zero, get total counts for debugging
+    if ($applicationCount == 0 && $inspectionCount == 0 && $certificateCount == 0) {
+        $totalApp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbapplication WHERE guid = '" . pg_escape_string($con, $guid) . "'"))['total'] ?? 0;
+        $totalInsp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbinspection"))['total'] ?? 0;
+        $totalCert = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbcertificate WHERE gid = '" . pg_escape_string($con, $guid) . "'"))['total'] ?? 0;
+        error_log("ChartDocTracking - No data this month. Total records - App: $totalApp, Insp: $totalInsp, Cert: $totalCert");
+    }
+
+    // Free result memory
+    pg_free_result($resultApplication);
+    pg_free_result($resultInspection);
+    pg_free_result($resultCertificate);
+
+    return [
+        'success' => true,
+        'data' => [
+            'application' => (int)$applicationCount,
+            'inspection' => (int)$inspectionCount,
+            'certificate' => (int)$certificateCount
+        ]
+    ];
+}
+
+/*
+  CertificateStatusInfo: Get certificate print log history
+  Returns array of print log records for a given application ID
+*/
+function CertificateStatusInfo($appid, $con) {
+    // Validate input
+    if (empty($appid) || !is_numeric($appid)) {
+        return null;
+    }
+    
+    // Query to get print logs with user information
+    $sql = "SELECT 
+                cpl.id,
+                cpl.application_id,
+                cpl.certificate_id,
+                cpl.current_status,
+                cpl.original_carbonpaper_id,
+                cpl.current_carbonpaper_id,
+                cpl.updated_at as print_timestamp,
+                cpl.print_count,
+                cpl.updated_by,
+                u.id as user_id,
+                u.name as user_name,
+                u.surname as user_surname,
+                u.email as user_email
+            FROM tbcertificate_print_log cpl
+            LEFT JOIN tbusers u ON cpl.updated_by = u.id
+            WHERE cpl.application_id = $1
+            ORDER BY cpl.id ASC";
+    
+    $result = pg_query_params($con, $sql, array($appid));
+    
+    if (!$result) {
+        error_log("CertificateStatusInfo - Query failed: " . pg_last_error($con));
+        return null;
+    }
+    
+    $logs = array();
+    while ($row = pg_fetch_assoc($result)) {
+        $logs[] = $row;
+    }
+    
+    pg_free_result($result);
+    
+    return $logs;
 }
 
 ?>

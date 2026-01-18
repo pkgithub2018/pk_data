@@ -345,6 +345,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 $_SESSION['lang'] = $lang;
 
 // Include the appropriate language file
+
 $langFile = "php-bin/lang_" . $lang . ".php";
 if (file_exists($langFile)) {
     $translations = include($langFile);
@@ -622,10 +623,26 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
-         <?php
-         // $activeParts = ['application', 'application_list', 'inspection']; // Add all relevant parts here
-         // $isPartActive = (isset($_GET['part']) && in_array($_GET['part'], $activeParts));
-         ?>
+
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
+        </a>
+      </li><!-- End Application Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
+        </a>
+      </li><!-- End Inspection Nav --> 
+      
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
+        </a>
+      </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
         <a class="nav-link" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >

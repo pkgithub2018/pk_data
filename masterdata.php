@@ -1477,6 +1477,7 @@
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
+              <input type="hidden" name="uid" value="<?php echo $userid; ?>">
               <div class="modal-header">
                 <h5 class="modal-title" id="addInspectionMethodModalLabel"><b>Add New Inspection Method</b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1554,18 +1555,29 @@
         $imCode = $_POST['inspectionMethodCode'];
         $imName = $_POST['inspectionMethodName'];
         $imDescription = $_POST['inspectionMethodDescription'];
+        $userid = isset($_POST['uid']) ? $_POST['uid'] : ''; // Get userid from form
         
         if($imid === 'new') {
             // Add new inspection method
-            AddInspectionMethod($imCode, $imName, $imDescription, $con); // Function to add new inspection method
+            AddInspectionMethod($imCode, $imName, $imDescription, $userid, $con); // Function to add new inspection method
             echo "<script>alert('New inspection method added-Done');</script>"; // Debugging line
+    
         } else {
             // Update existing inspection method
             echo "<script>alert('Inspection method with ID: " . $imid . " updated.');</script>"; // Debugging line
-            UpdateInspectionMethod($imid, $imCode, $imName, $imDescription, $con); // Function to update inspection method
-           
+            UpdateInspectionMethod($imid, $imCode, $imName, $imDescription, $userid, $con); // Function to update inspection method
+          
         }
-      } // End of if submitInspectionMethod
+     } // End of if submitInspectionMethod
+
+     // DELETE inspection method
+     if(isset($_GET['part']) && $_GET['part']==='inspectionmethod' && isset($_GET['del']) && $_GET['del'] === 'yes') {
+         if(isset($_GET['mid']) && !empty($_GET['mid'])) {
+             $inspectionMethodId = $_GET['mid']; // Inspection Method ID to delete
+             // Call the function to delete inspection method
+             DeleteInspectionMethod($inspectionMethodId, $userid, $con); // Function to delete inspection method    
+         }
+     } // End of DELETE inspection method
 ?>
    <!--============= Treatment methods =============-->    
     <?php

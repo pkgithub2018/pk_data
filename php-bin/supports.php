@@ -1304,6 +1304,10 @@ function UpdatePest($id, $pname, $scientificname, $category,  $userid, $con) {
  PestInfo: Get pest information from tbpest table
 */
 function PestInfo($pestid, $con) {
+    // Validate pestid is not empty and is numeric
+    if (empty($pestid) || !is_numeric($pestid)) {
+        return null;
+    }
     $sql = "SELECT * FROM tbpest WHERE id = '$pestid'";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if ($result && pg_num_rows($result) > 0) {
@@ -1970,7 +1974,7 @@ function InspectionMethodList($userid, $con) {
 /*
  AddInspectionMethod: Add new inspection method into tbinspectionmethod table 
 */
-function AddInspectionMethod($code, $method, $desc, $con) {
+function AddInspectionMethod($code, $method, $desc, $userid, $con) {
     // Escape all inputs
     $code = pg_escape_string($con, $code);
     $method = pg_escape_string($con, $method);
@@ -1988,7 +1992,7 @@ function AddInspectionMethod($code, $method, $desc, $con) {
                          VALUES ('".$code."', '".$method."', '".$desc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdmethod) or die(pg_last_error($con));
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod';</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod&uid=" . $userid . "';</script>";
         } else {
             echo "<script>alert('Error adding inspection method: " . pg_last_error($con) . "');</script>";
         }
@@ -1997,7 +2001,7 @@ function AddInspectionMethod($code, $method, $desc, $con) {
 /*
  UpdateInspectionMethod: Update inspection method from tbinspectionmethod table 
 */
-function UpdateInspectionMethod($mid, $code, $method, $desc, $con) {
+function UpdateInspectionMethod($mid, $code, $method, $desc, $userid, $con) {
     // Escape all inputs
     $mid = pg_escape_string($con, $mid); // Get inspection method ID from POST data
     $code = pg_escape_string($con, $code);
@@ -2008,9 +2012,23 @@ function UpdateInspectionMethod($mid, $code, $method, $desc, $con) {
     $sqlupdatemethod = "UPDATE tbinspection_method SET code='$code', title='$method', description='$desc' WHERE id='$mid'";
     $result = pg_query($con, $sqlupdatemethod) or die(pg_last_error($con));
     if ($result) {
-        echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod';</script>";
+        echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod&uid=" . $userid . "';</script>";
     } else {
         echo "<script>alert('Error updating inspection method: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ DeleteInspectionMethod: Delete inspection method from tbinspectionmethod table 
+*/
+function DeleteInspectionMethod($mid, $userid, $con) {
+    $sqlmethod = "DELETE FROM tbinspection_method WHERE id='$mid'";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if ($result) {
+        // Redirect back to the table
+        echo "<script>window.location.href = 'masterdata.php?part=inspectionmethod&uid=" . $userid . "';</script>";
+    } else {
+        echo "<script>alert('Error deleting inspection method: " . pg_last_error($con) . "');</script>";
     }
 }
 
@@ -2032,6 +2050,66 @@ function SelectInspectionMethod($selectedMethodId, $con) {
     }
 }
 
+/*
+  Inspection_TreatmentList_items($guid, $con, $userid): Show list of treatment methods from tbtreatmentmethod table for items form
+*/
+function Inspection_TreatmentList($guid, $con, $userid) {
+
+   if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID provided.');</script>";
+        return;
+    }
+
+    $sqlmethod = "SELECT id, application_id, inspection_date, (SELECT title FROM tbinspection_method WHERE tbinspection_method.id = tbinspection.inspection_method) AS inspection_method, treatment_date, 
+     (SELECT title FROM tbtreatment_method WHERE tbtreatment_method.id = tbinspection.treatment_method) AS treatment_method,
+     (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS application_date,
+     (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS company_id, 
+     (SELECT pestid FROM tbpest_detected WHERE tbinspection.application_id = tbpest_detected.application_id) AS pestid FROM tbinspection WHERE (SELECT guid FROM tbapplication 
+     WHERE tbapplication.id = tbinspection.application_id) = '$guid' AND pest_detected ='1' and treat_ability='1' ORDER BY application_id DESC";
+    $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $id = $row['id'];
+            $appid = $row['application_id'];
+            
+            // Get application date
+            $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);
+            $appdate = date('d/m/Y', strtotime($appdate));
+           
+            // Get exporter name
+            $comid = htmlspecialchars($row['company_id'], ENT_QUOTES);
+            $rows = EntityExportInfo($comid, $con);
+            $exporter = $rows['title'] ?? 'Unknown';
+
+            $inspection_date = htmlspecialchars($row['inspection_date'], ENT_QUOTES);
+            $inspection_date = date('d/m/Y', strtotime($inspection_date));
+            $inspection_method = $row['inspection_method'];
+            $treatment_date = htmlspecialchars($row['treatment_date'], ENT_QUOTES);
+            $treatment_date = date('d/m/Y', strtotime($treatment_date));
+            $treatment_method = $row['treatment_method'];
+            $pestid = $row['pestid'] ?? '';
+
+            // Get pest detected and treatability status
+            $pestname = 'Unknown Pest';
+            if (!empty($pestid)) {
+                $pestInfo = PestInfo($pestid, $con);
+                $pestname = $pestInfo['scientificname'] ?? 'Unknown Pest';
+            }
+            $uid_param = $userid ? "&uid=$userid" : "";
+
+            print "<tr>
+                    <td>$appdate</td>
+                    <td>$exporter</td>
+                    <td>$inspection_date</td>
+                    <td>$inspection_method</td>
+                    <td>$pestname</td>
+                    <td>$treatment_date</td>
+                    <td>$treatment_method</td>
+                    <td><a href='transaction.php?part=inspection&appid=$appid$uid_param&inspect=View/Edit'>View/Edit</a></td>
+                    </tr>";
+        } // end of while loop
+    }
+}
 /*
   TreatmentMethodList($con): Show list of treatment methods from tbtreatmentmethod table
 */

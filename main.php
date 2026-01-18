@@ -560,7 +560,7 @@ if (!empty($userid)) {
   <aside id="sidebar" class="sidebar">
     <ul class="sidebar-nav" id="sidebar-nav">
       <li class="nav-item">
-        <a class="nav-link " href="index.php">
+        <a class="nav-link " href="#">
           <i class="bi bi-grid"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
@@ -578,7 +578,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="#">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
@@ -619,13 +619,13 @@ if (!empty($userid)) {
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
+            <a href="masterdata.php?part=districts&uid=<?php echo $userid; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity_type']) ? $translations['Entity_type'] : 'Entity_type'; ?></span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
@@ -665,7 +665,7 @@ if (!empty($userid)) {
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
           <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
         </a>
@@ -703,7 +703,7 @@ if (!empty($userid)) {
       <h1><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="#"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></a></li>
           <li class="breadcrumb-item active"><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></li>
         </ol>
       </nav>
@@ -997,7 +997,7 @@ if (!empty($userid)) {
             <div class="col-12">
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
-                  <h5 class="card-title"><?php echo isset($translations['Document list']) ? $translations['Document list'] : 'Document list'; ?> <span>| <?php echo isset($translations['Today']) ? $translations['Today'] : 'Today'; ?></span></h5>
+                  <h5 class="card-title"><?php echo isset($translations['Document list']) ? $translations['Document list'] : 'Document list'; ?> <span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
                   <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>

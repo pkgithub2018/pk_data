@@ -63,6 +63,7 @@ $langHrefEn = '?' . http_build_query($__lang_params_en);
 // Link back to main.php preserving uid and current lang
 $mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => $lang];
 $mainHref = 'main.php?' . http_build_query($mainParams); 
+
 if (!empty($userid)) {
     // Get user data from database
     $userdata = Userdata($userid, $con);  
@@ -259,13 +260,13 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Application Nav --> 
        <li class="nav-item">
-        <a class="nav-link" href="inspection.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>">
           <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>">
+        <a class="nav-link" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
@@ -390,7 +391,7 @@ if (!empty($userid)) {
        // if(isset($_GET['part']) && $_GET['part'] == 'dashboard_inspection'){ 
      ?>
     <div class="pagetitle">
-      <h1><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></h1>
+      <h1><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
@@ -566,371 +567,16 @@ if (!empty($userid)) {
    --> 
     <!-- End Charts Section -->
 
-    <?php
-    // Handle Pest Detected Form
-    if (isset($_GET['part']) && $_GET['part'] === 'pest_detected') {
-        $appid = isset($_GET['appid']) ? (int)$_GET['appid'] : 0;
-        
-        // Get application info
-        $app_info = ApplicationInfo($appid, $con);
-        $appno = $app_info ? $app_info['application_no'] : '';
-        
-        // Get pest detected info if exists using PestDetectedInfo function
-        $pest_detected_info = null;
-        $btnSubmitPest = 'submit';
-        $record_id = '';
-        $pestid = '';
-        $pest_name = '';
-        $infestation_level = '';
-        $alive_status = '';
-        $risk_category = '';
-        $result_measure = '';
-        
-        if ($appid > 0) {
-            // Check if pest detection record exists
-            $pest_detected_info = PestDetectedInfo($appid, $con);
-            if ($pest_detected_info) {
-                $btnSubmitPest = 'update';
-                $record_id = $pest_detected_info['id'];
-                $pestid = $pest_detected_info['pestid'] ?? '';
-                $infestation_level = $pest_detected_info['infestation_level'] ?? '';
-                $alive_status = $pest_detected_info['alive_status'] ?? '';
-                $risk_category = $pest_detected_info['risk_category'] ?? '';
-                $result_measure = $pest_detected_info['result_measure'] ?? '';
-                
-                // Get pest name if pestid exists
-                if ($pestid) {
-                    $pest_info = PestInfo($pestid, $con);
-                    if ($pest_info) {
-                        $pest_name = $pest_info['pestname'];
-                    }
-                }
-            }
-        }
-        
-        // Handle form submission using PestDetectedSave and PestDetectedUpdate functions
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btnSubmitPestDetected'])) {
-            $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
-            $pestid = isset($_POST['pestid']) ? (int)$_POST['pestid'] : 0;
-            $infestation_level = $_POST['infestation_level'] ?? '';
-            $alive_status = $_POST['alive_status'] ?? '';
-            $risk_category = $_POST['risk_category'] ?? '';
-            $result_measure = $_POST['result_measure'] ?? '';
-            
-            $result = false;
-            if ($_POST['btnSubmitPestDetected'] === 'update') {
-                // Update existing record using PestDetectedUpdate function
-                $record_id = isset($_POST['record_id']) ? (int)$_POST['record_id'] : 0;
-                $result = PestDetectedUpdate($record_id, $pestid, $infestation_level, 
-                                            $alive_status, $risk_category, $result_measure, $con);
-            } else {
-                // Insert new record using PestDetectedSave function
-                $result = PestDetectedSave($appid, $pestid, $infestation_level, 
-                                          $alive_status, $risk_category, $result_measure, $con);
-            }
-            
-            if ($result) {
-                // Update inspection table to mark pest as detected
-                PestDetectedInspectionUpdate($appid, $con);
-                
-                echo "<script>
-                    alert('Pest detection information saved successfully!');
-                    window.location.href = 'transaction.php?part=inspection&inspect=View/Edit&appid=" . $appid . "&uid=" . $userid . "';
-                </script>";
-            } else {
-                echo "<script>alert('Error saving pest detection information.');</script>";
-            }
-        }
-    ?>
-    
-    <div class="pagetitle">
-        <h1><?php echo isset($translations['Data Form']) ? $translations['Data Form'] : 'Data Form'; ?></h1>
-       <!--
-        <nav>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
-                <li class="breadcrumb-item"><a href="transaction.php?part=inspection&inspect=View/Edit&appid=<?php echo $appid; ?>&uid=<?php echo $userid; ?>"><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></a></li>
-                <li class="breadcrumb-item active"><?php echo isset($translations['Pest Detected']) ? $translations['Pest Detected'] : 'Pest Detected'; ?></li>
-            </ol>
-        </nav>
-        -->
-    </div>
-    
-    <style>
-        /* Custom radio button styling to show checkmark when selected */
-        .result-measure-radio {
-            width: 1.3em !important;
-            height: 1.3em !important;
-            border-radius: 0.25em !important;
-            border: 2px solid #000 !important;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-color: #fff;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .result-measure-radio:checked {
-            background-color: #0d6efd;
-            border-color: #0d6efd !important;
-        }
-        
-        .result-measure-radio:checked::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 1em;
-            font-weight: bold;
-        }
-    </style>
-
-    <section class="section">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title"><?php echo isset($translations['Pest Detected Information']) ? $translations['Pest Detected Information'] : 'Pest Detected Information'; ?></h5>
-                        
-                        <form id="pestDetectedForm" action="inspection.php?part=pest_detected&appid=<?php echo $appid; ?>&uid=<?php echo $userid; ?>" method="POST">
-                            <input type="hidden" name="appid" value="<?php echo $appid; ?>">
-                            <input type="hidden" name="record_id" value="<?php echo $record_id; ?>">
-                            <input type="hidden" name="pestid" id="pestid" value="<?php echo $pestid; ?>">
-                            <input type="hidden" name="uid" value="<?php echo $userid; ?>">
-                            
-                            <!-- Pest Information Section -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong><?php echo isset($translations['Pest Information']) ? $translations['Pest Information'] : 'Pest Information'; ?></strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Select Pest']) ? $translations['Select Pest'] : 'Select Pest'; ?> <span class="text-danger">*</span></label>
-                                        <div class="col-sm-7">
-                                            <input type="text" class="form-control" id="pest_name_display" 
-                                                   value="<?php echo htmlspecialchars($pest_name); ?>" 
-                                                   placeholder="Click search to select pest" readonly required>
-                                        </div>
-                                        <div class="col-sm-2">
-                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pestSearchModal">
-                                                <i class="bi bi-search"></i> Search
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Infestation Level']) ? $translations['Infestation Level'] : 'Infestation Level'; ?></label>
-                                        <div class="col-sm-9">
-                                            <select class="form-select" name="infestation_level">
-                                                <option value=""><?php echo isset($translations['Select level']) ? $translations['Select level'] : 'Select level'; ?></option>
-                                                <option value="trace" <?php if($infestation_level === 'trace') echo 'selected'; ?>><?php echo isset($translations['Trace']) ? $translations['Trace'] : 'Trace'; ?></option>
-                                                <option value="low" <?php if($infestation_level === 'low') echo 'selected'; ?>><?php echo isset($translations['Low']) ? $translations['Low'] : 'Low'; ?></option>
-                                                <option value="medium" <?php if($infestation_level === 'medium') echo 'selected'; ?>><?php echo isset($translations['Medium']) ? $translations['Medium'] : 'Medium'; ?></option>
-                                                <option value="high" <?php if($infestation_level === 'high') echo 'selected'; ?>><?php echo isset($translations['High']) ? $translations['High'] : 'High'; ?></option>
-                                                <option value="severe" <?php if($infestation_level === 'severe') echo 'selected'; ?>><?php echo isset($translations['Severe']) ? $translations['Severe'] : 'Severe'; ?></option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Alive Status']) ? $translations['Alive Status'] : 'Alive Status'; ?></label>
-                                        <div class="col-sm-9">
-                                            <select class="form-select" name="alive_status">
-                                                <option value="">Select status</option>
-                                                <option value="alive" <?php if($alive_status === 'alive') echo 'selected'; ?>>Alive</option>
-                                                <option value="dead" <?php if($alive_status === 'dead') echo 'selected'; ?>>Dead</option>
-                                                <option value="mixed" <?php if($alive_status === 'mixed') echo 'selected'; ?>>Mixed (Alive and Dead)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Risk Category']) ? $translations['Risk Category'] : 'Risk Category'; ?></label>
-                                        <div class="col-sm-9">
-                                            <select class="form-select" name="risk_category">
-                                                <option value=""><?php echo isset($translations['Select category']) ? $translations['Select category'] : 'Select category'; ?></option>
-                                                <option value="low" <?php if($risk_category === 'low') echo 'selected'; ?>><?php echo isset($translations['Low']) ? $translations['Low'] : 'Low'; ?></option>
-                                                <option value="medium" <?php if($risk_category === 'medium') echo 'selected'; ?>><?php echo isset($translations['Medium']) ? $translations['Medium'] : 'Medium'; ?></option>
-                                                <option value="high" <?php if($risk_category === 'high') echo 'selected'; ?>><?php echo isset($translations['High']) ? $translations['High'] : 'High'; ?></option>
-                                                <option value="critical" <?php if($risk_category === 'critical') echo 'selected'; ?>><?php echo isset($translations['Critical']) ? $translations['Critical'] : 'Critical'; ?></option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Inspection Results and Measures Section -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong><?php echo isset($translations['Inspection Results and Measures']) ? $translations['Inspection Results and Measures'] : 'Inspection Results and Measures'; ?></strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Result Measure']) ? $translations['Result Measure'] : 'Result Measure'; ?></label>
-                                        <div class="col-sm-9" style="margin-top: 10px;">
-                                            <div class="form-check mb-2">
-                                                <input class="result-measure-radio" type="radio" name="result_measure" 
-                                                       id="result_immediate_treatment" value="immediate_treatment"
-                                                       <?php if($result_measure === 'immediate_treatment') echo 'checked'; ?>>
-                                                <label class="form-check-label" for="result_immediate_treatment" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    <?php echo isset($translations['Immediately implement the treatment']) ? $translations['Immediately implement the treatment'] : 'Immediately implement the treatment'; ?>
-                                                </label>
-                                            </div>
-                                            <div class="form-check mb-2">
-                                                <input class="result-measure-radio" type="radio" name="result_measure" 
-                                                       id="result_not_accordance" value="not_accordance"
-                                                       <?php if($result_measure === 'not_accordance') echo 'checked'; ?>>
-                                                <label class="form-check-label" for="result_not_accordance" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    <?php echo isset($translations['Regulated article was not accordance']) ? $translations['Regulated article was not accordance'] : 'Regulated article was not accordance'; ?>
-                                                </label>
-                                            </div>
-                                            <div class="form-check mb-2">
-                                                <input class="result-measure-radio" type="radio" name="result_measure" 
-                                                       id="result_phytosanitary_requirements" value="phytosanitary_requirements"
-                                                       <?php if($result_measure === 'phytosanitary_requirements') echo 'checked'; ?>>
-                                                <label class="form-check-label" for="result_phytosanitary_requirements" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    The regulated article was in accordance with Lao Phytosanitary requirements
-                                                </label>
-                                            </div>
-                                            <div class="form-check mb-2">
-                                                <input class="result-measure-radio" type="radio" name="result_measure" 
-                                                       id="result_other_conclusion" value="other_conclusion"
-                                                       <?php if($result_measure === 'other_conclusion') echo 'checked'; ?>>
-                                                <label class="form-check-label" for="result_other_conclusion" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    Other conclusion
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Form Actions -->
-                            <div class="row mb-3">
-                                <div class="col-sm-12 d-flex gap-2">
-                                    <button type="submit" name="btnSubmitPestDetected" 
-                                            value="<?php echo $btnSubmitPest; ?>" 
-                                            class="btn btn-success">
-                                        <i class="bi bi-save"></i> <?php echo $btnSubmitPest === 'update' ? 'Update' : 'Submit'; ?>
-                                    </button>
-                                    <a href="transaction.php?part=inspection&inspect=View/Edit&appid=<?php echo $appid; ?>&uid=<?php echo $userid; ?>" 
-                                       class="btn btn-secondary">
-                                        <i class="bi bi-arrow-left"></i> Back to Inspection
-                                    </a>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Pest Search Modal -->
-    <div class="modal fade" id="pestSearchModal" tabindex="-1" aria-labelledby="pestSearchModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="pestSearchModalLabel">Search and Select Pest</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <input type="text" class="form-control" id="pestSearchInput" placeholder="Search by pest name, scientific name, or category...">
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover" id="pestSearchTable">
-                            <thead>
-                                <tr>
-                                    <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
-                                    <th><?php echo isset($translations['Pest Name']) ? $translations['Pest Name'] : 'Pest Name'; ?></th>
-                                    <th><?php echo isset($translations['Category']) ? $translations['Category'] : 'Category'; ?></th>
-                                    <th><?php echo isset($translations['Select']) ? $translations['Select'] : 'Select'; ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                // Get all pests from database
-                                $pest_sql = "SELECT id, pestname, scientificname, category FROM tbpest ORDER BY pestname ASC";
-                                $pest_result = pg_query($con, $pest_sql);
-                                if ($pest_result && pg_num_rows($pest_result) > 0) {
-                                    while ($pest_row = pg_fetch_assoc($pest_result)) {
-                                        $pid = $pest_row['id'];
-                                        $pname = htmlspecialchars($pest_row['pestname']);
-                                        $scientific = htmlspecialchars($pest_row['scientificname'] ?? '');
-                                        $category = htmlspecialchars($pest_row['category'] ?? '');
-                                        
-                                        echo "<tr>";
-                                        echo "<td><em>$scientific</em></td>";
-                                        echo "<td>$pname</td>";
-                                        echo "<td>$category</td>";
-                                        echo "<td><button type='button' class='btn btn-sm btn-danger' onclick='selectPestDetected($pid, \"$pname\")'>Select</button></td>";
-                                        echo "</tr>";
-                                    }
-                                } else {
-                                    echo "<tr><td colspan='4' class='text-center'>No pests found</td></tr>";
-                                }
-                                ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Pest selection function
-        function selectPestDetected(pestId, pestName) {
-            document.getElementById('pestid').value = pestId;
-            document.getElementById('pest_name_display').value = pestName;
-            
-            // Close the modal
-            var modal = bootstrap.Modal.getInstance(document.getElementById('pestSearchModal'));
-            modal.hide();
-        }
-        
-        // Pest search functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const pestSearchInput = document.getElementById('pestSearchInput');
-            const pestSearchTable = document.getElementById('pestSearchTable');
-            
-            if (pestSearchInput && pestSearchTable) {
-                pestSearchInput.addEventListener('keyup', function() {
-                    const searchTerm = pestSearchInput.value.toLowerCase();
-                    const rows = pestSearchTable.querySelectorAll('tbody tr');
-                    
-                    rows.forEach(row => {
-                        const text = row.textContent.toLowerCase();
-                        if (text.includes(searchTerm)) {
-                            row.style.display = '';
-                        } else {
-                            row.style.display = 'none';
-                        }
-                    });
-                });
-            }
-        });
-    </script>
-    
-    <?php
-    } else {
-        // Show normal inspection list
-    ?>
-
     <section class="section dashboard">
       <div class="row">
         <!-- Left side columns -->
         <div class="col-lg-8" style="width: 100%;">
           <div class="row">           
-            <!-- Inspection list -->
+            <!-- Certificate list -->
             <div class="col-12">
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
-                  <h5 class="card-title"><?php echo isset($translations['Inspection List']) ? $translations['Inspection List'] : 'Inspection List'; ?><span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
+                  <h5 class="card-title"><?php echo isset($translations['Certificate List']) ? $translations['Certificate List'] : 'Certificate List'; ?><span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
                   <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
@@ -970,28 +616,7 @@ if (!empty($userid)) {
                   </table>
 
                 <!-- Inspection results data table -->
-              <!--
-                 <div class="card-body">
-                  <h5 class="card-title"><?php echo isset($translations['Inspection Results List']) ? $translations['Inspection Results List'] : 'Inspection Results List'; ?><span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
-                  <table class="table datatable" style="font-size: 10pt;">
-                    <thead>
-                      <tr>
-                        <th scope="col"><?php echo isset($translations['Application date']) ? $translations['Application date'] : 'Application date'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Exporter']) ? $translations['Exporter'] : 'Exporter'; ?></th> 
-                        <th scope="col"><?php echo isset($translations['Inspection date']) ? $translations['Inspection date'] : 'Inspection date'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Inspected by']) ? $translations['Inspected by'] : 'Inspected by'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Lot No']) ? $translations['Lot No'] : 'Lot No'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Pest Detected']) ? $translations['Pest Detected'] : 'Pest Detected'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Action']) ? $translations['Action'] : 'Action'; ?></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                     <?php //PestDetectedInspectionList_items($guid, $con, $userid); ?>
-                    </tbody>
-                  </table>  
-
-                </div>
-                --> <!-- End treatement data table -->
+             
               </div>
             </div><!-- End Inspection list -->
           </div>
@@ -999,10 +624,6 @@ if (!empty($userid)) {
         <!-- Right side columns *****************PK************************ -->
       </div>
     </section>
-    
-    <?php
-    } // End of else block - normal inspection list
-    ?>
  
   </main><!-- End #main -->
   <!-- ======= Footer ======= -->

@@ -565,7 +565,7 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav --> 
-    <li class="nav-item">
+      <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
@@ -591,7 +591,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
@@ -603,58 +603,68 @@ if (!empty($userid)) {
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
          <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
         <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=districts&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=districts&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection Method']) ? $translations['Inspection Method'] : 'Inspection Method'; ?></span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
-            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
@@ -673,25 +683,25 @@ if (!empty($userid)) {
     
       <li class="nav-heading"><?php echo isset($translations['USERS MANAGEMENT']) ? $translations['USERS MANAGEMENT'] : "Users' Management"; ?></li>
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
@@ -736,6 +746,50 @@ if (!empty($userid)) {
             'success' => false,
             'error' => 'JSON encoding failed: ' . json_last_error_msg()
         ]);
+    }
+
+    // Monthly pest detected line-chart data (last 3 months)
+    $monthlyPestData = MonthlyPestDetectedChartData($con);
+    $defaultLastThreeMonths = [];
+    for ($i = 2; $i >= 0; $i--) {
+      $defaultLastThreeMonths[] = date('M', strtotime("first day of -{$i} month"));
+    }
+    if (!$monthlyPestData || !isset($monthlyPestData['months']) || !isset($monthlyPestData['series'])) {
+      $monthlyPestData = [
+        'success' => false,
+        'months' => $defaultLastThreeMonths,
+        'series' => [],
+        'year' => (int)date('Y')
+      ];
+    }
+    $monthlyPestDataJson = json_encode($monthlyPestData, JSON_NUMERIC_CHECK);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      $monthlyPestDataJson = json_encode([
+        'success' => false,
+        'months' => $defaultLastThreeMonths,
+        'series' => [],
+        'year' => (int)date('Y')
+      ]);
+    }
+
+    // Monthly pest category bar-chart data (last 3 months)
+    $monthlyPestCategoryData = MonthlyPestCategoryChartData($con);
+    if (!$monthlyPestCategoryData || !isset($monthlyPestCategoryData['months']) || !isset($monthlyPestCategoryData['series'])) {
+      $monthlyPestCategoryData = [
+        'success' => false,
+        'months' => $defaultLastThreeMonths,
+        'series' => [],
+        'year' => (int)date('Y')
+      ];
+    }
+    $monthlyPestCategoryDataJson = json_encode($monthlyPestCategoryData, JSON_NUMERIC_CHECK);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      $monthlyPestCategoryDataJson = json_encode([
+        'success' => false,
+        'months' => $defaultLastThreeMonths,
+        'series' => [],
+        'year' => (int)date('Y')
+      ]);
     }
     ?>
     
@@ -882,17 +936,31 @@ if (!empty($userid)) {
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
+              <h5 class="card-title">Monthly Pest Trends <span>| Last 3 Months</span></h5>
               <!-- Line Chart -->
               <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                  const pestLineData = <?php echo $monthlyPestDataJson; ?>;
+                  const legendData = Array.isArray(pestLineData.series)
+                    ? pestLineData.series.map(item => item.name)
+                    : [];
+
+                  const lineSeries = Array.isArray(pestLineData.series)
+                    ? pestLineData.series.map(item => ({
+                        name: item.name,
+                        type: 'line',
+                        data: Array.isArray(item.data) ? item.data : [],
+                        smooth: true
+                      }))
+                    : [];
+
                   echarts.init(document.querySelector("#reportsChart")).setOption({
                     tooltip: {
-                      trigger: 'item'
+                      trigger: 'axis'
                     },
                     legend: {
-                      data: ['Applications', 'Certificates', 'Inspections']
+                      data: legendData
                     },
                     toolbox: {
                       show: true,
@@ -906,27 +974,12 @@ if (!empty($userid)) {
                     xAxis: {
                       type: 'category',
                       boundaryGap: false,
-                      data: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+                      data: Array.isArray(pestLineData.months) ? pestLineData.months : []
                     },
                     yAxis: {
                       type: 'value'
                     },
-                    series: [{
-                      name: 'Applications',
-                      type: 'line',
-                      data: [120, 132, 101, 134, 90, 230],
-                      smooth: true
-                    }, {
-                      name: 'Certificates',
-                      type: 'line',
-                      data: [220, 182, 191, 234, 290, 330],
-                      smooth: true
-                    }, {
-                      name: 'Inspections',
-                      type: 'line',
-                      data: [150, 232, 201, 154, 190, 330],
-                      smooth: true
-                    }]
+                    series: lineSeries
                   });
                 });
               </script>
@@ -934,15 +987,35 @@ if (!empty($userid)) {
             </div>
           </div>
         </div>
-        <!-- Chart 3: Export Entities Performance -->
+        <!-- Chart 3: Pest Category Trends -->
         <div class="col-lg-4">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Export Entities <span>| Performance</span></h5>
+              <h5 class="card-title">Pest Category Trends <span>| Last 3 Months</span></h5>
               <!-- Column Chart -->
               <div id="columnChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                  const pestCategoryData = <?php echo $monthlyPestCategoryDataJson; ?>;
+                  const categoryLegendData = Array.isArray(pestCategoryData.series)
+                    ? pestCategoryData.series.map(item => item.name)
+                    : [];
+
+                  const barSeries = Array.isArray(pestCategoryData.series)
+                    ? pestCategoryData.series.map(item => ({
+                        name: item.name,
+                        type: 'bar',
+                        label: {
+                          show: true,
+                          position: 'top'
+                        },
+                        emphasis: {
+                          focus: 'series'
+                        },
+                        data: Array.isArray(item.data) ? item.data : []
+                      }))
+                    : [];
+
                   echarts.init(document.querySelector("#columnChart")).setOption({
                     tooltip: {
                       trigger: 'axis',
@@ -950,7 +1023,9 @@ if (!empty($userid)) {
                         type: 'shadow'
                       }
                     },
-                    legend: {},
+                    legend: {
+                      data: categoryLegendData
+                    },
                     grid: {
                       left: '3%',
                       right: '4%',
@@ -959,26 +1034,12 @@ if (!empty($userid)) {
                     },
                     xAxis: [{
                       type: 'category',
-                      data: ['Entity A', 'Entity B', 'Entity C', 'Entity D', 'Entity E', 'Entity F']
+                      data: Array.isArray(pestCategoryData.months) ? pestCategoryData.months : []
                     }],
                     yAxis: [{
                       type: 'value'
                     }],
-                    series: [{
-                      name: 'Applications',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [320, 302, 301, 334, 390, 330]
-                    }, {
-                      name: 'Certificates',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [120, 132, 101, 134, 90, 230]
-                    }]
+                    series: barSeries
                   });
                 });
               </script>
@@ -988,6 +1049,7 @@ if (!empty($userid)) {
         </div>
       </div>
     </section><!-- End Charts Section -->
+
     <section class="section dashboard">
       <div class="row">
         <!-- Left side columns -->
@@ -1011,7 +1073,7 @@ if (!empty($userid)) {
                       </tr>
                     </thead>
                     <tbody>
-                     <?php ApplicationList($guid, $con, $userid); ?>
+                     <?php ApplicationList($guid, $con, $lang, $userid); ?>
                     </tbody>
                   </table>
                 </div>

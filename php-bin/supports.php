@@ -1446,7 +1446,7 @@ function PestDetectedInfo($appid, $con) {
 /* 
   ProductList: List all product  from tbproduct table
 */
-function ProductList($con) {
+function ProductList($userid, $con) {
     $sqlproduct = "SELECT * FROM tbproduct ORDER BY id ASC";
     $result = pg_query($con, $sqlproduct) or die(pg_last_error());
     $i = 0;
@@ -1483,7 +1483,7 @@ function ProductList($con) {
                          data-productgroup='" . htmlspecialchars($producgroup, ENT_QUOTES) . "'>
                       <i class='bi bi-pencil-square table-icon'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=product&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                    <td><a href='masterdata.php?part=product&uid=$userid&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
                     </tr>"; 
         } // end of while loop
     }
@@ -3079,12 +3079,14 @@ function MultipleProductList($app_id, $con) {
 /*
  ApplicationList: Show list of applications and their status from tbapplication
 */
-function ApplicationList($guid, $con, $userid = null) {
+function ApplicationList($guid, $con, $lang, $userid = null) {
     // Validate guid parameter - must be numeric and not empty
     if (empty($guid) || !is_numeric($guid)) {
         echo "<script>alert('Invalid group ID provided.');</script>";
         return;
     }
+
+    $lang_param = "&lang=$lang";
 
     $sql = "SELECT * FROM tbapplication WHERE guid = '$guid' ORDER BY id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
@@ -3113,7 +3115,8 @@ function ApplicationList($guid, $con, $userid = null) {
              // Certificate status - to be implemented later
             if ($certificate_status == "Add" || $certificate_status == "View/Edit") {
                 $uid_param = $userid ? "&uid=$userid" : "";
-                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status$uid_param'>$certificate_status</a>";
+                
+                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status$uid_param$lang_param'>$certificate_status</a>";
             } else {
                 $certificate_link = "<span class='text-muted'>Not ready</span>";
             }
@@ -3133,8 +3136,8 @@ function ApplicationList($guid, $con, $userid = null) {
                     <td>$appno</td>
                     <td>$exporter</td>
                     <td>$appdate</td>
-                    <td><a href='transaction.php?part=application&appid_edit=$id$uid_param'>View/Edit</a></td>
-                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param'>$inspection_status</a></span></td>
+                    <td><a href='transaction.php?part=application&appid_edit=$id$uid_param$lang_param'>View/Edit</a></td>
+                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param$lang_param'>$inspection_status</a></span></td>
                     <td>$certificate_link</td>
                     <td>$certificate_final_display</td>
                    </tr>";
@@ -3587,7 +3590,51 @@ function CertificateStatus($appid, $con) {
     }
 }
 
+/*
+ CertificateList: Show list of certificates and their status from tbcertificate
+*/
+ function CertificateList($guid, $con, $userid){
+    // Validate guid parameter - must be numeric and not empty
+    if (empty($guid) || !is_numeric($guid)) {
+        echo "<script>alert('Invalid group ID provided.');</script>";
+        return;
+    }
 
+    $sql = "SELECT id, application_id, certificate_no, carbonpaper_id, consignment_value, datetime_created, date_issued, 
+            (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) AS application_date,
+            (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) AS company_id 
+            FROM tbcertificate WHERE (SELECT guid FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) = '$guid'  ORDER BY id DESC";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_assoc($result)) {
+            $id = htmlspecialchars($row['id'], ENT_QUOTES);
+            $app_id = htmlspecialchars($row['application_id'], ENT_QUOTES);
+            $appdate = htmlspecialchars($row['application_date'], ENT_QUOTES);   
+            $appdate = date('d/m/Y', strtotime($appdate));  // Format
+            $cert_no = htmlspecialchars($row['certificate_no'], ENT_QUOTES);
+            $carbonpaper_id = htmlspecialchars($row['carbonpaper_id'], ENT_QUOTES);
+            $consignment_value = htmlspecialchars($row['consignment_value'], ENT_QUOTES);
+            $exporter_id = htmlspecialchars($row['company_id'], ENT_QUOTES);
+            $exporter = EntityExportInfo($exporter_id, $con)['title'] ?? 'Unknown';  // Exporter's name
+            $date_created = htmlspecialchars($row['datetime_created'], ENT_QUOTES);   
+            $date_created = date('d/m/Y', strtotime($date_created));  // Format date for display
+            $date_issued = htmlspecialchars($row['date_issued'], ENT_QUOTES);   
+            $date_issued = date('d/m/Y', strtotime($date_issued));  // Format date for display
+            
+            $uid_param = $userid ? "&uid=$userid" : "";
+            print "<tr>
+                    <td>$appdate</td>
+                    <td>$exporter</td>
+                    <td>$cert_no</td>
+                    <td>$carbonpaper_id</td>
+                    <td>$consignment_value</td>
+                    <td>$date_created</td>
+                    <td>$date_issued</td>
+                    <td><a href='transaction.php?part=certificate&appid=$app_id&certify=View/Edit$uid_param'>View/Edit</a></td>
+                   </tr>";
+        }
+    }
+ }
 
 /*
   GenerateCertificatePDF: Generate PDF from certificate view
@@ -3956,6 +4003,148 @@ function CertificateStatusInfo($appid, $con) {
     pg_free_result($result);
     
     return $logs;
+}
+
+/*
+    MonthlyPestDetectedChartData: Get monthly pest detection counts for last 3 months
+    Returns month labels and line-series data grouped by pest scientific name
+*/
+function MonthlyPestDetectedChartData($con) {
+        $monthKeys = [];
+        $monthLabels = [];
+    for ($i = 2; $i >= 0; $i--) {
+                $dt = strtotime("first day of -{$i} month");
+                $monthKeys[] = date('Y-m', $dt);
+                $monthLabels[] = date('M', $dt);
+        }
+
+        $sql = "SELECT
+                                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
+                                COALESCE(NULLIF(TRIM(p.scientificname), ''), 'Unknown Pest') AS pest_name,
+                                COUNT(tpd.pestid)::int AS pest_count
+                        FROM tbinspection i
+                        INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
+                        LEFT JOIN tbpest p ON p.id = tpd.pestid
+                        WHERE i.inspection_date IS NOT NULL
+                            AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
+                            AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+                        GROUP BY month_key, pest_name
+                        ORDER BY pest_name, month_key";
+
+    $result = pg_query($con, $sql);
+    if (!$result) {
+        error_log("MonthlyPestDetectedChartData Query Error: " . pg_last_error($con));
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . pg_last_error($con),
+            'months' => $monthLabels,
+            'series' => [],
+            'year' => (int)date('Y')
+        ];
+    }
+
+    $seriesMap = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $monthKey = $row['month_key'];
+        $pestName = $row['pest_name'];
+        $pestCount = (int)$row['pest_count'];
+
+        if (!isset($seriesMap[$pestName])) {
+            $seriesMap[$pestName] = array_fill(0, count($monthKeys), 0);
+        }
+
+        $monthIndex = array_search($monthKey, $monthKeys, true);
+        if ($monthIndex !== false) {
+            $seriesMap[$pestName][$monthIndex] = $pestCount;
+        }
+    }
+    pg_free_result($result);
+
+    $seriesData = [];
+    foreach ($seriesMap as $pestName => $counts) {
+        $seriesData[] = [
+            'name' => $pestName,
+            'data' => $counts
+        ];
+    }
+
+    return [
+        'success' => true,
+        'months' => $monthLabels,
+        'series' => $seriesData,
+        'year' => (int)date('Y')
+    ];
+}
+
+/*
+  MonthlyPestCategoryChartData: Get monthly pest detection counts by category for last 3 months
+  Returns month labels and bar-series data grouped by pest category
+*/
+function MonthlyPestCategoryChartData($con) {
+    $monthKeys = [];
+    $monthLabels = [];
+    for ($i = 2; $i >= 0; $i--) {
+        $dt = strtotime("first day of -{$i} month");
+        $monthKeys[] = date('Y-m', $dt);
+        $monthLabels[] = date('M', $dt);
+    }
+
+    $sql = "SELECT
+                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
+                COALESCE(NULLIF(TRIM(p.category), ''), 'Unknown Category') AS pest_category,
+                COUNT(tpd.pestid)::int AS pest_count
+            FROM tbinspection i
+            INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
+            LEFT JOIN tbpest p ON p.id = tpd.pestid
+            WHERE i.inspection_date IS NOT NULL
+              AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
+              AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+            GROUP BY month_key, pest_category
+            ORDER BY pest_category, month_key";
+
+    $result = pg_query($con, $sql);
+    if (!$result) {
+        error_log("MonthlyPestCategoryChartData Query Error: " . pg_last_error($con));
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . pg_last_error($con),
+            'months' => $monthLabels,
+            'series' => [],
+            'year' => (int)date('Y')
+        ];
+    }
+
+    $seriesMap = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $monthKey = $row['month_key'];
+        $pestCategory = $row['pest_category'];
+        $pestCount = (int)$row['pest_count'];
+
+        if (!isset($seriesMap[$pestCategory])) {
+            $seriesMap[$pestCategory] = array_fill(0, count($monthKeys), 0);
+        }
+
+        $monthIndex = array_search($monthKey, $monthKeys, true);
+        if ($monthIndex !== false) {
+            $seriesMap[$pestCategory][$monthIndex] = $pestCount;
+        }
+    }
+    pg_free_result($result);
+
+    $seriesData = [];
+    foreach ($seriesMap as $pestCategory => $counts) {
+        $seriesData[] = [
+            'name' => $pestCategory,
+            'data' => $counts
+        ];
+    }
+
+    return [
+        'success' => true,
+        'months' => $monthLabels,
+        'series' => $seriesData,
+        'year' => (int)date('Y')
+    ];
 }
 
 ?>

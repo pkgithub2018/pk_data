@@ -275,13 +275,13 @@ if (!empty($userid)) {
       </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
@@ -293,17 +293,17 @@ if (!empty($userid)) {
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
          <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
@@ -313,37 +313,47 @@ if (!empty($userid)) {
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity_type']) ? $translations['Entity_type'] : 'Entity_type'; ?></span>
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection Method']) ? $translations['Inspection Method'] : 'Inspection Method'; ?></span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
-            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
@@ -352,25 +362,25 @@ if (!empty($userid)) {
       <?php } // End of Admin group check ?>
       <li class="nav-heading"><?php echo isset($translations["USERS MANAGEMENT"]) ? $translations["USERS MANAGEMENT"] : "USERS' MANAGEMENT"; ?></li>
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
@@ -391,164 +401,6 @@ if (!empty($userid)) {
       </nav>
     </div><!-- End Page Title -->
     <!-- Charts Section -->
- <!--
-    <section class="section">
-      <div class="row">   
-        <div class="col-lg-4"> 
-  <div class="card">
-    <div class="card-body">
-      <h5 class="card-title">Application Status <span>| This Month</span></h5>
-      <div id="kpiCard" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
-        <div class="kpi-container" style="text-align: center; width: 100%;">
-          <div style="margin-bottom: 20px; color: #6c757d; font-size: 14px; letter-spacing: 0.5px;">
-            APPLICATIONS THIS MONTH
-          </div>
-          
-          <div style="font-size: 64px; font-weight: 700; color: #2c3e50; margin-bottom: 15px; line-height: 1;">
-            23
-          </div>
-          
-          <div style="font-size: 16px; color: #495057; margin-bottom: 25px;">
-            Total Applications
-          </div>
-          
-          <div style="display: flex; justify-content: center; gap: 30px; margin-top: 30px;">
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 600; color: #27ae60;">15</div>
-              <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Submitted</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 600; color: #3498db;">5</div>
-              <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">In Review</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 600; color: #9b59b6;">3</div>
-              <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Approved</div>
-            </div>
-          </div>
-          
-          <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: #27ae60; font-weight: 500;">
-              <span style="font-size: 18px;">↑</span>
-              <span>12% increase from last month</span>
-            </div>
-          </div>
-        </div>
-      </div>   
-    </div>
-  </div>
-</div>
-       
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
-             
-              <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
-              <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#reportsChart")).setOption({
-                    tooltip: {
-                      trigger: 'item'
-                    },
-                    legend: {
-                      data: ['Applications', 'Certificates', 'Inspections']
-                    },
-                    toolbox: {
-                      show: true,
-                      feature: {
-                        dataView: { show: true, readOnly: false },
-                        magicType: { show: true, type: ['line', 'bar'] },
-                        restore: { show: true },
-                        saveAsImage: { show: true }
-                      }
-                    },
-                    xAxis: {
-                      type: 'category',
-                      boundaryGap: false,
-                      data: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-                    },
-                    yAxis: {
-                      type: 'value'
-                    },
-                    series: [{
-                      name: 'Applications',
-                      type: 'line',
-                      data: [120, 132, 101, 134, 90, 230],
-                      smooth: true
-                    }, {
-                      name: 'Certificates',
-                      type: 'line',
-                      data: [220, 182, 191, 234, 290, 330],
-                      smooth: true
-                    }, {
-                      name: 'Inspections',
-                      type: 'line',
-                      data: [150, 232, 201, 154, 190, 330],
-                      smooth: true
-                    }]
-                  });
-                });
-              </script>
-             
-            </div>
-          </div>
-        </div>
-       
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Export Entities <span>| Performance</span></h5>
-             
-              <div id="columnChart" style="min-height: 250px;" class="echart"></div>
-              <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#columnChart")).setOption({
-                    tooltip: {
-                      trigger: 'axis',
-                      axisPointer: {
-                        type: 'shadow'
-                      }
-                    },
-                    legend: {},
-                    grid: {
-                      left: '3%',
-                      right: '4%',
-                      bottom: '3%',
-                      containLabel: true
-                    },
-                    xAxis: [{
-                      type: 'category',
-                      data: ['Entity A', 'Entity B', 'Entity C', 'Entity D', 'Entity E', 'Entity F']
-                    }],
-                    yAxis: [{
-                      type: 'value'
-                    }],
-                    series: [{
-                      name: 'Applications',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [320, 302, 301, 334, 390, 330]
-                    }, {
-                      name: 'Certificates',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [120, 132, 101, 134, 90, 230]
-                    }]
-                  });
-                });
-              </script>
-             
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  -->
     <!-- End Charts Section -->
     <section class="section dashboard">
       <div class="row">
@@ -602,13 +454,13 @@ if (!empty($userid)) {
             <div class="col-lg-12">
             <div class="card">
                 <div class="card-body">
-                <h5 class="card-title">Multiple Products</h5>
+                <h5 class="card-title"><?php echo isset($translations['Multiple commodities']) ? $translations['Multiple commodities'] : 'Multiple commodities'; ?></h5>
                 
                 <!-- Form Section -->
                 <form id="multipleProductsForm" method="POST">
                   <input type="hidden" id="appid" name="appid" value="<?php echo htmlspecialchars($appid); ?>">
                   <div class="row mb-3 align-items-center">
-                    <label for="product_name" class="col-sm-2 col-form-label">Product Name</label>
+                    <label for="product_name" class="col-sm-2 col-form-label"><?php echo isset($translations['Product name']) ? $translations['Product name'] : 'Product Name'; ?></label>
                     <div class="col-sm-10">
                       <div class="input-group">
                         <input type="text" class="form-control" id="product_name" name="product_name" readonly style="background-color: #e7f3ff; border-color: #4a9eff;">
@@ -621,35 +473,35 @@ if (!empty($userid)) {
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="scientific_name" class="col-sm-2 col-form-label">Scientific Name</label>
+                    <label for="scientific_name" class="col-sm-2 col-form-label"><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></label>
                     <div class="col-sm-10">
                       <input type="text" class="form-control" id="scientific_name" name="scientific_name" readonly style="background-color: #e7f3ff; border-color: #4a9eff;">
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="number_description" class="col-sm-2 col-form-label">Number and Description</label>
+                    <label for="number_description" class="col-sm-2 col-form-label"><?php echo isset($translations['Number and description']) ? $translations['Number and description'] : 'Number and Description'; ?></label>
                     <div class="col-sm-10">
                       <input type="text" class="form-control" id="number_description" name="number_description" style="background-color: #e7f3ff; border-color: #4a9eff;">
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="net_quantity" class="col-sm-2 col-form-label">Net Quantity</label>
+                    <label for="net_quantity" class="col-sm-2 col-form-label"><?php echo isset($translations['Net Quantity']) ? $translations['Net Quantity'] : 'Net Quantity'; ?></label>
                     <div class="col-sm-4">
                       <input type="number" step="0.01" min="0" class="form-control" id="net_quantity" name="net_quantity" style="background-color: #e7f3ff; border-color: #4a9eff;">
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="gross_quantity" class="col-sm-2 col-form-label">Gross Quantity</label>
+                    <label for="gross_quantity" class="col-sm-2 col-form-label"><?php echo isset($translations['Gross Quantity']) ? $translations['Gross Quantity'] : 'Gross Quantity'; ?></label>
                     <div class="col-sm-4">
                       <input type="number" step="0.01" min="0" class="form-control" id="gross_quantity" name="gross_quantity" style="background-color: #e7f3ff; border-color: #4a9eff;">
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="unit" class="col-sm-2 col-form-label">Unit</label>
+                    <label for="unit" class="col-sm-2 col-form-label"><?php echo isset($translations['Unit']) ? $translations['Unit'] : 'Unit'; ?></label>
                     <div class="col-sm-4">
                       <select class="form-select" id="unit" name="unit" style="background-color: #e7f3ff; border-color: #4a9eff;">
                         <option value="">&nbsp;</option>
@@ -671,7 +523,7 @@ if (!empty($userid)) {
 
                 <!-- Data Table Section -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h5 class="mb-0">Products List</h5>
+                  <h5 class="mb-0"><?php echo isset($translations['Products List']) ? $translations['Products List'] : 'Products List'; ?></h5>
                   <button type="button" class="btn btn-outline-primary btn-sm" id="printTableBtn" title="Print Products List">
                     <i class="bi bi-printer"></i> Print
                   </button>
@@ -680,14 +532,14 @@ if (!empty($userid)) {
                   <table class="table table-bordered table-striped" id="productsTable">
                     <thead>
                       <tr>
-                        <th>No</th>
-                        <th>Product Name</th>
-                        <th>Scientific Name</th>
-                        <th>Number and Description</th>
-                        <th>Net Quantity</th>
-                        <th>Gross Quantity</th>
-                        <th>Unit</th>
-                        <th>Action</th>
+                        <th><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></th>
+                        <th><?php echo isset($translations['Product name']) ? $translations['Product name'] : 'Product Name'; ?></th>
+                        <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
+                        <th><?php echo isset($translations['Number and description']) ? $translations['Number and description'] : 'Number and Description'; ?></th>
+                        <th><?php echo isset($translations['Net Quantity']) ? $translations['Net Quantity'] : 'Net Quantity'; ?></th>
+                        <th><?php echo isset($translations['Gross Quantity']) ? $translations['Gross Quantity'] : 'Gross Quantity'; ?></th>
+                        <th><?php echo isset($translations['Unit']) ? $translations['Unit'] : 'Unit'; ?></th>
+                        <th><?php echo isset($translations['Action']) ? $translations['Action'] : 'Action'; ?></th>
                       </tr>
                     </thead>
                     <tbody id="productsTableBody">
@@ -704,7 +556,7 @@ if (!empty($userid)) {
                       <i class="bi bi-check-circle"></i> Submit
                     </button>
                     <button type="button" class="btn btn-secondary" id="cancelBtn">
-                      <i class="bi bi-x-circle"></i> Cancel
+                      <i class="bi bi-x-circle"></i> Go Back
                     </button>
                   </div>
                 </div>

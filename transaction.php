@@ -336,6 +336,8 @@ if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
   $lang = $_SESSION['lang'];
 } elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
   $lang = $_GET['lang'];
+} elseif (isset($_POST['hlang']) && !empty($_POST['hlang'])) {
+  $lang = $_POST['hlang'];
 }
 
 // Persist selected language in session
@@ -375,10 +377,26 @@ $langHrefEn = '?' . http_build_query($__lang_params_en);
 // Link back to main.php preserving uid and current lang
 $mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => $lang];
 $mainHref = 'main.php?' . http_build_query($mainParams);
+// Hidden field for forms to preserve language
+$hiddenLangField = '<input type="hidden" name="hlang" id="hlang" value="' . htmlspecialchars($lang) . '">';
+
+// Validate userid is numeric before using it
+if (!is_numeric($userid)) {
+    echo "<script>alert('Invalid user ID format: " . htmlspecialchars($userid) . ". Please log in again.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+}
+
 // User data
-$loginuser = Userdata($userid, $con)['name']; // User name
-$guid = Userdata($userid, $con)['group_id'];
-$position = Userdata($userid, $con)['position'];       
+$userdata = Userdata($userid, $con);
+if (!$userdata) {
+    echo "<script>alert('User data not found. Please log in again.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+}
+$loginuser = $userdata['name']; // User name
+$guid = $userdata['group_id'];
+$position = $userdata['position'];       
 // Get and store user profile image
 $uprofile = Profiledata($userid, $con);
 if (!$uprofile) {
@@ -507,7 +525,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     <div class="d-flex align-items-center justify-content-between">
       <a href="index.html" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+        <span class="d-none d-lg-block"><?php echo isset($translations['e-Phytosanitary']) ? $translations['e-Phytosanitary'] : 'e-Phytosanitary'; ?></span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -664,83 +682,102 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
            <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Countries</span>
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
             <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Districts</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Provinces</span>
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
         </ul>
-      </li><!-- End Master Data Nav -->     
+      </li><!-- End Master Data Nav -->
+      
+      <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
 
       <li class="nav-heading"><?php echo isset($translations["USERS MANAGEMENT"]) ? $translations["USERS MANAGEMENT"] : "Users Management"; ?></li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i>
           <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
@@ -947,7 +984,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Application Form</h5>
+              <h5 class="card-title"><?php echo isset($translations['Application Form']) ? $translations['Application Form'] : 'Application Form'; ?></h5>
                <!-- FORM: Entity/Company Form -->
               <form action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
                 <!-- Hidden input to store application ID -->
@@ -964,45 +1001,45 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 <input type="hidden" name="huid" value="<?php echo $userid; ?>">
                 <div class="row mb-3 align-items-center">
                   <!-- Application No -->
-                  <label class="col-sm-2 col-form-label">Application No</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Application No']) ? $translations['Application No'] : 'Application No'; ?></label>
                   <div class="col-sm-3">
                     <input type="text" name="application_no" id="application_no" class="form-control" value="<?php echo isset($app_no) ? $app_no : ''; ?>" readonly>
                   </div>
                   <!-- Application Date -->
-                  <label class="col-sm-1 col-form-label">Date</label>
-                  <div class="col-sm-3">
+                  <label class="col-sm-1 col-form-label"><?php echo isset($translations['Application date']) ? $translations['Application date'] : 'Date'; ?></label>
+                  <div class="col-sm-2">
                     <input type="text" name="app_date" id="app_date" class="form-control" value="<?php echo date('d/m/Y', strtotime($date)); ?>" readonly>
                   </div>
                   <!-- Reg No -->
-                  <label class="col-sm-1 col-form-label">Reg No</label>
-                  <div class="col-sm-2">
+                  <label class="col-sm-1 col-form-label"><?php echo isset($translations['Reg No']) ? $translations['Reg No'] : 'Reg No'; ?></label>
+                  <div class="col-sm-3">
                     <input type="text" name="reg_no" id="reg_no" class="form-control" value="<?php echo isset($reg_no) ? $reg_no : ''; ?>">
                   </div>
                 </div>
                 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Applicant's Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations["Applicant Name"]) ? $translations["Applicant Name"] : "Applicant's Name"; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="applicant_name" id="applicant_name" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>">
                   </div>
                 </div>
                 
                 <div class="row mb-3">
-                  <label for="inputPassword" class="col-sm-2 col-form-label">Address</label>
+                  <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translations["Address"]) ? $translations["Address"] : "Address"; ?></label>
                   <div class="col-sm-10">
                     <textarea class="form-control" name="address" id="address" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
                 </div>
                  <!-- Phone -->
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Phone</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Phone"]) ? $translations["Phone"] : "Phone"; ?></label>
                   <div class="col-sm-4">
                     <input type="text" name="phone" id="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
                   </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Export entry point</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Export entry point"]) ? $translations["Export entry point"] : "Export entry point"; ?></label>
                   <div class="col-sm-10">
                     <select class="form-select" name="entry_point" id="entry_point" aria-label="Default select example">
                       <option selected></option>
@@ -1012,43 +1049,43 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 </div>
 
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Import country</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Import country"]) ? $translations["Import country"] : "Import country"; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="import_country" id="import_country" aria-label="Default select example">
                       <option selected></option>
                       <?php SelectCountry($countryid, $con); ?>
                     </select>
                   </div>
-                  <label class="col-sm-2 col-form-label">Import entry point</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Import entry point"]) ? $translations["Import entry point"] : "Import entry point"; ?></label>
                   <div class="col-sm-4">
   <textarea class="form-control" name="import_point" id="import_point" rows="2" placeholder="Enter import entry point"><?php echo isset($import_point) ? $import_point : ''; ?></textarea>
 </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Export certificate</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Export certificate"]) ? $translations["Export certificate"] : "Export certificate"; ?></label>
                   <div class="col-sm-2 d-flex align-items-center">
                     <input type="checkbox" name="export_certificate" id="export_certificate" value="1" <?php echo (isset($export_certificate) && $export_certificate) ? 'checked' : ''; ?>>
-                    <label for="export_certificate" class="ms-2 mb-0">Yes</label>
+                    <label for="export_certificate" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label>
                   </div>
-                  <label class="col-sm-2 col-form-label">Transit certificate</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Transit certificate"]) ? $translations["Transit certificate"] : "Transit certificate"; ?></label>
                   <div class="col-sm-2 d-flex align-items-center">
                     <input type="checkbox" name="transit_certificate" id="transit_certificate" value="1" <?php echo (isset($transit_certificate) && $transit_certificate) ? 'checked' : ''; ?>>
-                    <label for="transit_certificate" class="ms-2 mb-0">Yes</label>
+                    <label for="transit_certificate" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label>
                   </div>
                 </div>
 
  
                 <div class="row mb-3">
-                   <label class="col-sm-2 col-form-label">Multiple commodities</label>
+                   <label class="col-sm-2 col-form-label"><?php echo isset($translations["Multiple commodities"]) ? $translations["Multiple commodities"] : "Multiple commodities"; ?></label>
                   <div class="col-sm-6 d-flex align-items-center">
                     <input type="checkbox" name="multiple_commodities" id="multiple_commodities" value="1" <?php echo (isset($multiple_commodities) && $multiple_commodities) ? 'checked' : ''; ?>>
-                    <label for="multiple_commodities" class="ms-2 mb-0">Yes</label><span id="span_multiple" class="ms-3 text-muted">, Please go to <a href="application.php?part=multiple_products&appid=<?php echo isset($_GET['appid_edit']) ? $_GET['appid_edit'] : $app_id; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>" id="link_multiple_details">details</a></span>
+                    <label for="multiple_commodities" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label><span id="span_multiple" class="ms-3 text-muted">, <?php echo isset($translations["Please go to"]) ? $translations["Please go to"] : "Please go to"; ?> <a href="application.php?part=multiple_products&appid=<?php echo isset($_GET['appid_edit']) ? $_GET['appid_edit'] : $app_id; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>&lang=<?php echo isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en'; ?>" id="link_multiple_details">details</a></span>
                   </div>
                 </div>
                 
           <div class="row mb-3 align-items-center">
-            <label class="col-sm-2 col-form-label">Print supporting document</label>
+            <label class="col-sm-2 col-form-label"><?php echo isset($translations["Print supporting document"]) ? $translations["Print supporting document"] : "Print supporting document"; ?></label>
             <div class="col-sm-2 d-flex align-items-center">
               <input type="checkbox" name="support_document" id="support_document" value="1" <?php echo (isset($support_document) && $support_document) ? 'checked' : ''; ?>>
               <!--
@@ -1061,7 +1098,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             </div>
           </div>
           <div class="row mb-3 align-items-center">
-            <label class="col-sm-2 col-form-label">Commodities</label>
+            <label class="col-sm-2 col-form-label"><?php echo isset($translations["Commodities"]) ? $translations["Commodities"] : "Commodities"; ?></label>
             <div class="col-sm-10 d-flex align-items-center">
              <a href="#" data-bs-toggle="modal" data-bs-target="#commodityModal">
                   <i class="bi bi-search ms-2" style="font-size: 1.2rem;"></i>
@@ -1074,33 +1111,33 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           </div>
               
           <div class="row mb-3 align-items-center">
-            <label for="name_oncertificate" class="col-sm-2 col-form-label">Name on certificate</label>
+            <label for="name_oncertificate" class="col-sm-2 col-form-label"><?php echo isset($translations["Name on certificate"]) ? $translations["Name on certificate"] : "Name on certificate"; ?></label>
             <div class="col-sm-4">
               <input type="text" name="name_oncertificate" id="name_oncertificate" class="form-control" value="<?php echo isset($proName) ? $proName : ''; ?>">
             </div>
-            <label for="scientific_name" class="col-sm-2 col-form-label">Scientific Name</label>
+            <label for="scientific_name" class="col-sm-2 col-form-label"><?php echo isset($translations["Scientific Name"]) ? $translations["Scientific Name"] : "Scientific Name"; ?></label>
             <div class="col-sm-4">
               <input type="text" name="scientific_name" id="scientific_name" class="form-control" value="<?php echo isset($scientific_name) ? $scientific_name : ''; ?>">
             </div>
           </div>
 
           <div class="row mb-3">
-            <label for="number_description" class="col-sm-2 col-form-label">Number and description</label>
+            <label for="number_description" class="col-sm-2 col-form-label"><?php echo isset($translations["Number and description"]) ? $translations["Number and description"] : "Number and description"; ?></label>
             <div class="col-sm-10">
               <textarea name="number_description" id="number_description" class="form-control" rows="3"><?php echo isset($number_description) ? $number_description : ''; ?></textarea>
             </div>
           </div>
 
           <div class="row mb-3 align-items-center">
-              <label for="nquantity" class="col-sm-2 col-form-label">Net Quantity</label>
+              <label for="nquantity" class="col-sm-2 col-form-label"><?php echo isset($translations["Net Quantity"]) ? $translations["Net Quantity"] : "Net Quantity"; ?></label>
             <div class="col-sm-2">
               <input type="number" step="0.01" min="0" name="nquantity" id="nquantity" class="form-control" value="<?php echo isset($nquantity) ? $nquantity : ''; ?>">
             </div>
-            <label for="gquantity" class="col-sm-2 col-form-label">Gross Quantity</label>
+            <label for="gquantity" class="col-sm-2 col-form-label"><?php echo isset($translations["Gross Quantity"]) ? $translations["Gross Quantity"] : "Gross Quantity"; ?></label>
             <div class="col-sm-2">
               <input type="number" step="0.01" min="0" name="gquantity" id="gquantity" class="form-control" value="<?php echo isset($gquantity) ? $gquantity : ''; ?>">
             </div>
-              <label for="unit" class="col-sm-1 col-form-label">Unit</label>
+              <label for="unit" class="col-sm-1 col-form-label"><?php echo isset($translations["Unit"]) ? $translations["Unit"] : "Unit"; ?></label>
             <div class="col-sm-3">
               <select name="unit" id="unit" class="form-select">
                 <option value="">Select</option>
@@ -1110,13 +1147,13 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             </div>
             </div>
             <div class="row mb-3">
-              <label for="inputText" class="col-sm-2 col-form-label">Distinguishing Marks</label>
+              <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations["Distinguishing Marks"]) ? $translations["Distinguishing Marks"] : "Distinguishing Marks"; ?></label>
                <div class="col-sm-10">
                  <input type="text" name="marks" id="marks" class="form-control" value="<?php echo isset($distinguishing_marks) ? $distinguishing_marks : ''; ?>">
                </div>
              </div>
              <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Place of origin</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Place of origin"]) ? $translations["Place of origin"] : "Place of origin"; ?></label>
                   <div class="col-sm-10">
                     <select class="form-select" name="place_origin" aria-label="Default select example">
                       <option selected></option>
@@ -1125,25 +1162,25 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   </div>
                 </div>  
             <div class="row mb-3 align-items-center">
-                <label class="col-sm-2 col-form-label">Conveyance</label>
+                <label class="col-sm-2 col-form-label"><?php echo isset($translations["Conveyance"]) ? $translations["Conveyance"] : "Conveyance"; ?></label>
                 <div class="col-sm-4">
                   <select class="form-select" name="conveyance" id="conveyance" aria-label="Select packaging type">
                     <option value="">Select</option>
                     <?php SelectConveyance($conveyanceid, $con); ?> 
                   </select>
                 </div>
-                <label class="col-sm-2 col-form-label">Conveyance Sign</label>
+                <label class="col-sm-2 col-form-label"><?php echo isset($translations["Conveyance Sign"]) ? $translations["Conveyance Sign"] : "Conveyance Sign"; ?></label>
                 <div class="col-sm-4">
                   <input type="text" name="conveyance_sign" id="conveyance_sign" class="form-control" value="<?php echo isset($conveyance_sign) ? $conveyance_sign : ''; ?>">
                 </div>
             </div>
 
             <div class="row mb-3 align-items-start">
-                  <label class="col-sm-2 col-form-label">Exporter's address</label> <!-- Application -->
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Exporter address"]) ? $translations["Exporter address"] : "Exporter's address"; ?></label> <!-- Application -->
                   <div class="col-sm-4">
                       <textarea name="exporter" id="exporter" class="form-control" rows="3"><?php echo isset($exporter_address) ? $exporter_address : ''; ?></textarea>
                   </div>
-                  <label class="col-sm-2 col-form-label">Importer's address</label> <!-- Application -->
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Importer address"]) ? $translations["Importer address"] : "Importer's address"; ?></label> <!-- Application -->
                   <div class="col-sm-4 position-relative">
                     <div class="d-flex align-items-start">
                       <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal" class="me-2 mt-2">
@@ -1158,7 +1195,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             
 
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Purpose</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Purpose"]) ? $translations["Purpose"] : "Purpose"; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="purpose" id="purpose" aria-label="Default select example">
                       <option selected></option>
@@ -1168,35 +1205,35 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 </div>
 
               <div class="row mb-3 align-items-center">
-                <label class="col-sm-2 col-form-label">Place of Quarantine</label>
+                <label class="col-sm-2 col-form-label"><?php echo isset($translations["Place of Quarantine"]) ? $translations["Place of Quarantine"] : "Place of Quarantine"; ?></label>
                 <div class="col-sm-4">
                   <select class="form-select" name="place_quarantine" id="place_quarantine" aria-label="Select packaging type">
                     <option value="">Select</option>
                     <?php SelectProvince($provinceid_quarantine, $con); ?> 
                   </select>
                 </div>
-                <label class="col-sm-1 col-form-label">Specify</label>
+                <label class="col-sm-1 col-form-label"><?php echo isset($translations["Specify"]) ? $translations["Specify"] : "Specify"; ?></label>
                 <div class="col-sm-5">
                   <input type="text" name="place_quarantine_other" id="place_quarantine_other" class="form-control" value="<?php echo isset($place_of_quarantine_other) ? $place_of_quarantine_other : ''; ?>">
                 </div>
             </div>
            
              <div class="row mb-3 align-items-center">
-                <label class="col-sm-2 col-form-label">Place of treatment</label>
+                <label class="col-sm-2 col-form-label"><?php echo isset($translations["Place of treatment"]) ? $translations["Place of treatment"] : "Place of treatment"; ?></label>
                 <div class="col-sm-4">
                   <select class="form-select" name="place_treatment" id="place_treatment" aria-label="Select packaging type">
                     <option value="">Select</option>
                     <?php SelectProvince($provinceid_treatment, $con); ?> 
                   </select>
                 </div>
-                <label class="col-sm-1 col-form-label">Specify</label>
+                <label class="col-sm-1 col-form-label"><?php echo isset($translations["Specify"]) ? $translations["Specify"] : "Specify"; ?></label>
                 <div class="col-sm-5">
                   <input type="text" name="place_treatment_other" id="place_treatment_other" class="form-control" value="<?php echo isset($place_of_treatment_other) ? $place_of_treatment_other : ''; ?>">
                 </div>
             </div>
 
                 <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Certificate Date</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Certificate date"]) ? $translations["Certificate date"] : "Certificate date"; ?></label>
                     <div class="col-sm-4">
                       <input type="date" name="certificate_date" class="form-control" value="<?php echo isset($certificate_date) ? $certificate_date : ''; ?>">
                     </div>
@@ -1208,9 +1245,11 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                     <button type="submit" name="btnsubApplication_save" class="btn btn-primary" value="<?php echo isset($btnSubmit) ? 'update' : 'submit'; ?>">
                       <?php echo isset($btnSubmit) ? 'Update' : 'Submit'; ?>
                     </button>
+                    <!--
                     <button type="submit" name="btnsubApplication_save_continue" class="btn btn-secondary" value="save_continue" <?php echo (isset($btnSubmit) && $btnSubmit === 'update') ? 'disabled' : ''; ?>>
                       Save & continue
                     </button>
+                    -->
                    </div>
                 </div>
                     
@@ -1685,12 +1724,12 @@ function selectExporter(info) {
       ?>
      <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Inspection</h1>
+        <h1><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></h1>
         <nav>
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
-            <li class="breadcrumb-item"><a href="transaction.php?part=exportentity_list&uid=<?php echo $userid; ?>">Export entity</a></li>
-            <li class="breadcrumb-item active">Inspection</li>
+            <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></a></li>
+            <li class="breadcrumb-item active"><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></li>
           </ol>
         </nav>
       </div>
@@ -1702,43 +1741,45 @@ function selectExporter(info) {
     <div class="col-lg-12">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">Inspection Form</h5>
+          <h5 class="card-title"><?php echo isset($translations['Inspection Form']) ? $translations['Inspection Form'] : 'Inspection Form'; ?></h5>
           <!-- FORM: Inspection Form -->
             <form id="inspectionFormID" action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
             <!-- Hidden input to store application ID -->
             <input type="hidden" name="appid" id="appid" value="<?php echo $appid_inspection; ?>">
             <!-- Hidden input to preserve userid for dynamic authentication -->
             <input type="hidden" name="uid" id="uid" value="<?php echo $userid; ?>">
+            <input type="hidden" name="hlang" id="hlang" value="<?php echo $lang; ?>">
+
              <div class="row mb-3 align-items-center">
                   <!-- Application No -->
-                  <label class="col-sm-2 col-form-label">Application No</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Application No']) ? $translations['Application No'] : 'Application No'; ?></label>
                   <div class="col-sm-2">
                     <input type="text" name="appno_insp" id="appno_insp" class="form-control" style="background-color: #2ec691ff;" value="<?php echo isset($appno_inspection) ? $appno_inspection : ''; ?>" readonly >
                   </div>
                   <!-- Entity's name -->
-                  <label class="col-sm-2 col-form-label">Entity's Name</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Entity Name"]) ? $translations["Entity Name"] : "Entity's Name"; ?></label>
                   <div class="col-sm-6">
                     <input type="text" name="entity_name" class="form-control" style="background-color: #f0f0f0;" value="<?php echo isset($entityexport_name) ? $entityexport_name : ''; ?>" readonly >
                   </div>  
                 </div>
 
             <div class="row mb-3">
-              <label for="inspection_date" class="col-sm-2 col-form-label">Inspection Date</label>
+              <label for="inspection_date" class="col-sm-2 col-form-label"><?php echo isset($translations['Inspection date']) ? $translations['Inspection date'] : 'Inspection date'; ?></label>
               <div class="col-sm-4">
                 <input type="date" class="form-control" id="inspection_date" name="inspection_date" value="<?php echo isset($inspection_date) ? $inspection_date : ''; ?>">
               </div>
             </div>
            
             <div class="row mb-3 align-items-center">
-                <label for="sampleno" class="col-sm-2 col-form-label">Sample No</label>
+                <label for="sampleno" class="col-sm-2 col-form-label"><?php echo isset($translations['Number of sample']) ? $translations['Number of sample'] : 'Number of sample'; ?></label>
                 <div class="col-sm-2">
                   <input type="text" name="sampleno" id="sampleno" class="form-control" value="<?php echo isset($sampleno) ? $sampleno : ''; ?>">
                 </div>
-                <label for="sample_volume" class="col-sm-2 col-form-label">Sample Volume</label>
+                <label for="sample_volume" class="col-sm-2 col-form-label"><?php echo isset($translations['Sample Volume']) ? $translations['Sample Volume'] : 'Sample Volume'; ?></label>
                 <div class="col-sm-2">
                   <input type="number" step="0.01" min="0" name="sample_volume" id="sample_volume" class="form-control" value="<?php echo isset($sample_volume) ? $sample_volume : ''; ?>">
                 </div>
-                <label for="unit" class="col-sm-1 col-form-label">Unit</label>
+                <label for="unit" class="col-sm-1 col-form-label"><?php echo isset($translations['Unit']) ? $translations['Unit'] : 'Unit'; ?></label>
                 <div class="col-sm-3">
                   <select name="unit" id="unit" class="form-select">
                     <option value="">Select</option>
@@ -1748,13 +1789,13 @@ function selectExporter(info) {
                 </div>
             </div>
             <div class="row mb-3">
-              <label for="sample_collectedby" class="col-sm-2 col-form-label">Sample collected by</label>
+              <label for="sample_collectedby" class="col-sm-2 col-form-label"><?php echo isset($translations['Sample collected by']) ? $translations['Sample collected by'] : 'Sample collected by'; ?></label>
                <div class="col-sm-10">
                  <input type="text" name="sample_collectedby" id="sample_collectedby" class="form-control" value="<?php echo isset($sample_collectedby) ? $sample_collectedby : ''; ?>">
                </div>
              </div>
              <div class="row mb-3">
-              <label for="sample_inspected" class="col-sm-2 col-form-label">Inspected by</label>
+              <label for="sample_inspected" class="col-sm-2 col-form-label"><?php echo isset($translations['Inspected by']) ? $translations['Inspected by'] : 'Inspected by'; ?></label>
                <div class="col-sm-10">
                  <input type="text" name="sample_inspectedby" id="sample_inspectedby" class="form-control" value="<?php echo isset($sample_inspected) ? $sample_inspected : ''; ?>">
                </div>
@@ -1762,12 +1803,12 @@ function selectExporter(info) {
 
              <div class="row mb-3 align-items-center">
                   <!-- Certificate fee -->
-                  <label class="col-sm-2 col-form-label">Certificate fee</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Certificate fee']) ? $translations['Certificate fee'] : 'Certificate fee'; ?></label>
                   <div class="col-sm-4">
                     <input type="number" name="certificate_fee" id="certificate_fee" class="form-control" value="<?php echo isset($certificate_fee) ? $certificate_fee : ''; ?>" >
                   </div>
                   <!-- Receipt No -->
-                  <label class="col-sm-2 col-form-label">Receipt No</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Receipt No']) ? $translations['Receipt No'] : 'Receipt No'; ?></label>
                   <div class="col-sm-4">
                     <input type="text" name="receipt_no" id="receipt_no" class="form-control" value="<?php echo isset($receipt_no) ? $receipt_no : ''; ?>" >
                   </div>  
@@ -1775,14 +1816,14 @@ function selectExporter(info) {
 
               <div class="row mb-3 align-items-center">
                   <!-- Lot Number -->
-                  <label class="col-sm-2 col-form-label">Lot No</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Lot No']) ? $translations['Lot No'] : 'Lot No'; ?></label>
                   <div class="col-sm-2">
                     <input type="text" name="lot_no" id="lot_no" class="form-control" value="<?php echo isset($lot_no) ? $lot_no : ''; ?>" >
                   </div>
               </div>
 
               <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Inspection Method</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection Method'; ?></label>
                   <div class="col-sm-10">
                     <select class="form-select" name="inspection_method" id="inspection_method" aria-label="Default select example">
                       <option selected></option>
@@ -1792,31 +1833,31 @@ function selectExporter(info) {
               </div>  
 
               <div class="row mb-3 align-items-center">
-                <label class="col-sm-2 col-form-label">Inspection Findings</label>
+                <label class="col-sm-2 col-form-label"><?php echo isset($translations['Inspection Findings']) ? $translations['Inspection Findings'] : 'Inspection Findings'; ?></label>
                 <div class="col-sm-10">
                   <div class="form-check mb-2">
                     <input class="form-check-input border border-success" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>> <!-- onclick="pest_inspected();" -->
-                     <label class="form-check-label" for="detected_pest">&nbsp;Detected pest,</label>&nbsp;<span id="span_pest">Please go to&nbsp;</span>&nbsp;&nbsp;<a id="link_pest_details" href="inspection.php?part=pest_detected&appid=<?php echo isset($_GET['appid']) ? $_GET['appid'] : ''; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>" class="text-decoration-none"><i class='bi bi-box-arrow-right'></i>&nbsp;Details</a>
+                     <label class="form-check-label" for="detected_pest">&nbsp;<?php echo isset($translations['Detected pest']) ? $translations['Detected pest'] : 'Detected pest'; ?>,</label>&nbsp;<span id="span_pest"><?php echo isset($translations['Please go to']) ? $translations['Please go to'] : 'Please go to'; ?>&nbsp;</span>&nbsp;&nbsp;<a id="link_pest_details" href="inspection.php?part=pest_detected&appid=<?php echo isset($_GET['appid']) ? $_GET['appid'] : ''; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>&lang=<?php echo isset($lang) ? $lang : 'en'; ?>" class="text-decoration-none"><i class='bi bi-box-arrow-right'></i>&nbsp;Details</a>
                   </div>
                   <div class="form-check mb-2">
                     <input class="form-check-input border border-warning" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
-                    <label class="form-check-label" for="treatment_ability">&nbsp;Treatment ability</label>
+                    <label class="form-check-label" for="treatment_ability">&nbsp;<?php echo isset($translations['Treatment ability']) ? $translations['Treatment ability'] : 'Treatment ability'; ?></label>
                   </div>
                   <div class="form-check mb-2">
                     <input class="form-check-input border-primary" type="checkbox" name="lab_analysis" id="lab_analysis" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($lab_analysis) && $lab_analysis) echo 'checked'; ?>>
-                    <label class="form-check-label" for="lab_analysis">&nbsp;Lab analysis required</label>
+                    <label class="form-check-label" for="lab_analysis">&nbsp;<?php echo isset($translations['Lab analysis required']) ? $translations['Lab analysis required'] : 'Lab analysis required'; ?></label>
                   </div>
                 </div>
               </div>
 
           <div class="card mb-4" id="details_treatment"> <!-- details of treatment -->
               <div class="card-header">
-                <strong>Details of treatment</strong>
+                <strong><?php echo isset($translations['Details of treatment']) ? $translations['Details of treatment'] : 'Details of treatment'; ?></strong>
               </div>
 
               <div class="card-body">
                 <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Treatment Method</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></label>
                   <div class="col-sm-10">
                     <select class="form-select" name="treatment_method" aria-label="Default select example">
                       <option selected></option>
@@ -1826,7 +1867,7 @@ function selectExporter(info) {
                 </div> 
               
                 <div class="row mb-3 align-items-center">
-                 <label for="treatment_date" class="col-sm-2 col-form-label">Treatment Date</label>
+                 <label for="treatment_date" class="col-sm-2 col-form-label"><?php echo isset($translations['Treatment date']) ? $translations['Treatment date'] : 'Treatment Date'; ?></label>
                   <div class="col-sm-4">
                     <input type="date" class="form-control" name="treatment_date" id="treatment_date"
                       value="<?php echo isset($treatment_date) && $treatment_date ? date('Y-m-d', strtotime($treatment_date)) : ''; ?>">
@@ -1835,31 +1876,31 @@ function selectExporter(info) {
                     <?php } ?>
                   </div>
 
-                    <label class="col-sm-2 col-form-label">Treated by</label>
+                    <label class="col-sm-2 col-form-label"><?php echo isset($translations['Treated by']) ? $translations['Treated by'] : 'Treated by'; ?></label>
                   <div class="col-sm-4">
                     <input type="text" class="form-control" name="chemical_fortreat" id="chemical_fortreat" value="<?php echo isset($chemical_fortreat) ? $chemical_fortreat : ''; ?>">
                   </div>
                 </div>
 
                 <div class="row mb-3">
-                   <label class="col-sm-2 col-form-label">Chemical Used</label>
+                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Chemical Used']) ? $translations['Chemical Used'] : 'Chemical Used'; ?></label>
                   <div class="col-sm-4">
                     <input type="text" class="form-control" name="chemical_used" id="chemical_used" value="<?php echo isset($chemical_used) ? $chemical_used : ''; ?>">
                   </div>
                 </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Duration - Temperature</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Duration - Temperature']) ? $translations['Duration - Temperature'] : 'Duration - Temperature'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="duration_temp" id="duration_temp" placeholder="e.g., 30 minutes - 50°C" value="<?php echo isset($duration_temp) ? $duration_temp : ''; ?>">
               </div>
-              <label class="col-sm-2 col-form-label">Concentration</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Concentration']) ? $translations['Concentration'] : 'Concentration'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="concentration" id="concentration" placeholder="e.g., 0.5%" value="<?php echo isset($concentration) ? $concentration : ''; ?>">
               </div>
             </div>
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Sample Inspected by</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Sample Inspected by']) ? $translations['Sample Inspected by'] : 'Sample Inspected by'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="sample_inspectedby" id="sample_inspectedby" value="<?php echo isset($sample_inspectedby) ? $sample_inspectedby : ''; ?>">
               </div>
@@ -1868,19 +1909,19 @@ function selectExporter(info) {
         </div> <!-- End of details of treatment -->
 
              <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Additional information</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Additional information']) ? $translations['Additional information'] : 'Additional information'; ?></label>
               <div class="col-sm-10">
                 <input type="text" class="form-control" name="additional_info" id="additional_info" placeholder="Enter additional information" value="<?php echo isset($additional_info) ? $additional_info : ''; ?>">
               </div>
             </div>
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Reason</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Reason']) ? $translations['Reason'] : 'Reason'; ?></label>
               <div class="col-sm-10">
                 <input type="text" class="form-control" name="reason" id="reason" placeholder="Enter reason" value="<?php echo isset($reason) ? $reason : ''; ?>">
               </div>
             </div>
             <div class="row mb-3 align-items-center">
-            <label class="col-sm-2 col-form-label">Post Treatment Details</label>
+            <label class="col-sm-2 col-form-label"><?php echo isset($translations['Post Treatment Details']) ? $translations['Post Treatment Details'] : 'Post Treatment Details'; ?></label>
             <div class="col-sm-10">
               <textarea class="form-control" name="post_details" id="post_details" rows="3" placeholder="Enter post treatment details"><?php echo isset($post_details) ? htmlspecialchars($post_details) : ''; ?></textarea>
             </div>
@@ -2002,8 +2043,8 @@ function selectExporter(info) {
         <nav>
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($mainHref); ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></a></li>
             <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars('transaction.php?part=exportentity_list&uid='.$userid.'&lang='.$lang); ?>"><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></a></li>
-            <li class="breadcrumb-item active"><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></li>
           </ol>
         </nav>
       </div>
@@ -2013,7 +2054,7 @@ function selectExporter(info) {
     <div class="col-lg-12">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">Certificate Form</h5>
+          <h5 class="card-title"><?php echo isset($translations['Certificate Form']) ? $translations['Certificate Form'] : 'Certificate Form'; ?></h5>
           <form id="certificateFormID" action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
             <!-- HIDDEN INPUTS -->
             <input type="hidden" name="appid_certificate" value="<?php echo $appid_certificate; ?>">
@@ -2023,33 +2064,33 @@ function selectExporter(info) {
             <input type="hidden" name="uid" value="<?php echo $userid; ?>">
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Cerificate No</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Certificate No']) ? $translations['Certificate No'] : 'Certificate No'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="certificate_no" id="certificate_no" required value="<?php echo isset($certificate_no) ? $certificate_no : ''; ?>" readonly>
               </div>
-              <label class="col-sm-2 col-form-label">Application No</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Application No']) ? $translations['Application No'] : 'Application No'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="application_no" id="application_no" value="<?php echo isset($application_no) ? $application_no : ''; ?>" readonly>
               </div>
             </div>
 
              <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Import country</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Import country']) ? $translations['Import country'] : 'Import country'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="import_country" id="import_country" required value="<?php echo isset($import_country) ? $import_country : ''; ?>" readonly>
               </div>
-              <label class="col-sm-2 col-form-label">Import entry point</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Import entry point']) ? $translations['Import entry point'] : 'Import entry point'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="import_entrypoint" id="import_entrypoint" required value="<?php echo isset($import_point) ? $import_point : ''; ?>">
               </div>
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Place of Issue</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Place of Issue']) ? $translations['Place of Issue'] : 'Place of Issue'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="place_issue" id="place_issue" required value="<?php echo isset($place_issue) ? $place_issue : ''; ?>">
               </div>
-              <label class="col-sm-2 col-form-label">Export entry point</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Export entry point']) ? $translations['Export entry point'] : 'Export entry point'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="export_entrypoint" id="export_entrypoint" required value="<?php echo isset($export_point) ? $export_point : ''; ?>">
               </div>
@@ -2057,18 +2098,18 @@ function selectExporter(info) {
 
             
                 <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Issue Date</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Issued date']) ? $translations['Issued date'] : 'Issued date'; ?></label>
                     <div class="col-sm-4">
                       <input type="date" name="date_issue" class="form-control" value="<?php echo isset($date_issued) ? $date_issued : ''; ?>">
                     </div>
                 </div>
 
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Exporter's name and address</label> <!-- Certificate-->
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Exporter name and address"]) ? $translations["Exporter name and address"] : "Exporter's name and address"; ?></label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-start">
                       <input type="text" class="form-control" name="exporter_name" id="exporter_name" class="form-control" value="<?php echo isset($exporter_name) ? $exporter_name : ''; ?>"></input>
                   </div>
-                  <label class="col-sm-2 col-form-label">Importer's name and address</label> <!-- Certificate-->
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Importer name and address"]) ? $translations["Importer name and address"] : "Importer's name and address"; ?></label> <!-- Certificate-->
                   <div class="col-sm-4 d-flex align-items-center position-relative">
                     <a href="#" data-bs-toggle="modal" data-bs-target="#importerModal" class="me-2">
                       <i class="bi bi-plus-circle" style="font-size: 1.2rem; color: #28a745;"></i>
@@ -2090,7 +2131,7 @@ function selectExporter(info) {
             </div>
          
              <div class="row mb-3 align-items-center"> 
-              <label class="col-sm-2 col-form-label">Carbon Paper No</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Carbon paper No']) ? $translations['Carbon paper No'] : 'Carbon paper No'; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="carbonpaper_id" id="carbonpaper_id" required value="<?php echo isset($carbonpaper_id) ? $carbonpaper_id : ''; ?>">
               </div>
@@ -2098,25 +2139,25 @@ function selectExporter(info) {
 
             
             <div class="row mb-3 align-items-center">
-                  <label class="col-sm-2 col-form-label">Approved by</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Approved by']) ? $translations['Approved by'] : 'Approved by'; ?></label>
                   <div class="col-sm-4">
                     <select class="form-select" name="approved_by" aria-label="Select approver">
                       <option value="">Select approver...</option>
                       <?php CertificateApprovedBy($con, $guid, isset($approved_by) ? $approved_by : null); ?>
                     </select>
                   </div>
-              <label class="col-sm-2 col-form-label">Approver's position</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations["Approver position"]) ? $translations["Approver position"] : "Approver's position"; ?></label>
               <div class="col-sm-4">
                 <input type="text" class="form-control" name="approver_position" id="approver_position" required value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
               </div>
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Consignment Value</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Consignment Value']) ? $translations['Consignment Value'] : 'Consignment Value'; ?></label>
               <div class="col-sm-4">
                 <input type="number" step="0.01" class="form-control" name="consignment_value" id="consignment_value" required value="<?php echo isset($consignment_value) ? $consignment_value : ''; ?>">
               </div>
-              <label class="col-sm-2 col-form-label">Value Currency</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Currency']) ? $translations['Currency'] : 'Currency'; ?></label>
               <div class="col-sm-4">
                 <select class="form-select" name="value_currency" aria-label="Select currency">
                   <option value="">Select currency...</option>
@@ -2126,14 +2167,13 @@ function selectExporter(info) {
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label class="col-sm-2 col-form-label">Another Scientific Name</label>
+              <label class="col-sm-2 col-form-label"><?php echo isset($translations['Another Scientific Name']) ? $translations['Another Scientific Name'] : 'Another Scientific Name'; ?></label>
               <div class="col-sm-10">
                 <input type="text" class="form-control" name="additional_scientificname" id="another_scientificname" value="<?php echo isset($additional_scientificname) ? $additional_scientificname : ''; ?>">
               </div>
             </div>
-
              <div class="row mb-3 align-items-center">
-            <label class="col-sm-2 col-form-label">Additional Declaration</label>
+            <label class="col-sm-2 col-form-label"><?php echo isset($translations['Additional Declaration']) ? $translations['Additional Declaration'] : 'Additional Declaration'; ?></label>
             <div class="col-sm-10">
               <textarea class="form-control" name="additional_declaration" id="additional_declaration" rows="3" placeholder="Enter additional declaration"><?php echo isset($additional_declaration) ? htmlspecialchars($additional_declaration) : ''; ?></textarea>
               </div>

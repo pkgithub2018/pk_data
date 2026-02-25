@@ -253,25 +253,36 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span>Entity_type</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod">
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span>Inspection Method</span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span>Locations</span>
             </a>
           </li>
             <li>
-            <a href="masterdata.php?part=product">
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span>Product</span>
             </a>
           </li>
+          <li>
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+
           <li>
             <a href="masterdata.php?part=provinces">
               <i class="bi bi-circle"></i><span>Provinces</span>
@@ -635,18 +646,17 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
     <section class="section">
       <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Import entity</h1>
+        <h1><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item"><a href="#">Import entity list</a></li>
-            <li class="breadcrumb-item active">Import entity</li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application list']) ? $translations['Application list'] : 'Application list'; ?></a></li>
           </ol>
           </nav>
         </div>
         <div>
-          <a href="entity.php?frm=newEntity_import&uid=<?php echo $userid; ?>" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> Add New import entity
+          <a href="entity.php?frm=newEntity_import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
+            <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New import entity']) ? $translations['Add New import entity'] : 'Add New import entity'; ?>
           </a>
         </div>
       </div><!-- End Page Title - Import entity list -->
@@ -654,25 +664,25 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Import entity</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Import entity</p>
+              <h5 class="card-title"><?php echo isset($translations['Import entity list']) ? $translations['Import entity list'] : 'Import entity list'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
                 <thead>
                   <tr>
                    <th>
-                      <b>N</b>o
+                      <b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b>
                     </th>
-                    <th>Country</th>
+                    <th><?php echo isset($translations['Country']) ? $translations['Country'] : 'Country'; ?></th>
                     <th>
-                      <b>N</b>ame
+                      <b><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></b>
                     </th>
-                    <th>Address</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Contact Person</th>
-                    <th>Edit</th>
+                    <th><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></th>
+                    <th><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></th>
+                    <th><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></th>
+                    <th><?php echo isset($translations['Contact person']) ? $translations['Contact person'] : 'Contact person'; ?></th>
+                    <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -746,12 +756,12 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           }
     ?>
     <div class="pagetitle">
-      <h1><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></h1>
+      <h1><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
           <li class="breadcrumb-item"><a href="entity.php?entity=import&uid=<?php echo $userid; ?>"><?php echo isset($translations['Import entity list']) ? $translations['Import entity list'] : 'Import entity list'; ?></a></li>
-          <li class="breadcrumb-item active"><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -762,7 +772,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title"><?php echo isset($translations['Import Entity']) ? $translations['Import Entity'] : 'Import Entity'; ?></h5>
+              <h5 class="card-title"><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></h5>
               <!-- Import Entity/Company Form -->
               <form action="" method="POST">
                 <!-- Hidden inputs to preserve parameters -->

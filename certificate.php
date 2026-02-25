@@ -260,26 +260,26 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Application Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>">
+        <a class="nav-link" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
@@ -292,17 +292,17 @@ if (!empty($userid)) {
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
          <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
@@ -337,12 +337,23 @@ if (!empty($userid)) {
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
@@ -582,43 +593,43 @@ if (!empty($userid)) {
                       <tr>
                         <th scope="col"><?php echo isset($translations['Application date']) ? $translations['Application date'] : 'Application date'; ?></th>
                         <th scope="col"><?php echo isset($translations['Exporter']) ? $translations['Exporter'] : 'Exporter'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Inspection date']) ? $translations['Inspection date'] : 'Inspection date'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Sample collected by']) ? $translations['Sample collected by'] : 'Sample collected by'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Inspected by']) ? $translations['Inspected by'] : 'Inspected by'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Lot No']) ? $translations['Lot No'] : 'Lot No'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Certificate No']) ? $translations['Certificate No'] : 'Certificate No'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Carbon paper No']) ? $translations['Carbon paper No'] : 'Carbon paper No'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Value (USD)']) ? $translations['Value (USD)'] : 'Value (USD)'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Created date']) ? $translations['Created date'] : 'Created date'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Issued date']) ? $translations['Issued date'] : 'Issued date'; ?></th>
                         <th scope="col"><?php echo isset($translations['Action']) ? $translations['Action'] : 'Action'; ?></th>
                       </tr>
                     </thead>
                     <tbody>
-                     <?php InspectionList_items($guid, $con, $userid); ?>
+                     <?php CertificateList($guid, $con, $userid); ?>
                     </tbody>
                   </table>
                 </div>
-                <!-- treatement data table -->
+                <!-- Certificate List - Price/Value -->
+             <!--    
                  <div class="card-body">
-                  <h5 class="card-title"><?php echo isset($translations['Inspection - Treatment List']) ? $translations['Inspection - Treatment List'] : 'Inspection - Treatment List'; ?><span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
+                  <h5 class="card-title"><?php echo isset($translations['Certificate List - Value']) ? $translations['Certificate List - Value'] : 'Certificate List - Value'; ?><span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
                   <table class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
                         <th scope="col"><?php echo isset($translations['Application date']) ? $translations['Application date'] : 'Application date'; ?></th>
                         <th scope="col"><?php echo isset($translations['Exporter']) ? $translations['Exporter'] : 'Exporter'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Inspection date']) ? $translations['Inspection date'] : 'Inspection date'; ?></th>
-                        <th scope="col"><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></th>
-                                                <th scope="col"><?php echo isset($translations['Pest detected']) ? $translations['Pest detected'] : 'Pest detected'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Certificate No']) ? $translations['Certificate No'] : 'Certificate No'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Consignment value']) ? $translations['Consignment value'] : 'Consignment value (USD)'; ?></th>
+                        <th scope="col"><?php echo isset($translations['Pest detected']) ? $translations['Pest detected'] : 'Pest detected'; ?></th>
                         <th scope="col"><?php echo isset($translations['Treatment date']) ? $translations['Treatment date'] : 'Treatment date'; ?></th>
                         <th scope="col"><?php echo isset($translations['Treatment method']) ? $translations['Treatment method'] : 'Treatment method'; ?></th>
                         <th scope="col"><?php echo isset($translations['Action']) ? $translations['Action'] : 'Action'; ?></th>
                       </tr>
                     </thead>
                     <tbody>
-                     <?php Inspection_TreatmentList($guid, $con, $userid); ?>
+                     <?php //Inspection_TreatmentList($guid, $con, $userid); ?>
                     </tbody>
                   </table>
-
-                <!-- Inspection results data table -->
-             
-              </div>
-            </div><!-- End Inspection list -->
+                </div>
+              -->
+            </div><!-- End Certificate list - Section -->
           </div>
         </div><!-- End Left side columns -->
         <!-- Right side columns *****************PK************************ -->

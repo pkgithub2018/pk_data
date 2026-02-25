@@ -88,6 +88,7 @@ $place_issued = $cert_info['place_issued'] ?? '';
 
 // Inspection information
 $inspection_info = InspectionInfo($appid, $con);
+$inspection_date = $inspection_info['date_inspection'] ?? '';
 $treatment_date = $inspection_info['date_treatment'] ?? '';
 $treatment_method_id = $inspection_info['treatment_id'] ?? '';
 $treatment_info = TreatmentMethodInfo($treatment_method_id, $con);
@@ -113,491 +114,14 @@ $approver_position = $cert_info['position_approved'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phytosanitary Certificate - <?php echo htmlspecialchars($certificate_no); ?></title>
+    <link rel="stylesheet" href="stylecss/certificate_style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 11pt;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        
-        .certificate-container {
-            max-width: 210mm;
-            margin: 0 auto;
-            background: white;
-            padding: 15mm;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 15px;
-            /* border-bottom: 2px solid #000; */
-            padding-bottom: 10px;
-        }
-        
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 10px auto;
-            display: block;
-            text-align: center;
-        }
-        
-        .logo img {
-            max-width: 100%;
-            max-height: 100%;
-            display: block;
-            margin: 0 auto;
-        }
-        
-        .header h1 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-        
-        .header h2 {
-            font-size: 12pt;
-            margin-bottom: 3px;
-        }
-        
-        .header p {
-            font-size: 9pt;
-            margin: 2px 0;
-        }
-        
-        .cert-title {
-            text-align: center;
-            font-size: 16pt;
-            font-weight: bold;
-            margin: 15px 0;
-            border-bottom: 2px solid #000;
-            text-decoration: none;
-        }
-        
-        .cert-number {
-            text-align: right;
-            font-size: 10pt;
-            margin-bottom: 10px;
-        }
-        
-        .section {
-            margin-bottom: 10px;
-        }
-        
-        .two-column {
-            display: table;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        
-        .column {
-            display: table-cell;
-            width: 50%;
-            padding: 5px;
-            vertical-align: top;
-        }
-        
-        .field-label {
-            font-weight: bold;
-            font-size: 9pt;
-            margin-bottom: 3px;
-        }
-        
-        .field-value {
-            font-size: 10pt;
-            padding: 3px;
-            border-bottom: 1px solid #333;
-            min-height: 20px;
-        }
-        
-        .table-section {
-            border: 1px solid #000;
-            margin: 10px 0;
-        }
-        
-        .table-header {
-            background: #e0e0e0;
-            padding: 5px;
-            font-weight: bold;
-            font-size: 10pt;
-            border-bottom: 1px solid #000;
-        }
-        
-        .table-content {
-            padding: 8px;
-            min-height: 40px;
-        }
-        
-        .treatment-section {
-            border: 1px solid #000;
-            padding: 8px;
-            margin: 10px 0;
-        }
-        
-        .treatment-title {
-            font-weight: bold;
-            font-size: 10pt;
-            margin-bottom: 5px;
-            text-decoration: underline;
-        }
-        
-        .treatment-details {
-            display: table;
-            width: 100%;
-        }
-        
-        .treatment-row {
-            display: table-row;
-        }
-        
-        .treatment-label {
-            display: table-cell;
-            width: 30%;
-            padding: 3px;
-            font-size: 9pt;
-        }
-        
-        .treatment-value {
-            display: table-cell;
-            padding: 3px;
-            font-size: 10pt;
-        }
-        
-        .signature-section {
-            margin-top: 30px;
-            padding: 10px;
-            border: 1px solid #000;
-        }
-        
-        .signature-row {
-            display: table;
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .signature-col {
-            display: table-cell;
-            width: 50%;
-            padding: 5px;
-        }
-        
-        .signature-label {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-        
-        .signature-value {
-            font-size: 10pt;
-            min-height: 50px;
-            border-bottom: 1px solid #333;
-        }
-        
-        .stamp-area {
-            text-align: center;
-            padding: 20px;
-            margin-top: 10px;
-            border: 2px dashed #999;
-            font-size: 9pt;
-            color: #666;
-        }
-        
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 8pt;
-            color: #666;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-        }
-        
-        .print-button {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .btn-print {
-            background: #4CAF50;
-            color: white;
-            padding: 10px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .btn-print:hover {
-            background: #45a049;
-        }
-        
-        /* QR Code Box Styles */
-        .qr-box {
-            position: absolute;
-            left: 32mm;
-            top: 55mm;
-            width: 45mm;
-            height: 60mm;
-           /* border: 3px solid #4A148C; */
-            background: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 5mm;
-        }
-        
-        .qr-box::before,
-        .qr-box::after {
-            content: '';
-            position: absolute;
-            background: #4A148C;
-        }
-        
-        /* Diagonal cross lines */
-        .qr-box::before {
-            width: 100%;
-            height: 3px;
-            transform: rotate(45deg);
-            transform-origin: center;
-        }
-        
-        .qr-box::after {
-            width: 100%;
-            height: 3px;
-            transform: rotate(-45deg);
-            transform-origin: center;
-        }
-        
-        .qr-code-display {
-            width: 30mm;
-            height: 30mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            z-index: 1;
-            position: relative;
-        }
-        
-        .qr-code-display svg {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .qr-label {
-            margin-top: 5px;
-            font-size: 8pt;
-            text-align: center;
-            font-weight: bold;
-            z-index: 1;
-            position: relative;
-        }
-        
-        .certificate-main {
-            position: relative;
-        }
-        
         @media print {
-            @page {
-                size: A4;
-                margin: 5mm;
-            }
-            
-            body {
-                background: white;
-                padding: 0;
-                margin: 0;
-                font-size: 9pt;
-            }
-            
-            .certificate-container {
-                box-shadow: none;
-                padding: 3mm 5mm 5mm 5mm;
-                max-width: 100%;
-                margin: 0;
-            }
-            
-            .print-button {
-                display: none;
-            }
-            
-            .header {
-                margin-bottom: 2px;
-                padding-bottom: 0;
-                margin-top: 0;
-            }
-            
-            .header h1 {
-                font-size: 11pt;
-                margin-bottom: 1px;
-            }
-            
-            .header h2 {
-                font-size: 9pt;
-                margin-bottom: 1px;
-            }
-            
-            .header p {
-                font-size: 7pt;
-                margin: 0;
-            }
-            
-            .logo {
-                width: 50px;
-                height: 50px;
-                margin: -15px auto 0 auto;
-                display: block;
-                text-align: center;
-            }
-            
-            .logo img {
-                max-width: 100%;
-                max-height: 100%;
-                display: block;
-                margin: 0 auto;
-            }
-            
-            .cert-title {
-                font-size: 12pt;
-                margin: 5px 0;
-                padding: 3px 0;
-            }
-            
-            .cert-number {
-                font-size: 8pt;
-                margin-bottom: 4px;
-            }
-            
-            .section {
-                margin-bottom: 4px;
-            }
-            
-            .two-column {
-                margin-bottom: 4px;
-            }
-            
-            .column {
-                padding: 2px;
-            }
-            
-            .field-label {
-                font-size: 7pt;
-                margin-bottom: 1px;
-            }
-            
-            .field-value {
-                font-size: 8pt;
-                padding: 1px 2px;
-                min-height: 14px;
-            }
-            
-            .table-section {
-                margin: 4px 0;
-            }
-            
-            .table-header {
-                padding: 2px;
-                font-size: 8pt;
-            }
-            
-            .table-content {
-                padding: 3px;
-                min-height: 20px;
-            }
-            
-            .treatment-section {
-                padding: 4px;
-                margin: 4px 0;
-            }
-            
-            .treatment-title {
-                font-size: 8pt;
-                margin-bottom: 2px;
-            }
-            
-            .treatment-label {
-                font-size: 7pt;
-                padding: 1px;
-            }
-            
-            .treatment-value {
-                font-size: 8pt;
-                padding: 1px;
-            }
-            
-            .signature-section {
-                margin-top: 8px;
-                padding: 4px;
-            }
-            
-            .signature-row {
-                margin-top: 4px;
-            }
-            
-            .signature-col {
-                padding: 2px;
-            }
-            
-            .signature-label {
-                font-size: 7pt;
-                margin-bottom: 1px;
-            }
-            
-            .signature-value {
-                font-size: 8pt;
-                min-height: 20px;
-                padding-top: 8px;
-            }
-            
-            .stamp-area {
-                padding: 8px;
-                margin-top: 4px;
-                font-size: 7pt;
-            }
-            
-            .footer {
-                margin-top: 6px;
-                font-size: 6pt;
-                padding-top: 3px;
-            }
-            
-            .qr-box {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-                position: absolute;
-                left: 5mm;
-                top: 10mm;
-                width: 28mm;
-                height: 40mm;
-                padding: 2mm;
-                border-width: 2px;
-            }
-            
-            .qr-box::before,
-            .qr-box::after {
-                height: 2px;
-            }
-            
-            .qr-code-display {
-                width: 24mm;
-                height: 24mm;
-            }
-            
-            .qr-label {
-                font-size: 6pt;
-                margin-top: 2px;
-            }
-            
             .certificate-main {
-                position: relative;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
         }
     </style>
@@ -605,6 +129,7 @@ $approver_position = $cert_info['position_approved'] ?? '';
 <body>
     <div class="print-button">
         <button class="btn-print" onclick="window.print()">🖨️ Print Certificate</button>
+        <button class="btn-save-pdf" onclick="saveAsPDF()">💾 Save As PDF</button>
     </div>
     
     <div class="certificate-container">
@@ -623,109 +148,181 @@ $approver_position = $cert_info['position_approved'] ?? '';
         </div>
         
         <!-- Main Certificate Content -->
-        <div class="certificate-main">
+        <div class="certificate-main" style="background-image: url('images/certificate_bg.png'); background-size: cover; background-position: center 150px; background-repeat: no-repeat;">
         <!-- Header -->
         <div class="header">
             <div class="logo">
                 <img src="assets/img/national_logo.jpg" alt="National Logo">
             </div>
-            <p>ສາທາລະນະລັດ ປະຊາທິປະໄຕ ປະຊາຊົນລາວ</p>
+            <p class="title-text-lao" style="font-size: 11pt;">ສາທາລະນະລັດ ປະຊາທິປະໄຕ ປະຊາຊົນລາວ</p>
             <h1>LAO PEOPLE'S DEMOCRATIC REPUBLIC</h1>
-            <p>ສັນຕິພາບ ເອກະລາດ ປະຊາທິປະໄຕ ເອກະພາບ ວັດທະນາຖາວອນ</p>
+            <p class="title-text-lao" style="font-size: 11pt;">ສັນຕິພາບ ເອກະລາດ ປະຊາທິປະໄຕ ເອກະພາບ ວັດທະນາຖາວອນ</p>
             <p style="margin-bottom: 10px;">PEACE INDEPENDENCE DEMOCRACY UNITY PROSPERITY</p>
-            <h2>MINISTRY OF AGRICULTURE AND FORESTRY</h2>
-            <h2>DEPARTMENT OF AGRICULTURE</h2>
+            <h2>MINISTRY OF AGRICULTURE AND FORESTRY<br>DEPARTMENT OF AGRICULTURE</h2>
         </div>
         
         <!-- Certificate Title -->
-        <div class="cert-title">PHYTOSANITARY CERTIFICATE</div>
-        
-        <!-- Certificate Number -->
-        <div class="cert-number">
-            <strong>No. <?php echo htmlspecialchars($certificate_no); ?></strong>
+        <div class="title-text-lao" style="font-size: 16pt;">ໃບຢັ້ງຢືນ ສຸຂານາໄມ</div>
+        <div class="cert-title">
+            <span class="title-text">PHYTOSANITARY CERTIFICATE</span>
+            <span class="cert-no">No. <?php echo htmlspecialchars($certificate_no); ?></span>
         </div>
-        
+        <!-- Main Content -->
+        <div style="border: 1px solid #000;">
         <!-- From/To Section -->
-        <div class="two-column">
-            <div class="column">
-                <div class="field-label">FROM:</div>
-                <div class="field-value">The National Plant Protection Organization</div>
-                <div class="field-value">LAO PEOPLE'S DEMOCRATIC REPUBLIC</div>
+        <div style="border-bottom: 1px solid #000;">
+            <div class="two-column">
+                <div class="column" style="width: 50%;">
+                    <span class="field-label-lao" style="padding:2px">ຈາກ:</span><span class="field-value" style="display: inline-block; width:85%; padding:2px; margin-left: 8px; text-align: center;">The National Plant Protection Organization</span>
+                </div>
+                <div class="column" style="width: 50%; border-left: 1px solid #000;">
+                    <span class="field-label-lao" style="padding:2px">ເຖີງ:</span><span class="field-value" style="display: inline-block; width:85%; padding:2px; text-align: center;">The National Plant Protection Organization of</span>
+                </div>
             </div>
-            <div class="column">
-                <div class="field-label">TO:</div>
-                <div class="field-value">The National Plant Protection Organization of</div>
-                <div class="field-value"><?php echo htmlspecialchars($import_country); ?></div>
-            </div>
-        </div>
-        
-        <!-- Names Section -->
-        <div class="section">
-            <div class="field-label">Name and address of exporter:</div>
-            <div class="field-value"><?php echo htmlspecialchars($exporter_name); ?></div>
-            <div class="field-value"><?php echo htmlspecialchars($exporter_address); ?></div>
-        </div>
-        
-        <div class="section">
-            <div class="field-label">Declared name and address of consignee:</div>
-            <div class="field-value"><?php echo htmlspecialchars($importer_name); ?></div>
-            <div class="field-value"><?php echo htmlspecialchars($importer_address); ?></div>
-        </div>
-        
-        <!-- Description of Consignment -->
-        <div class="table-section">
-            <div class="table-header">DESCRIPTION OF CONSIGNMENT</div>
-            <div class="table-content">
-                <div class="field-label">Name of product and quantity declared:</div>
-                <div class="field-value">
-                    <?php echo htmlspecialchars($product_name); ?> - 
-                    <?php echo htmlspecialchars($quantity_gross . ' ' . $unit_name); ?>
+            <div class="two-column">
+                <div class="column" style="width: 50%;">
+                    <span class="field-label" style="padding:2px">&nbsp;FROM:</span><span class="field-value" style="display: inline-block; width:85%; padding:2px; text-align: center;"><b>LAO PEOPLE'S DEMOCRATIC REPUBLIC</b></span>
+                </div>
+                <div class="column" style="width: 50%; border-left: 1px solid #000;">
+                    <span class="field-label" style="padding:2px">TO:</span><span class="field-value" style="display: inline-block; width:85%; padding:2px; text-align: center;"><b><?php echo strtoupper(htmlspecialchars($import_country)); ?></b></span>
                 </div>
             </div>
         </div>
         
-        <!-- Number and Description of Packages -->
-        <div class="section">
-            <div class="field-label">Number and description of packages:</div>
-            <div class="field-value"><?php echo htmlspecialchars($commodity_description); ?></div>
+        <!-- Description Header -->
+        <div style="border-bottom: 1px solid #000;">
+            <div class="section" style="margin: 0; text-align: center;">
+                <div class="field-label" style="font-weight: bold;"><span class="field-label-lao">I. ປະເພດສີນຄ້າ</span><span style="font-weight: normal;"> / DESCRIPTION OF CONSIGNMENT</span></div>
+            </div>
         </div>
         
-        <!-- Distinguishing Marks -->
-        <div class="section">
-            <div class="field-label">Distinguishing marks:</div>
-            <div class="field-value"><?php echo htmlspecialchars($distinguishing_marks); ?></div>
-        </div>
-        
-        <!-- Place of Origin and Entry Point -->
+
+        <!-- Names Section -->
         <div class="two-column">
-            <div class="column">
-                <div class="field-label">Place of origin:</div>
-                <div class="field-value"><?php echo htmlspecialchars($country_origin); ?></div>
+            <div class="column" style="width: 50%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຊື່ ແລະ ທີ່ຢູ່ ຂອງ ຜູ້ສົ່ງອອກ</div>
+                <div class="field-label">Name and address of exporter</div>
             </div>
-            <div class="column">
-                <div class="field-label">Declared point of entry:</div>
-                <div class="field-value"><?php echo htmlspecialchars($import_point); ?></div>
-            </div>
-        </div>
-        
-        <!-- Means of Conveyance -->
-        <div class="section">
-            <div class="field-label">Means of conveyance:</div>
-            <div class="field-value">
-                <?php echo htmlspecialchars($conveyance_name); ?>
-                <?php if ($conveyance_sign): ?>
-                    - <?php echo htmlspecialchars($conveyance_sign); ?>
-                <?php endif; ?>
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຊື່ ແລະ ທີ່ຢູ່ ຂອງ ຜູ້ຮັບ</div>
+                <div class="field-label">Declared name and address of consignee</div>
             </div>
         </div>
         
-        <!-- Botanical Name -->
-        <div class="section">
-            <div class="field-label">Botanical name of plants:</div>
-            <div class="field-value"><?php echo htmlspecialchars($scientific_name); ?></div>
+        <div class="two-column">
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000;">
+                <div class="field-value" style="margin-left: 10px;"><?php echo strtoupper(htmlspecialchars($exporter_name)); ?><br><?php echo strtoupper(htmlspecialchars($exporter_address)); ?></div>
+            </div>
+            <div class="column" style="width: 50%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                <div class="field-value" style="margin-left: 10px;"><?php echo strtoupper(htmlspecialchars($importer_name)); ?><br><?php echo strtoupper(htmlspecialchars($importer_address)); ?></div>
+            </div>
         </div>
         
+        <!-- Number and Description of Packages / Distinguishing Marks -->
+        <div class="two-column">
+            <div class="column" style="width: 50%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຈໍານວນ ແລະ ລັກສະນະການຫຸ້ມຫໍ່</div>
+                <div class="field-label">Number and description of packages</div>
+            </div>
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ເຄື່ອງໝາຍທີ່ເດັ່ນ</div>
+                <div class="field-label">Distinguishing marks</div>
+            </div>
+        </div>
+        
+        <div class="two-column">
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000;">
+                <div class="field-value" style="margin-left: 10px;"><?php echo strtoupper(htmlspecialchars($commodity_description)); ?></div>
+            </div>
+            <div class="column" style="width: 50%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                <div class="field-value" style="margin-left: 10px;"><?php echo strtoupper(htmlspecialchars($distinguishing_marks)); ?></div>
+            </div>
+        </div>
+        
+
+        <!-- Place of Origin / Means of Conveyance / Point of Entry -->
+        <div style="display: flex;">
+            <div class="column" style="width: 25%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ແຫຼ່ງທີ່ມາ ຂອງ ສີນຄ້າ</div>
+                <div class="field-label">Place of origin</div>
+            </div>
+            <div class="column" style="width: 25%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ວິທີການຂົນສົ່ງ</div>
+                <div class="field-label">Declared means of conveyance</div>
+            </div>
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຈຸດແຈ້ງ ການນໍາເຂົ້າ</div>
+                <div class="field-label">Declared point of entry</div>
+            </div>
+        </div>
+        
+        <div style="display: flex;">
+            <div class="column" style="width: 25%; border-bottom: 1px solid #000;">
+                <div class="field-value" style="text-align: center;"><b><?php echo strtoupper(htmlspecialchars($country_origin)); ?></b></div>
+            </div>
+            <div class="column" style="width: 25%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                <div class="field-value" style="text-align: center;">
+                    <b><?php echo strtoupper(htmlspecialchars($conveyance_name)); ?></b>
+                    <?php if ($conveyance_sign): ?>
+                     <b><?php echo strtoupper(htmlspecialchars($conveyance_sign)); ?></b>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="column" style="width: 50%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                <div class="field-value" style="text-align: center;"><b><?php echo strtoupper(htmlspecialchars($import_point)); ?></b></div>
+            </div>
+        </div>
+        
+
+        <!-- Product Name/Quantity and Botanical Name -->
+        <div class="two-column">
+            <div class="column" style="width: 50%; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຊື່ ຂອງ ສີນຄ້າ ແລະ ຈໍານວນທີ່ແຈ້ງ</div>
+                <div class="field-label">Name of product and quantity declared</div>
+            </div>
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000; text-align: center;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຊື່ວິທະຍາສາດ ຂອງ ພືດ</div>
+                <div class="field-label">Botanical name of plants</div>
+            </div>
+        </div>
+        
+        <div class="two-column">
+            <div class="column" style="width: 50%; border-bottom: 1px solid #000;">
+                <div class="field-value" style="margin-left: 10px; font-weight: bold;">
+                    <?php echo strtoupper(htmlspecialchars($product_name)); ?> - 
+                    <?php echo strtoupper(htmlspecialchars($quantity_gross . ' ' . $unit_name)); ?>
+                </div>
+            </div>
+            <div class="column" style="width: 50%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                <div class="field-value" style="text-align: center; font-weight: bold;"><i><?php echo htmlspecialchars($scientific_name); ?></i></div>
+            </div>
+        </div>
+        
+         <!-- Declaration Text -->
+        <div class="section" style="margin-top: 15px; font-size: 9pt; text-align: center; border-bottom: 1px solid #000;">
+            <div style="font-family: phetsarath OT; margin-bottom: 5px;">
+                ຂໍຢັ້ງຢືນວ່າ ພືດ ແລະ ຜະລິດຕະພັນພືດ ຫຼື ວັດຖຸອື່ນຂ້າງເທີງນັ້ນ ໄດ້ຜ່ານການກວດກາ ແລະ ພົບວ່າ ປອດສັດຕູພືດຕ້ອງຫ້າມ ແລະ ສັດຕູພືດອື່ນໆ ທີ່ເປັນອັນຕະລາຍ ເຊີ່ງສອດຄ່ອງກັບ ລະບຽບການປ້ອງກັນພືດ ຂອງ ປະທດ ທີ່ນໍາເຂົ້າ
+            </div>
+            This is to certify that the plants, plant products or other regulated articles described herein have been inspected and/or tested according to appropriate official
+            procedures and are considered to be free from the quarantine pests specified by the importing contracting party and to conform with the current phytosanitary
+            requirements of the importing contracting party, including those for regulated non-quarantine pests.
+        </div>
+        
+        <!-- Additional Declaration Header -->
+        <div style="border-bottom: 1px solid #000;">
+            <div class="section" style="margin: 0; text-align: center;">
+                <div class="field-label" style="font-weight: bold;"><span class="field-label-lao">II. ແຈ້ງເພີ່ມເຕີມ(ຖ້າມີ)</span><span style="font-weight: normal;"> / ADDITIONAL DECLARATION</span></div>
+            </div>
+        </div>
+      
+        <div style="border-bottom: 1px solid #000; height: 100px;">
+            <div class="section">
+                <div class="field-value" style="text-align: center; font-weight: bold;"><?php echo strtoupper(htmlspecialchars($additional_declaration)); ?></div>
+            </div>
+        </div>
+
         <!-- Treatment Section -->
+       <!--
         <?php if ($treatment_name): ?>
         <div class="treatment-section">
             <div class="treatment-title">III. DISINFESTATION AND/OR DISINFECTION TREATMENT</div>
@@ -751,73 +348,272 @@ $approver_position = $cert_info['position_approved'] ?? '';
             </div>
         </div>
         <?php endif; ?>
-        
-        <!-- Additional Declaration -->
-        <?php if ($additional_declaration): ?>
-        <div class="section">
-            <div class="field-label">Additional Declaration:</div>
-            <div class="field-value"><?php echo htmlspecialchars($additional_declaration); ?></div>
+        --> 
+         <div style="border-bottom: 1px solid #000;">
+            <div class="section" style="margin: 0; text-align: center;">
+                <div class="field-label" style="font-weight: bold;"><span class="field-label-lao">III. ການເຮັດຄວາມສະອາດ ແລະ ການຂ້າເຊື້ອ</span><span style="font-weight: normal;"> / DISINFESTATION AND/OR DISINFECTION TREATMENT</span></div>
+            </div>
         </div>
-        <?php endif; ?>
-        
-        <!-- Declaration Text -->
-        <div class="section" style="margin-top: 15px; font-size: 9pt; text-align: justify;">
-            This is to certify that the plants, plant products or other regulated articles described herein have been inspected and/or tested according to appropriate official
-            procedures and are considered to be free from the quarantine pests specified by the importing contracting party and to conform with the current phytosanitary
-            requirements of the importing contracting party, including those for regulated non-quarantine pests.
+       
+        <div style="display: flex; border-bottom: 1px solid #000;">
+            <div class="column" style="width: 20%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ວັນທີ ເຮັດຄວາມສະອາດຂ້າເຊື້ອ</div>
+                <div class="field-label">Treatment date:</div>
+            </div>
+            <div class="column" style="width: 30%; border-right: 1px solid #000;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $treatment_date ? date('d-M-Y', strtotime($treatment_date)) : 'NIL'; ?>
+                </div>
+            </div>
+            <div class="column" style="width: 20%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ວິທີເຮັດຄວາມສະອາດຂ້າເຊື້ອ</div>
+                <div class="field-label">Treatment:</div>
+            </div>
+            <div class="column" style="width: 30%;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $treatment_name ? strtoupper(htmlspecialchars($treatment_name)) : 'NIL'; ?>
+                </div>
+            </div>
         </div>
         
-        <div style="text-align: center; margin: 10px 0; font-weight: bold;">
-            NO MORE DECLARATION_TEST
+        <div style="display: flex; border-bottom: 1px solid #000;">
+            <div class="column" style="width: 22%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ສານເຄມີ (ສ່ວນປະກອບທີ່ອອກລິດ)</div>
+                <div class="field-label">Chemical (Active ingredient):</div>
+            </div>
+            <div class="column" style="width: 28%; border-right: 1px solid #000;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $treatment_chemical ? htmlspecialchars($treatment_chemical) : 'NIL'; ?>
+                </div>
+            </div>
+            <div class="column" style="width: 20%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ໄລຍະເວລາ ແລະ ອຸນຫະພູມ</div>
+                <div class="field-label">Duration & temperature:</div>
+            </div>
+            <div class="column" style="width: 30%;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $treatment_duration ? htmlspecialchars($treatment_duration) : 'NIL'; ?>
+                </div>
+            </div>
+        </div>
+
+         <div style="display: flex; border-bottom: 1px solid #000;">
+            <div class="column" style="width: 22%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຄວາມເຂັ້ມຂຸ້ນ</div>
+                <div class="field-label">Concentration:</div>
+            </div>
+            <div class="column" style="width: 28%; border-right: 1px solid #000;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $treatment_concentration ? htmlspecialchars($treatment_concentration) : 'NIL'; ?>
+                </div>
+            </div>
+            <div class="column" style="width: 20%; text-align: left;">
+                <div class="field-label" style="font-family: phetsarath OT;">ຂໍ້ມູນເພີ່ມເຕີມ</div>
+                <div class="field-label">Additional Information:</div>
+            </div>
+            <div class="column" style="width: 30%;">
+                <div class="field-value" style="text-align: center; font-weight: bold;">
+                    <?php echo $additional_declaration ? htmlspecialchars($additional_declaration) : 'NIL'; ?>
+                </div>
+            </div>
         </div>
         
+
         <!-- Signature Section -->
-        <div class="signature-section">
-            <div class="signature-row">
-                <div class="signature-col">
-                    <div class="signature-label">Date Inspected:</div>
-                    <div class="signature-value">
-                        <?php echo $treatment_date ? date('d-M-Y', strtotime($treatment_date)) : ''; ?>
+        <div style="display: flex; position: relative;">
+            <!-- Left side: Three rows with two columns each -->
+            <div style="width: 43%; display: flex; flex-direction: column;">
+                <!-- First Row: Date Inspected -->
+                <div class="row" style="display: flex; border-bottom: 1px solid #000;">
+                    <div class="column" style="width: 40%; text-align: left;">
+                        <div class="field-label" style="font-family: phetsarath OT;">ວັນທີ ກວດກາ</div>
+                        <div class="field-label">Date Inspected:</div>
+                    </div>
+                    <div class="column" style="width: 60%;">
+                        <div class="field-value" style="text-align: left;">
+                            <?php echo isset($inspection_date) && $inspection_date ? date('d-M-Y', strtotime($inspection_date)) : ''; ?>
+                        </div>
                     </div>
                 </div>
-                <div class="signature-col">
-                    <div class="signature-label">Date Issued:</div>
-                    <div class="signature-value">
-                        <?php echo date('d-M-Y', strtotime($date_issued)); ?>
+                
+                <!-- Second Row: Date Issued -->
+                <div class="row" style="display: flex; border-bottom: 1px solid #000;"> 
+                   <div class="column" style="width: 40%; text-align: left;">
+                        <div class="field-label" style="font-family: phetsarath OT;">ວັນທີ ອອກໃບຢັ້ງຢືນ</div>
+                        <div class="field-label">Date Issued:</div>
+                    </div>
+                    <div class="column" style="width: 60%;">
+                        <div class="field-value" style="text-align: left;">
+                            <?php echo isset($date_issued) && $date_issued ? date('d-M-Y', strtotime($date_issued)) : ''; ?>
+                        </div>
+                    </div>
+                </div>  
+                
+                <!-- Third Row: Place of Issued -->
+                <div class="row" style="display: flex; border-bottom: 1px solid #000;"> 
+                    <div class="column" style="width: 40%; text-align: left;">
+                        <div class="field-label" style="font-family: phetsarath OT;">ສະຖານທີ່ ອອກໃບຢັ້ງຢືນ</div>
+                        <div class="field-label">Place of Issued:</div>
+                    </div>
+                    <div class="column" style="width: 60%;">
+                        <div class="field-value" style="text-align: left;">
+                            <?php echo isset($place_issued) ? htmlspecialchars($place_issued) : ''; ?>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="signature-row">
-                <div class="signature-col">
-                    <div class="signature-label">Place of Issue:</div>
-                    <div class="signature-value"><?php echo htmlspecialchars($place_issued); ?></div>
-                </div>
+            <!-- Merged third column (spans all 3 rows) -->
+            <div class="column" style="width: 25%; border-bottom: 1px solid #000; border-right: 1px solid #000; border-left: 1px solid #000; text-align: center;">
+                <div class="field-value">&nbsp;</div>
             </div>
             
-            <div class="stamp-area">
-                <strong>STAMP OF AUTHORIZED ORGANIZATION</strong><br>
-                (Official Stamp/Seal Area)
-            </div>
-            
-            <div class="signature-row">
-                <div class="signature-col" style="width: 100%;">
-                    <div class="signature-label">Name and Signature of Authorized Officer:</div>
-                    <div class="signature-value" style="text-align: center; padding-top: 20px;">
-                        <strong><?php echo htmlspecialchars($authorized_officer); ?></strong><br>
-                        <span style="font-size: 9pt;"><?php echo htmlspecialchars($approver_position); ?></span>
-                    </div>
+            <!-- Fourth column area -->
+            <div style="width: 42%; display: flex; flex-direction: column; border-bottom: 1px solid #000;">
+                <div class="column" style="height: 33.33%; width: 100%;">
+                    <div class="field-label" style="font-family: phetsarath OT; text-align: center;">ຊື່ ແລະ ລາຍເຊັນເຈົ້າໜ້າທີ່ກັກກັນພືດ</div>
+                    <div class="field-label" style="text-align: center;">Name and Signature of Authorized Officer</div>
+                </div>
+                <div class="column" style="height: 33.33%;">
+                    <div class="field-value">&nbsp;</div>
+                </div>
+                <div class="column" style="height: 33.34%; text-align: center;">
+                    <div class="field-value" style="text-align: center;">Officer's name</div>
                 </div>
             </div>
-        </div>
-        
+        </div> 
         <!-- Footer -->
         <div class="footer">
-            Department of Agriculture, P.O Box 811, Nongbone, Lao PDR. Tel: (856) 21 416350, Fax: (856) 21 415349<br>
-            Email: ppd@doa.gov.la
+            Department of Agriculture, P.O Box 811, Nongbone, Lao PDR. Tel: (856) 21 412350, Fax: (856) 21 412349<br>
+            Email: pqdlao@yahoo.com
         </div>
-        
-        </div><!-- End certificate-main -->
+       </div> <!-- End Main Content --> 
+     </div><!-- End certificate-main -->
     </div><!-- End certificate-container -->
+    
+    <script>
+    function saveAsPDF() {
+        // Hide the buttons before generating PDF
+        const buttonContainer = document.querySelector('.print-button');
+        buttonContainer.style.display = 'none';
+        
+        // Clone the certificate container for manipulation
+        const originalContainer = document.querySelector('.certificate-container');
+        const clonedContainer = originalContainer.cloneNode(true);
+        
+        // Create a temporary wrapper
+        const tempWrapper = document.createElement('div');
+        tempWrapper.style.position = 'fixed';
+        tempWrapper.style.left = '-9999px';
+        tempWrapper.style.top = '0';
+        tempWrapper.style.width = '210mm';
+        tempWrapper.style.background = 'white';
+        tempWrapper.style.padding = '2mm';
+        document.body.appendChild(tempWrapper);
+        
+        // Restructure layout for PDF
+        const qrBox = clonedContainer.querySelector('.qr-box');
+        const certMain = clonedContainer.querySelector('.certificate-main');
+        
+        if (qrBox && certMain) {
+            // Create a wrapper table for side-by-side layout
+            const layoutTable = document.createElement('div');
+            layoutTable.style.display = 'table';
+            layoutTable.style.width = '100%';
+            layoutTable.style.tableLayout = 'fixed';
+            
+            // QR cell
+            const qrCell = document.createElement('div');
+            qrCell.style.display = 'table-cell';
+            qrCell.style.width = '35mm';
+            qrCell.style.verticalAlign = 'top';
+            qrCell.style.padding = '0';
+            
+            // Content cell
+            const contentCell = document.createElement('div');
+            contentCell.style.display = 'table-cell';
+            contentCell.style.verticalAlign = 'top';
+            contentCell.style.padding = '0';
+            contentCell.style.paddingLeft = '2mm';
+            
+            // Style QR box
+            qrBox.style.position = 'static';
+            qrBox.style.float = 'none';
+            qrBox.style.width = '32mm';
+            qrBox.style.height = 'auto';
+            qrBox.style.margin = '0';
+            qrBox.style.padding = '1mm';
+            
+            // Style cert main
+            certMain.style.margin = '0';
+            certMain.style.padding = '0';
+            // Preserve background image for PDF
+            certMain.style.backgroundImage = "url('images/certificate_bg.png')";
+            certMain.style.backgroundSize = 'cover';
+            certMain.style.backgroundPosition = 'center 150px';
+            certMain.style.backgroundRepeat = 'no-repeat';
+            
+            // Move elements into cells
+            qrCell.appendChild(qrBox);
+            contentCell.appendChild(certMain);
+            
+            // Clear and rebuild container
+            clonedContainer.innerHTML = '';
+            layoutTable.appendChild(qrCell);
+            layoutTable.appendChild(contentCell);
+            clonedContainer.appendChild(layoutTable);
+        }
+        
+        tempWrapper.appendChild(clonedContainer);
+        
+        // Minimal styling to ensure clean PDF output
+        clonedContainer.style.boxShadow = 'none';
+        clonedContainer.style.maxWidth = '100%';
+        clonedContainer.style.background = 'white';
+        
+        // Wait for rendering
+        setTimeout(function() {
+            const certificateNo = '<?php echo htmlspecialchars($certificate_no); ?>';
+            const filename = 'Phytosanitary_Certificate_' + certificateNo.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+            
+            const opt = {
+                margin: [2, 2, 2, 2],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true, 
+                    letterRendering: true,
+                    logging: false,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    windowHeight: clonedContainer.scrollHeight,
+                    height: clonedContainer.scrollHeight
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait',
+                    compress: true
+                },
+                pagebreak: { mode: 'avoid-all' }
+            };
+            
+            html2pdf().set(opt).from(clonedContainer).save().then(function() {
+                // Clean up
+                document.body.removeChild(tempWrapper);
+                buttonContainer.style.display = 'flex';
+            }).catch(function(error) {
+                console.error('PDF generation error:', error);
+                // Clean up on error
+                if (document.body.contains(tempWrapper)) {
+                    document.body.removeChild(tempWrapper);
+                }
+                buttonContainer.style.display = 'flex';
+                alert('Error generating PDF. Please try the Print button instead.');
+            });
+        }, 500);
+    }
+    </script>
 </body>
 </html>

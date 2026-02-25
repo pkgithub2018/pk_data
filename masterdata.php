@@ -1,6 +1,11 @@
 <?php
       // Pk: 2025-04-30
   //session_start(); - not working on cloud server
+  
+  // Prevent page caching
+  header("Cache-Control: no-cache, no-store, must-revalidate");
+  header("Pragma: no-cache");
+  header("Expires: 0");
 
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
@@ -40,16 +45,44 @@
     if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
     $uimage = $uprofile['imgfilepath'];
     }
+
+    // Language selection
+    $lang = isset($_GET['lang']) ? $_GET['lang'] : 'en'; // default language
+
+    // Include the appropriate language file
+    $langFile = "php-bin/lang_" . $lang . ".php";
+    if (file_exists($langFile)) {
+        $translations = include($langFile);
+    } else {
+        // Fallback translations if file doesn't exist
+        $translations = array(
+            'Dashboard' => 'Dashboard',
+            'Master data' => 'Master data'
+        );
+    }
+
+    // Build language switch URLs and main link AFTER userid is set
+    $__lang_params = $_GET;
+    if (!isset($__lang_params['uid']) || empty($__lang_params['uid'])) {
+        $__lang_params['uid'] = isset($userid) ? $userid : '';
+    }
+    $__lang_params_la = $__lang_params; $__lang_params_la['lang'] = 'la';
+    $__lang_params_en = $__lang_params; $__lang_params_en['lang'] = 'en';
+    $langHrefLa = '?' . http_build_query($__lang_params_la);
+    $langHrefEn = '?' . http_build_query($__lang_params_en);
+    // Link back to main.php preserving uid and current lang
+    $mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => $lang];
+    $mainHref = 'main.php?' . http_build_query($mainParams);
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo $lang === 'la' ? 'lo' : htmlspecialchars($lang); ?>">
 
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Master data</title>
+  <title><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></title>
   <meta content="" name="description">
   <meta content="" name="keywords">
   <!-- Ajax PK -->
@@ -81,6 +114,7 @@
   <link href="assets/css/style.css" rel="stylesheet">
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
 
   <!-- =======================================================
@@ -92,14 +126,14 @@
   ======================================================== -->
 </head>
 
-<body>
+<body class="<?php echo $lang === 'la' ? 'lang-lao' : 'lang-en'; ?>">
   <!-- ======= Header ======= -->
   <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="main.php?uid=<?php echo $userid; ?>" class="logo d-flex align-items-center">
+      <a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">ePhytosanitary Certificate</span>
+        <span class="d-none d-lg-block"><?php echo isset($translations['e-Phytosanitary']) ? $translations['e-Phytosanitary'] : 'e-Phytosanitary'; ?></span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -134,9 +168,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-person"></i>
-                <span>My Profile</span>
+                <span><?php echo isset($translations['My Profile']) ? $translations['My Profile'] : 'My Profile'; ?></span>
               </a>
             </li>
             <li>
@@ -144,9 +178,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-gear"></i>
-                <span>Account Settings</span>
+                <span><?php echo isset($translations['Account Settings']) ? $translations['Account Settings'] : 'Account Settings'; ?></span>
               </a>
             </li>
             <li>
@@ -156,7 +190,7 @@
             <li>
               <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
                 <i class="bi bi-question-circle"></i>
-                <span>Need Help?</span>
+                <span><?php echo isset($translations['Need Help?']) ? $translations['Need Help?'] : 'Need Help?'; ?></span>
               </a>
             </li>
             <li>
@@ -164,9 +198,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="index.php">
+              <a class="dropdown-item d-flex align-items-center" href="index.php?lang=<?php echo $lang; ?>">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
               </a>
             </li>
 
@@ -184,22 +218,42 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
+
       <li class="nav-item">
-        <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
+        </a>
+      </li><!-- End Application Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
+        </a>
+      </li><!-- End Inspection Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
+        </a>
+      </li><!-- End Certificate Nav --> 
+
+      <li class="nav-item">
+        <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
 
@@ -209,58 +263,68 @@
       ?>
       <li class="nav-item">
         <a class="nav-link <?php echo $isMasterActive ? '' : 'collapsed'; ?>" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse<?php echo $isMasterActive ? ' show' : ''; ?>" data-bs-parent="#sidebar-nav">
           <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'approvers') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'approvers') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'countries') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Countries</span>
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'countries') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
             <a href="#">
-              <i class="bi bi-circle"></i><span>Districts</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'entitytype') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'entitytype') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'inspectionmethod') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'inspectionmethod') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
 
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'locations') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && ($_GET['part'] === 'product' || $_GET['part'] ==='productgroup' || $_GET['part'] ==='productunit')) ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
             </a>
           </li>
           <li>
             <a href="#">
-              <i class="bi bi-circle"></i><span>Provinces</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'treatmentmethod') ? 'active' : ''; ?>">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'treatmentmethod') ? 'active' : ''; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment method']) ? $translations['Treatment method'] : 'Treatment method'; ?></span>
             </a>
           </li>
         </ul>
@@ -269,29 +333,29 @@
       <li class="nav-heading">Pages</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
       
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End User Group permit -->
 
       <li class="nav-item">
-        <a class="nav-link active" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
-          <i class="bi bi-person-plus"></i><span>Users</span>
+        <a class="nav-link active" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  <!-- End Users Nav -->
     </ul>
@@ -308,25 +372,25 @@
 
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Locations</h1>
+      <h1><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
           <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active"><a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">Locations</a></li>
+          <li class="breadcrumb-item active"><a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></a></li>
         </ol>
       </nav>
       </div>
       <!--
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addGroupModal" data-gid="new">
-          <i class="bi bi-plus-circle"></i> Add New Location
+          <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New Location']) ? $translations['Add New Location'] : 'Add New Location'; ?>
         </button>
       </div>
      -->
       <div>
-          <a href="masterdata.php?loc=new" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> Add New Location
+          <a href="masterdata.php?loc=new&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
+            <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New Location']) ? $translations['Add New Location'] : 'Add New Location'; ?>
           </a>
       </div>
     </div><!-- End Page Title -->
@@ -338,8 +402,8 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Locations</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Locations</p>
+              <h5 class="card-title"><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary by Department of Agriculture, MAF - Locations']) ? $translations['ePhytosanitary by Department of Agriculture, MAF - Locations'] : 'ePhytosanitary by Department of Agriculture, MAF - Locations'; ?></p>
 
               <!-- Table with stripped rows -->
                
@@ -347,14 +411,14 @@
                 <thead>
                   <tr>
                    <th><b>N</b>o</th>
-                   <th>Name(English)</th>
-                   <th>Name(Lao)</th>
-                   <th>Type</th>
-                   <th>District</th>
-                   <th>Province</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><?php echo isset($translations['Name(English)']) ? $translations['Name(English)'] : 'Name(English)'; ?></th>
+                   <th><?php echo isset($translations['Name(Lao)']) ? $translations['Name(Lao)'] : 'Name(Lao)'; ?></th>
+                   <th><?php echo isset($translations['Type']) ? $translations['Type'] : 'Type'; ?></th>
+                   <th><?php echo isset($translations['District']) ? $translations['District'] : 'District'; ?></th>
+                   <th><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -430,12 +494,12 @@
         // echo "<script>alert('Edit Location ID: " . $ledit . "');</script>"; // Debugging line
     ?>
      <div class="pagetitle">
-        <h1>Add/Update Location</h1>
+        <h1><?php echo isset($translations['Add/Update Location']) ? $translations['Add/Update Location'] : 'Add/Update Location'; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item">Forms</li>
-            <li class="breadcrumb-item active">Locations</li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+            <li class="breadcrumb-item"><?php echo isset($translations['Forms']) ? $translations['Forms'] : 'Forms'; ?></li>
+            <li class="breadcrumb-item active"><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></li>
           </ol>
         </nav>
       </div>
@@ -446,7 +510,7 @@
             <div class="card-body">
               <h5 class="card-title"><?php echo (isset($_GET['loc']) && $_GET['loc'] === 'edit') ? 'Location Update' : 'New Location'; ?></h5>
               <!-- Users Form -->
-              <form action="masterdata.php?part=locations&uid=<?php echo $userid; ?>" method="POST">
+              <form action="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" method="POST">
                 <!-- Hidden input for id : location  ID -->
                 <input type="hidden" id="hlid" name="hlid" value="<?php echo isset($id) ? $id : ''; ?>">
                 <div class="row mb-3">
@@ -456,19 +520,19 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">English Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['English Name']) ? $translations['English Name'] : 'English Name'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="nameeng" id="nameeng" class="form-control" value="<?php echo isset($nameeng) ? $nameeng : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Lao Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Lao Name']) ? $translations['Lao Name'] : 'Lao Name'; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="namelao" id="namelao" class="form-control" value="<?php echo isset($namelao) ? $namelao : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Location Type</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Location Type']) ? $translations['Location Type'] : 'Location Type'; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="locationtype" aria-label="Default select example">
                       <option selected>*** Please select one ***</option>
@@ -479,7 +543,7 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Province</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="province" id="province" aria-label="Default select example" onchange="SelectProvinceOnChange(this)">
                      <option value="">*** Please select one ***</option>
@@ -488,7 +552,7 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">District</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations['District']) ? $translations['District'] : 'District'; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="district" id="district" aria-label="Default select example">
                       <option value="">*** Please select one ***</option>
@@ -519,7 +583,7 @@
             // Call the function to delete location
             //DeleteLocation($locsqid, $con); - NOT IMPLEMENTED YET
             echo "<script>alert('Location with ID: " . $locsqid . " TO be deleted (NOT IMPLEMENTED YET).');</script>"; // Debugging line
-            echo "<script>window.location.href='masterdata.php?part=locations&uid=<?php echo $userid; ?>';</script>"; // Redirect to locations page
+            echo "<script>window.location.href='masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>';</script>"; // Redirect to locations page
         } else {
             echo "<script>alert('No Location ID provided for deletion.');</script>"; // Debugging line
         }
@@ -533,52 +597,52 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Countries</h1>
+      <h1><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Countries</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">Home</a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></li>
         </ol>
       </nav>
       </div>
       
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
-          <i class="bi bi-plus-circle"></i>Add New Country
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Country']) ? $translations['Add New Country'] : 'Add New Country'; ?>
         </button>
       </div> 
     </div><!-- End Page Title -->
     <!-- == Modal form - Countries == -->
-      <div class="modal fade" id="addCountryModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addCountryModal" tabindex="-1" aria-labelledby="addCountryModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addGroupModalLabel"><b>Add New Country</b></h5>
+                <h5 class="modal-title" id="addCountryModalLabel"><b><?php echo isset($translations['Add New Country']) ? $translations['Add New Country'] : 'Add New Country'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="countryId" name="countryId">
                 <div class="mb-3">
-                  <label for="countryName" class="form-label">Country Name</label>
+                  <label for="countryName" class="form-label"><?php echo isset($translations['Country Name']) ? $translations['Country Name'] : 'Country Name'; ?></label>
                   <input type="text" class="form-control" id="countryName" name="countrypName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="alphaCode" class="form-label">Alpha code</label>
+                  <label for="alphaCode" class="form-label"><?php echo isset($translations['Alpha code']) ? $translations['Alpha code'] : 'Alpha code'; ?></label>
                   <input type="text" class="form-control" id="alphaCode" name="alphaCode" required>
                 </div>
                 <div class="mb-3">
-                  <label for="numCode" class="form-label">Numeric code</label>
+                  <label for="numCode" class="form-label"><?php echo isset($translations['Numeric code']) ? $translations['Numeric code'] : 'Numeric code'; ?></label>
                   <input type="text" class="form-control" id="numCode" name="numCode" required>
                 </div>
                 <div class="mb-3">
-                  <label for="currency" class="form-label">Currency</label>
+                  <label for="currency" class="form-label"><?php echo isset($translations['Currency']) ? $translations['Currency'] : 'Currency'; ?></label>
                   <input type="text" class="form-control" id="currency" name="currency">
                 </div>
                 <div class="mb-3">
-                  <label for="countryDescription" class="form-label">Description</label>
+                  <label for="countryDescription" class="form-label"><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></label>
                   <textarea class="form-control" id="countryDescription" name="countryDescription" rows="3"></textarea>
                 </div>
               </div>
@@ -598,8 +662,8 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Countries</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Countries</p>
+              <h5 class="card-title"><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary by Department of Agriculture, MAF - Countries']) ? $translations['ePhytosanitary by Department of Agriculture, MAF - Countries'] : 'ePhytosanitary by Department of Agriculture, MAF - Countries'; ?></p>
 
               <!-- Table with stripped rows -->
                
@@ -607,13 +671,13 @@
                 <thead>
                   <tr>
                    <th><b>N</b>o</th>
-                   <th>Name</th>
-                   <th>Alpha code</th>
-                   <th>Numeric code</th>
-                   <th>Currency</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></th>
+                   <th><?php echo isset($translations['Alpha code']) ? $translations['Alpha code'] : 'Alpha code'; ?></th>
+                   <th><?php echo isset($translations['Numeric code']) ? $translations['Numeric code'] : 'Numeric code'; ?></th>
+                   <th><?php echo isset($translations['Currency']) ? $translations['Currency'] : 'Currency'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -661,7 +725,7 @@
             // Call the function to delete country
             DeleteCountry($countryId, $con); // Function to delete country 
             echo "<script>alert('Country with ID: " . $countryId . " deleted.');</script>"; // Debugging line
-            echo "<script>window.location.href='masterdata.php?part=countries';</script>"; // Redirect to countries page
+            echo "<script>window.location.href='masterdata.php?part=countries&uid=" . $userid . "&lang=" . $lang . "';</script>"; // Redirect to countries page
     }
   }
   ?>
@@ -672,43 +736,43 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Pest</h1>
+      <h1><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Pest</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></li>
         </ol>
       </nav>
       </div>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPestModal" data-pestid="new">
-          <i class="bi bi-plus-circle"></i>Add New Pest
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Pest']) ? $translations['Add New Pest'] : 'Add New Pest'; ?>
         </button>
       </div> 
     </div><!-- End Page Title -->
      <!-- == Modal form - Pest == -->
-      <div class="modal fade" id="addPestModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addPestModal" tabindex="-1" aria-labelledby="addPestModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addPestModalLabel"><b>Add New Pest</b></h5>
+                <h5 class="modal-title" id="addPestModalLabel"><b><?php echo isset($translations['Add New Pest']) ? $translations['Add New Pest'] : 'Add New Pest'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for pid -->
                 <input type="hidden" id="pestId" name="pestId">
                 <div class="mb-3">
-                  <label for="pestName" class="form-label">Pest Name</label>
+                  <label for="pestName" class="form-label"><?php echo isset($translations['Pest Name']) ? $translations['Pest Name'] : 'Pest Name'; ?></label>
                   <input type="text" class="form-control" id="pestName" name="pestName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="pestScientificName" class="form-label">Scientific Name</label>
+                  <label for="pestScientificName" class="form-label"><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></label>
                   <input type="text" class="form-control" id="pestScientificName" name="pestScientificName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="pestCategory" class="form-label">Category</label>
+                  <label for="pestCategory" class="form-label"><?php echo isset($translations['Category']) ? $translations['Category'] : 'Category'; ?></label>
                   <input type="text" class="form-control" id="pestCategory" name="pestCategory" required>
                 </div>
               </div>
@@ -728,18 +792,18 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Pest</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Pest</p>
+              <h5 class="card-title"><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary by Department of Agriculture, MAF - Pest']) ? $translations['ePhytosanitary by Department of Agriculture, MAF - Pest'] : 'ePhytosanitary by Department of Agriculture, MAF - Pest'; ?></p>
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Name</th>
-                   <th>Scientific Name</th>
-                   <th>Category</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></th>
+                   <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
+                   <th><?php echo isset($translations['Category']) ? $translations['Category'] : 'Category'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -787,52 +851,55 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Product</h1>
+      <h1><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>">Product Group</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>">Product Unit</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></a></li>
         </ol>
       </nav>
       </div>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal" data-pid="new">
-          <i class="bi bi-plus-circle"></i>Add New Product
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product']) ? $translations['Add New Product'] : 'Add New Product'; ?>
         </button>
       </div> 
     </div><!-- End Page Title -->
      <!-- == Modal form - Product == -->
-      <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addProductModalLabel"><b>Add New Product</b></h5>
+                <h5 class="modal-title" id="addProductModalLabel"><b><?php echo isset($translations['Add New Product']) ? $translations['Add New Product'] : 'Add New Product'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="productId" name="productId">
+                <input type="hidden" id="<?php echo $userid; ?>" name="userid" value="<?php echo $userid; ?>">
+                <input type="hidden" id="<?php echo $lang; ?>" name="lang" value="<?php echo $lang; ?>">
+
                 <div class="mb-3">
-                  <label for="productCode" class="form-label">Code</label>
+                  <label for="productCode" class="form-label"><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></label>
                   <input type="text" class="form-control" id="productCode" name="productCode" required>
                 </div>
                 <div class="mb-3">
-                  <label for="productName" class="form-label">Name</label>
+                  <label for="productName" class="form-label"><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></label>
                   <input type="text" class="form-control" id="productName" name="productName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="scientName" class="form-label">Scientific Name</label>
+                  <label for="scientName" class="form-label"><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></label>
                   <input type="text" class="form-control" id="scientName" name="scientName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="hsCode" class="form-label">HS Code</label>
+                  <label for="hsCode" class="form-label"><?php echo isset($translations['HS Code']) ? $translations['HS Code'] : 'HS Code'; ?></label>
                   <input type="text" class="form-control" id="hsCode" name="hsCode">
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-8 col-form-label">Product Group</label>
+                  <label class="col-sm-8 col-form-label"><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></label>
                   <div class="col-sm-15">
                     <select class="form-select" name="productGroup" id="productGroup" aria-label="Default select example" onchange="SelectProvinceOnChange(this)">
                      <option value="">*** Please select one ***</option>
@@ -841,7 +908,7 @@
                   </div>
                 </div>
                 <div class="mb-3">
-                  <label for="description" class="form-label">Description</label>
+                  <label for="description" class="form-label"><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></label>
                   <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                 </div>
               </div>
@@ -861,28 +928,28 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Product</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Product</p>
+              <h5 class="card-title"><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
 
               <!-- Table with stripped rows -->
                
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Code</th>
-                   <th>Name</th>
-                   <th>Scientific Name</th>
-                   <th>HS Code</th>
-                   <th>Product Group</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></th>
+                   <th><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></th>
+                   <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
+                   <th><?php echo isset($translations['HS Code']) ? $translations['HS Code'] : 'HS Code'; ?></th>
+                   <th><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
                   <?php
-                    ProductList($con); // List of Product
+                    ProductList($userid, $con); // List of Product
                   ?>
                 </tbody>
               </table>
@@ -938,39 +1005,39 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Product Group</h1>
+      <h1><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">Product</a></li> 
-          <li class="breadcrumb-item active">Product Group</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></a></li> 
+          <li class="breadcrumb-item active"><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></li>
         </ol>
       </nav>
       </div>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductGroupModal" data-pgroupid="new">
-          <i class="bi bi-plus-circle"></i>Add New Product Group
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product Group']) ? $translations['Add New Product Group'] : 'Add New Product Group'; ?>
         </button>
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Product Group == -->
-      <div class="modal fade" id="addProductGroupModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addProductGroupModal" tabindex="-1" aria-labelledby="addProductGroupModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addProductGroupModalLabel"><b>Add New Product Group</b></h5>
+                <h5 class="modal-title" id="addProductGroupModalLabel"><b><?php echo isset($translations['Add New Product Group']) ? $translations['Add New Product Group'] : 'Add New Product Group'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="productGroupId" name="productGroupId">
                 <div class="mb-3">
-                  <label for="productGroupName" class="form-label">Name</label>
+                  <label for="productGroupName" class="form-label"><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></label>
                   <input type="text" class="form-control" id="productGroupName" name="productGroupName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="productGroupDescription" class="form-label">Description</label>
+                  <label for="productGroupDescription" class="form-label"><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></label>
                   <textarea class="form-control" id="productGroupDescription" name="productGroupDescription" rows="3"></textarea>
                 </div>
               </div>
@@ -990,18 +1057,18 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Product Group</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Product Group</p> 
+              <h5 class="card-title"><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p> 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Name</th>
-                   <th>Description</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></th>
+                   <th><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -1056,43 +1123,43 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Product Unit</h1>
+      <h1><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">Product</a></li>
-          <li class="breadcrumb-item active">Product Unit</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></a></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></li>
         </ol>
       </nav>
       </div>  
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductUnitModal" data-punitid="new">
-          <i class="bi bi-plus-circle"></i>Add New Product Unit
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product Unit']) ? $translations['Add New Product Unit'] : 'Add New Product Unit'; ?>
         </button>
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Product Unit == -->
-      <div class="modal fade" id="addProductUnitModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addProductUnitModal" tabindex="-1" aria-labelledby="addProductUnitModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addProductUnitModalLabel"><b>Add New Product Unit</b></h5>
+                <h5 class="modal-title" id="addProductUnitModalLabel"><b><?php echo isset($translations['Add New Product Unit']) ? $translations['Add New Product Unit'] : 'Add New Product Unit'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="productUnitId" name="productUnitId">
                 <div class="mb-3">
-                  <label for="productUnitCode" class="form-label">Code</label>
+                  <label for="productUnitCode" class="form-label"><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></label>
                   <input type="text" class="form-control" id="productUnitCode" name="productUnitCode" required>
                 </div>
                 <div class="mb-3">
-                  <label for="productUnitName" class="form-label">Symbol</label>
+                  <label for="productUnitName" class="form-label"><?php echo isset($translations['Symbol']) ? $translations['Symbol'] : 'Symbol'; ?></label>
                   <input type="text" class="form-control" id="productUnitSymbol" name="productUnitSymbol" required>
                 </div>
                 <div class="mb-3">
-                  <label for="productUnitName" class="form-label">Title</label>
+                  <label for="productUnitName" class="form-label"><?php echo isset($translations['Title']) ? $translations['Title'] : 'Title'; ?></label>
                   <input type="text" class="form-control" id="productUnitTitle" name="productUnitTitle" required>
                 </div>
               </div>
@@ -1112,20 +1179,20 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Product Unit</h5>
+              <h5 class="card-title"><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></h5>
        
-              <p>ePhytosanitary by Department of Agriculture, MAF - Product Unit</p>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
               <!-- Table with stripped rows --> 
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Code</th>
-                   <th>Symbol</th>
-                   <th>Title</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></th>
+                   <th><?php echo isset($translations['Symbol']) ? $translations['Symbol'] : 'Symbol'; ?></th>
+                   <th><?php echo isset($translations['Title']) ? $translations['Title'] : 'Title'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -1179,54 +1246,55 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Approvers</h1>
+      <h1><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Approvers</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><a href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></a></li>
+          <li class="breadcrumb-item active"><a href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></a></li>
         </ol>
       </nav>
     </div>
     <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addApproverModal" data-id="new">
-          <i class="bi bi-plus-circle"></i>Add New Approver
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?>
         </button>
       </div>
   </div>
   <!-- End Page Title -->
   <!-- == Modal form - Approver == -->
-      <div class="modal fade" id="addApproverModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addApproverModal" tabindex="-1" aria-labelledby="addApproverModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addApproverModalLabel"><b>Add New Approver</b></h5>
+                <h5 class="modal-title" id="addApproverModalLabel"><b><?php echo isset($translations['Add New Approver']) ? $translations['Add New Approver'] : 'Add New Approver'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="huid" name="huid" value="<?php echo $userid; ?>">
                 <input type="hidden" id="approverId" name="approverId">
+                <input type="hidden" id="hlang" name="hlang" value="<?php echo $lang; ?>">
 
                 <div class="mb-3">
-                  <label for="approverName" class="form-label">Name</label>
+                  <label for="approverName" class="form-label"><?php echo isset($translations['Name']) ? $translations['Name'] : 'Name'; ?></label>
                   <input type="text" class="form-control" id="approverName" name="approverName" value="" required>
                 </div>
                 <div class="mb-3">
-                  <label for="approverSurname" class="form-label">Surname</label>
+                  <label for="approverSurname" class="form-label"><?php echo isset($translations['Surname']) ? $translations['Surname'] : 'Surname'; ?></label>
                   <input type="text" class="form-control" id="approverSurname" name="approverSurname" required>
                 </div>
                 <div class="mb-3">
-                  <label for="approverRole" class="form-label">Roles</label>
+                  <label for="approverRole" class="form-label"><?php echo isset($translations['Roles']) ? $translations['Roles'] : 'Roles'; ?></label>
                   <input type="text" class="form-control" id="approverRole" name="approverRole" required>
                 </div>
                 <div class="mb-3">
-                  <label for="approverPosition" class="form-label">Position</label>
+                  <label for="approverPosition" class="form-label"><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></label>
                   <input type="text" class="form-control" id="approverPosition" name="approverPosition" required>
                 </div>
                 <div class="mb-3">
-                  <label for="approverWorkplace" class="form-label">Workplace</label>
+                  <label for="approverWorkplace" class="form-label"><?php echo isset($translations['Workplace']) ? $translations['Workplace'] : 'Workplace'; ?></label>
                   <!--
                   <select class="form-select" name="approverWorkplace" id="approverWorkplace" aria-label="Default select example">
                      <option value="">*** Please select one ***</option>
@@ -1237,8 +1305,8 @@
                 </div>
               </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" id="submitApprover" name="submitApprover" class="btn btn-success">Submit</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translations['Close']) ? $translations['Close'] : 'Close'; ?></button>
+              <button type="submit" id="submitApprover" name="submitApprover" class="btn btn-success"><?php echo isset($translations['Submit']) ? $translations['Submit'] : 'Submit'; ?></button>
             </div>
             </form>
           </div>
@@ -1252,19 +1320,19 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Approvers</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Approvers</p>
+              <h5 class="card-title"><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Name and surname</th>
-                   <th>Roles</th>
-                   <th>Position</th>
-                   <th>Workplace</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Name and surname']) ? $translations['Name and surname'] : 'Name and surname'; ?></th>
+                   <th><?php echo isset($translations['Roles']) ? $translations['Roles'] : 'Roles'; ?></th>
+                   <th><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></th>
+                   <th><?php echo isset($translations['Workplace']) ? $translations['Workplace'] : 'Workplace'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -1322,7 +1390,7 @@
             // Call the function to delete approver
           //  DeleteApprover($approverId, $con); // Function to delete approver 
             echo "<script>alert('Approver with ID: " . $approverId . " deleted.');</script>"; // Debugging line
-            echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "';</script>"; // Redirect to approvers page
+            echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "&lang=" . $lang . "';</script>"; // Redirect to approvers page
     }
   }
   ?>
@@ -1332,43 +1400,45 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Conveyance</h1>
+      <h1><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Conveyance</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></li>
         </ol>
       </nav>
       </div>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addConveyenceModal" data-cid="new">
-          <i class="bi bi-plus-circle"></i>Add New Conveyance
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Conveyance']) ? $translations['Add New Conveyance'] : 'Add New Conveyance'; ?>
         </button>
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Conveyance == -->
-      <div class="modal fade" id="addConveyenceModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addConveyenceModal" tabindex="-1" aria-labelledby="addConveyenceModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addConveyenceModalLabel"><b>Add New Conveyance</b></h5>
+                <h5 class="modal-title" id="addConveyenceModalLabel"><b><?php echo isset($translations['Add New Conveyance']) ? $translations['Add New Conveyance'] : 'Add New Conveyance'; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for cid -->
                 <input type="hidden" id="conveyanceId" name="conveyanceId">
+                <input type="hidden" id="huid" name="huid" value="<?php echo $userid; ?>">
+                <input type="hidden" id="hlang" name="hlang" value="<?php echo $lang; ?>">
                 <div class="mb-3">
-                  <label for="conveyanceCode" class="form-label">Code</label>
+                  <label for="conveyanceCode" class="form-label"><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></label>
                   <input type="text" class="form-control" id="conveyanceCode" name="conveyanceCode" required>
                 </div>
                 <div class="mb-3">
-                  <label for="conveyanceType" class="form-label">Conveyance Type</label>
+                  <label for="conveyanceType" class="form-label"><?php echo isset($translations['Conveyance Type']) ? $translations['Conveyance Type'] : 'Conveyance Type'; ?></label>
                   <input type="text" class="form-control" id="conveyanceType" name="conveyanceType" required>
                 </div>
                 <div class="mb-3">
-                  <label for="conveyanceDescription" class="form-label">Description</label>
+                  <label for="conveyanceDescription" class="form-label"><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></label>
                   <textarea class="form-control" id="conveyanceDescription" name="conveyanceDescription" rows="3"></textarea>
                 </div>
               </div>
@@ -1388,21 +1458,21 @@
           <div class="card">
             <div class="card-body">
               
-              <h5 class="card-title">Conveyance</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Conveyance</p>
+              <h5 class="card-title"><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary by Department of Agriculture, MAF - Conveyance']) ? $translations['ePhytosanitary by Department of Agriculture, MAF - Conveyance'] : 'ePhytosanitary by Department of Agriculture, MAF - Conveyance'; ?></p>
 
               <!-- Table with stripped rows -->
                
               <table class="table datatable tabledata-fonts">
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th>Code</th>
-                   <th>Conveyance Type</th>
-                   <th>Description</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><b><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></b></th>
+                   <th><?php echo isset($translations['Code']) ? $translations['Code'] : 'Code'; ?></th>
+                   <th><?php echo isset($translations['Conveyance Type']) ? $translations['Conveyance Type'] : 'Conveyance Type'; ?></th>
+                   <th><?php echo isset($translations['Description']) ? $translations['Description'] : 'Description'; ?></th>
+                   <th><?php echo isset($translations['Status']) ? $translations['Status'] : 'Status'; ?></th>
+                   <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                   <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -1457,12 +1527,12 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Inspection Method</h1>
+      <h1><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection Method'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item active">Inspection Method</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection Method'; ?></li>
         </ol>
       </nav>
       </div>
@@ -1473,7 +1543,7 @@
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Inspection Method == -->
-      <div class="modal fade" id="addInspectionMethodModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addInspectionMethodModal" tabindex="-1" aria-labelledby="addInspectionMethodModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
@@ -1601,7 +1671,7 @@
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Treatment Method == -->
-      <div class="modal fade" id="addTreatmentMethodModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addTreatmentMethodModal" tabindex="-1" aria-labelledby="addTreatmentMethodModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
@@ -1727,7 +1797,7 @@
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Entity Type == -->
-      <div class="modal fade" id="addEntityTypeModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addEntityTypeModal" tabindex="-1" aria-labelledby="addEntityTypeModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">
@@ -1849,7 +1919,7 @@
       </div>
     </div><!-- End Page Title -->
     <!-- == Modal form - Module == -->
-      <div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+      <div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModuleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="">

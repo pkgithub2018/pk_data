@@ -265,20 +265,20 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
@@ -291,17 +291,17 @@ if (!empty($userid)) {
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
          <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
@@ -311,37 +311,48 @@ if (!empty($userid)) {
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection Method']) ? $translations['Inspection Method'] : 'Inspection Method'; ?></span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
            <li>
-            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
@@ -360,25 +371,25 @@ if (!empty($userid)) {
 
       <li class="nav-heading"><?php echo isset($translations['USERS MANAGEMENT']) ? $translations['USERS MANAGEMENT'] : 'Users Management'; ?></li>
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
@@ -399,171 +410,7 @@ if (!empty($userid)) {
       </nav>
     </div><!-- End Page Title -->
     <!-- Charts Section -->
-    <!--
-    <section class="section">
-      <div class="row">  
-        
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Application Status <span>| This Month</span></h5>
-              
-              <div id="donutChart" style="min-height: 250px;" class="echart"></div>
-              <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#donutChart")).setOption({
-                    tooltip: {
-                      trigger: 'item'
-                    },
-                    legend: {
-                      top: '5%',
-                      left: 'center'
-                    },
-                    series: [{
-                      name: 'Applications',
-                      type: 'pie',
-                      radius: ['40%', '70%'],
-                      avoidLabelOverlap: false,
-                      label: {
-                        show: false,
-                        position: 'center'
-                      },
-                      emphasis: {
-                        label: {
-                          show: true,
-                          fontSize: '18',
-                          fontWeight: 'bold'
-                        }
-                      },
-                      labelLine: {
-                        show: false
-                      },
-                      data: [
-                        { value: 1048, name: 'Submitted' },
-                        { value: 735, name: 'Under Review' },
-                        { value: 580, name: 'Approved' },
-                        { value: 484, name: 'Rejected' },
-                        { value: 300, name: 'Pending' }
-                      ]
-                    }]
-                  });
-                });
-              </script>
-             
-            </div>
-          </div>
-        </div>
-      
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
-             
-              <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
-              <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#reportsChart")).setOption({
-                    tooltip: {
-                      trigger: 'item'
-                    },
-                    legend: {
-                      data: ['Applications', 'Certificates', 'Inspections']
-                    },
-                    toolbox: {
-                      show: true,
-                      feature: {
-                        dataView: { show: true, readOnly: false },
-                        magicType: { show: true, type: ['line', 'bar'] },
-                        restore: { show: true },
-                        saveAsImage: { show: true }
-                      }
-                    },
-                    xAxis: {
-                      type: 'category',
-                      boundaryGap: false,
-                      data: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-                    },
-                    yAxis: {
-                      type: 'value'
-                    },
-                    series: [{
-                      name: 'Applications',
-                      type: 'line',
-                      data: [120, 132, 101, 134, 90, 230],
-                      smooth: true
-                    }, {
-                      name: 'Certificates',
-                      type: 'line',
-                      data: [220, 182, 191, 234, 290, 330],
-                      smooth: true
-                    }, {
-                      name: 'Inspections',
-                      type: 'line',
-                      data: [150, 232, 201, 154, 190, 330],
-                      smooth: true
-                    }]
-                  });
-                });
-              </script>
-            
-            </div>
-          </div>
-        </div>
-       
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Export Entities <span>| Performance</span></h5>
-             
-              <div id="columnChart" style="min-height: 250px;" class="echart"></div>
-              <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                  echarts.init(document.querySelector("#columnChart")).setOption({
-                    tooltip: {
-                      trigger: 'axis',
-                      axisPointer: {
-                        type: 'shadow'
-                      }
-                    },
-                    legend: {},
-                    grid: {
-                      left: '3%',
-                      right: '4%',
-                      bottom: '3%',
-                      containLabel: true
-                    },
-                    xAxis: [{
-                      type: 'category',
-                      data: ['Entity A', 'Entity B', 'Entity C', 'Entity D', 'Entity E', 'Entity F']
-                    }],
-                    yAxis: [{
-                      type: 'value'
-                    }],
-                    series: [{
-                      name: 'Applications',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [320, 302, 301, 334, 390, 330]
-                    }, {
-                      name: 'Certificates',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [120, 132, 101, 134, 90, 230]
-                    }]
-                  });
-                });
-              </script>
-             
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-   --> 
+    
     <!-- End Charts Section -->
 
     <?php
@@ -644,7 +491,7 @@ if (!empty($userid)) {
     ?>
     
     <div class="pagetitle">
-        <h1><?php echo isset($translations['Data Form']) ? $translations['Data Form'] : 'Data Form'; ?></h1>
+        <h1><?php echo isset($translations['Data form']) ? $translations['Data form'] : 'Data Form'; ?></h1>
        <!--
         <nav>
             <ol class="breadcrumb">
@@ -700,15 +547,16 @@ if (!empty($userid)) {
                             <input type="hidden" name="record_id" value="<?php echo $record_id; ?>">
                             <input type="hidden" name="pestid" id="pestid" value="<?php echo $pestid; ?>">
                             <input type="hidden" name="uid" value="<?php echo $userid; ?>">
+                            <input type="hidden" name="hlang" value="<?php echo $lang; ?>">
                             
                             <!-- Pest Information Section -->
                             <div class="card mb-3">
                                 <div class="card-header bg-light">
-                                    <strong><?php echo isset($translations['Pest Information']) ? $translations['Pest Information'] : 'Pest Information'; ?></strong>
+                                    <strong><?php echo isset($translations['Pest information']) ? $translations['Pest information'] : 'Pest information'; ?></strong>
                                 </div>
                                 <div class="card-body">
                                     <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Select Pest']) ? $translations['Select Pest'] : 'Select Pest'; ?> <span class="text-danger">*</span></label>
+                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Pest name']) ? $translations['Pest name'] : "Pest's name"; ?> <span class="text-danger">*</span></label>
                                         <div class="col-sm-7">
                                             <input type="text" class="form-control" id="pest_name_display" 
                                                    value="<?php echo htmlspecialchars($pest_name); ?>" 
@@ -716,7 +564,7 @@ if (!empty($userid)) {
                                         </div>
                                         <div class="col-sm-2">
                                             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pestSearchModal">
-                                                <i class="bi bi-search"></i> Search
+                                                <i class="bi bi-search"></i> <?php echo isset($translations['Search']) ? $translations['Search'] : 'Search'; ?>
                                             </button>
                                         </div>
                                     </div>
@@ -769,7 +617,7 @@ if (!empty($userid)) {
                                 </div>
                                 <div class="card-body">
                                     <div class="row mb-3">
-                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Result Measure']) ? $translations['Result Measure'] : 'Result Measure'; ?></label>
+                                        <label class="col-sm-3 col-form-label"><?php echo isset($translations['Measure of result']) ? $translations['Measure of result'] : 'Measure of Result'; ?></label>
                                         <div class="col-sm-9" style="margin-top: 10px;">
                                             <div class="form-check mb-2">
                                                 <input class="result-measure-radio" type="radio" name="result_measure" 
@@ -792,7 +640,7 @@ if (!empty($userid)) {
                                                        id="result_phytosanitary_requirements" value="phytosanitary_requirements"
                                                        <?php if($result_measure === 'phytosanitary_requirements') echo 'checked'; ?>>
                                                 <label class="form-check-label" for="result_phytosanitary_requirements" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    The regulated article was in accordance with Lao Phytosanitary requirements
+                                                    <?php echo isset($translations['The regulated article was in accordance with Lao Phytosanitary requirements']) ? $translations['The regulated article was in accordance with Lao Phytosanitary requirements'] : 'The regulated article was in accordance with Lao Phytosanitary requirements'; ?>
                                                 </label>
                                             </div>
                                             <div class="form-check mb-2">
@@ -800,7 +648,7 @@ if (!empty($userid)) {
                                                        id="result_other_conclusion" value="other_conclusion"
                                                        <?php if($result_measure === 'other_conclusion') echo 'checked'; ?>>
                                                 <label class="form-check-label" for="result_other_conclusion" style="padding-left: 0.3em; vertical-align: middle;">
-                                                    Other conclusion
+                                                   <?php echo isset($translations['Other conclusion']) ? $translations['Other conclusion'] : 'Other conclusion'; ?>
                                                 </label>
                                             </div>
                                         </div>

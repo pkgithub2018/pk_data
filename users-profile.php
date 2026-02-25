@@ -14,16 +14,95 @@
   require("php-bin/supports.php"); // replace include with require
 
  // $userid = isset($_SESSION["uid"]) ? $_SESSION["uid"] : ''; // User ID
-  // USER DATA
- $userid = '';
-  $userid = Userconnect(
-        isset($_GET['uid']) ? $_GET['uid'] : '',
-        isset($_POST['uid']) ? $_POST['uid'] : '',
-        isset($_POST['huid']) ? $_POST['huid'] : '',
-        isset($_COOKIE['ephyto_uid']) ? $_COOKIE['ephyto_uid'] : '',
-        isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
-        $con
+  // USER DATA - Dynamic Authentication System
+$userid = '';
+// Try multiple sources for userid (Dynamic Authentication System)
+// First, try to get from GET parameter (most reliable for sessionless)
+if (isset($_GET["uid"]) && !empty($_GET["uid"])) {
+  $userid = $_GET["uid"]; // GET from URL in EntityExportList function in supports.php
+}
+// Try to get from POST parameter (form submissions)
+elseif (isset($_POST["uid"]) && !empty($_POST["uid"])) {
+  $userid = $_POST["uid"];
+}
+elseif (isset($_POST["huid"]) && !empty($_POST["huid"])) {
+  $userid = $_POST["huid"];
+}
+// Try to get from cookies if set
+elseif (isset($_COOKIE["ephyto_uid"]) && !empty($_COOKIE["ephyto_uid"])) {
+  $userid = $_COOKIE["ephyto_uid"];
+}
+// Last resort: try to get from HTTP_REFERER if coming from other pages
+elseif (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
+  $referer = $_SERVER['HTTP_REFERER'];
+  if (preg_match('/[?&]uid=([^&]+)/', $referer, $matches)) {
+    $userid = urldecode($matches[1]);
+    
+  }
+}
+// Authentication check
+if(empty($userid)){
+    // If user ID is not set, redirect to login page
+    echo "<script>alert('Dynamic Authentication Required. Please log in to access this page.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+}
+
+// Language handling for UI (mirror main.php)
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @session_start();
+}
+$lang = 'en';
+if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
+  $lang = $_SESSION['lang'];
+} elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
+  $lang = $_GET['lang'];
+} elseif (isset($_POST['hlang']) && !empty($_POST['hlang'])) {
+  $lang = $_POST['hlang'];
+}
+
+// Persist selected language in session
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @session_start();
+}
+$_SESSION['lang'] = $lang;
+
+// Include the appropriate language file
+$langFile = "php-bin/lang_" . $lang . ".php";
+if (file_exists($langFile)) {
+    $translations = include($langFile);
+} else {
+    // Fallback minimal translations to avoid notices
+    $translations = array(
+        'dashboard' => 'Dashboard',
+        'Dashboard' => 'Dashboard',
+        'Profile' => 'Profile',
+        'Users Profile' => 'Users Profile'
     );
+}
+
+// Build language switch URLs preserving current query parameters
+$__lang_params = $_GET;
+if (!isset($__lang_params['uid']) || empty($__lang_params['uid'])) {
+    $__lang_params['uid'] = isset($userid) ? $userid : '';
+}
+$__lang_params_la = $__lang_params; $__lang_params_la['lang'] = 'la';
+$__lang_params_en = $__lang_params; $__lang_params_en['lang'] = 'en';
+$langHrefLa = '?' . http_build_query($__lang_params_la);
+$langHrefEn = '?' . http_build_query($__lang_params_en);
+// Link back to main.php preserving uid and current lang
+$mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => $lang];
+$mainHref = 'main.php?' . http_build_query($mainParams);
+// Hidden field for forms to preserve language
+$hiddenLangField = '<input type="hidden" name="hlang" id="hlang" value="' . htmlspecialchars($lang) . '">';
+
+// Validate userid is numeric before using it
+if (!is_numeric($userid)) {
+    echo "<script>alert('Invalid user ID format: " . htmlspecialchars($userid) . ". Please log in again.');</script>"; 
+    echo "<script>window.location.href = 'index.php';</script>";
+    exit();
+}
+
   $userinfo = Userdata($userid, $con);
   $loginuser = isset($userinfo['name']) ? $userinfo['name'] : ''; // Name of user
   $uname = isset($userinfo['email']) ? $userinfo['email'] : ''; // Use email as login name
@@ -78,6 +157,7 @@
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -225,13 +305,13 @@
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
+            <a href="#">
               <i class="bi bi-circle"></i><span>Districts</span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+              <i class="bi bi-circle"></i><span>Entity type</span>
             </a>
           </li>
           <li>
@@ -240,26 +320,36 @@
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
+            </a>
+          </li>
+            <li>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=modules&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Module List</span>
+            <a href="masterdata.php?part=productgroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Group']) ? $translations['Product Group'] : 'Product Group'; ?></span>
+            </a>
+          </li>
+          <li>
+            <a href="masterdata.php?part=productunit&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></span>
+            </a>
+          </li>
+           <li>
+            <a href="masterdata.php?part=pest&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Pest']) ? $translations['Pest'] : 'Pest'; ?></span>
+            </a>
+          
+          <li>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           
-          <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Provinces</span>
-            </a>
-          </li>
-          <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
-            </a>
-          </li>
         </ul>
       </li><!-- End Tables Nav -->
 
@@ -343,11 +433,11 @@
                 <li class="nav-item">
                   <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-edit">Edit Profile</button>
                 </li>
-
+              <!--
                 <li class="nav-item">
                   <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-settings">Settings</button>
                 </li>
-
+              -->
                 <li class="nav-item">
                   <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-change-password">Change Password</button>
                 </li>

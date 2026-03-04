@@ -272,6 +272,71 @@ if(isset($_POST['action']) && $_POST['action'] == 'delete_multiple_commodities')
     exit;
 } // End of delete_multiple_transactions
 
+  // Delete application attachment - AJAX endpoint
+  if (isset($_POST['action']) && $_POST['action'] == 'delete_application_attachment') {
+    require("php-bin/connection.php");
+    require("php-bin/supports.php");
+
+    while (ob_get_level()) {
+      ob_end_clean();
+    }
+
+    header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+
+    $attachment_id = isset($_POST['attachment_id']) ? (int)$_POST['attachment_id'] : 0;
+    $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+
+    if ($attachment_id <= 0 || $appid <= 0) {
+      echo json_encode(['success' => false, 'error' => 'Invalid attachment ID or application ID']);
+      exit;
+    }
+
+    $tableCheckSql = "SELECT to_regclass('public.tbapplication_uploads') AS table_name";
+    $tableCheckResult = pg_query($con, $tableCheckSql);
+    if (!$tableCheckResult) {
+      echo json_encode(['success' => false, 'error' => 'Failed to validate attachment table']);
+      exit;
+    }
+    $tableRow = pg_fetch_assoc($tableCheckResult);
+    if (empty($tableRow['table_name'])) {
+      echo json_encode(['success' => false, 'error' => 'Attachment table not found']);
+      exit;
+    }
+
+    $safe_attachment_id = pg_escape_string($con, (string)$attachment_id);
+    $safe_appid = pg_escape_string($con, (string)$appid);
+
+    $selectSql = "SELECT id, file_path FROM tbapplication_uploads WHERE id = '$safe_attachment_id' AND application_id = '$safe_appid'";
+    $selectResult = pg_query($con, $selectSql);
+    if (!$selectResult || pg_num_rows($selectResult) <= 0) {
+      echo json_encode(['success' => false, 'error' => 'Attachment not found']);
+      exit;
+    }
+
+    $attachmentRow = pg_fetch_assoc($selectResult);
+    $relativePath = $attachmentRow['file_path'] ?? '';
+
+    $deleteSql = "DELETE FROM tbapplication_uploads WHERE id = '$safe_attachment_id' AND application_id = '$safe_appid'";
+    $deleteResult = pg_query($con, $deleteSql);
+    if (!$deleteResult) {
+      echo json_encode(['success' => false, 'error' => 'Failed to delete attachment metadata']);
+      exit;
+    }
+
+    if (!empty($relativePath)) {
+      $baseDir = realpath(__DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'application_documents');
+      $absolutePath = realpath(__DIR__ . DIRECTORY_SEPARATOR . $relativePath);
+      if ($baseDir && $absolutePath && strpos($absolutePath, $baseDir) === 0 && file_exists($absolutePath)) {
+        @unlink($absolutePath);
+      }
+    }
+
+    echo json_encode(['success' => true, 'message' => 'Attachment deleted successfully', 'attachment_id' => $attachment_id]);
+    exit;
+  }
+
 // Include database connection and functions
 require("php-bin/connection.php");
 require("php-bin/supports.php");
@@ -986,7 +1051,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             <div class="card-body">
               <h5 class="card-title"><?php echo isset($translations['Application Form']) ? $translations['Application Form'] : 'Application Form'; ?></h5>
                <!-- FORM: Entity/Company Form -->
-              <form action="<?php echo htmlspecialchars($mainHref); ?>" method="POST">
+              <form action="<?php echo htmlspecialchars($mainHref); ?>" method="POST" enctype="multipart/form-data">
                 <!-- Hidden input to store application ID -->
                 <input type="hidden" name="app_id" id="appid" value="<?php             
                                           if (!empty($app_id)) {
@@ -1077,12 +1142,20 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
 
  
                 <div class="row mb-3">
-                   <label class="col-sm-2 col-form-label"><?php echo isset($translations["Multiple commodities"]) ? $translations["Multiple commodities"] : "Multiple commodities"; ?></label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Multiple commodities"]) ? $translations["Multiple commodities"] : "Multiple commodities"; ?></label>
                   <div class="col-sm-6 d-flex align-items-center">
                     <input type="checkbox" name="multiple_commodities" id="multiple_commodities" value="1" <?php echo (isset($multiple_commodities) && $multiple_commodities) ? 'checked' : ''; ?>>
                     <label for="multiple_commodities" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label><span id="span_multiple" class="ms-3 text-muted">, <?php echo isset($translations["Please go to"]) ? $translations["Please go to"] : "Please go to"; ?> <a href="application.php?part=multiple_products&appid=<?php echo isset($_GET['appid_edit']) ? $_GET['appid_edit'] : $app_id; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>&lang=<?php echo isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en'; ?>" id="link_multiple_details">details</a></span>
                   </div>
-                </div>
+               </div>
+               <?php
+                 $multiple_product_appid = isset($appEdit_id) ? $appEdit_id : (isset($app_id) ? $app_id : null);
+                 $multiple_product_id = isset($product_id) ? $product_id : (isset($pid) ? $pid : null);
+                 $multiple_product_guid = isset($guid) ? $guid : null;
+                 if (isset($multiple_commodities) && (int)$multiple_commodities === 1 && !empty($multiple_product_appid)) {
+                   MultipleProductdataTable($multiple_product_appid, $multiple_product_id, $multiple_product_guid);
+                 }
+               ?>
                 
           <div class="row mb-3 align-items-center">
             <label class="col-sm-2 col-form-label"><?php echo isset($translations["Print supporting document"]) ? $translations["Print supporting document"] : "Print supporting document"; ?></label>
@@ -1239,6 +1312,42 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                     </div>
                 </div>
               
+                <div class="row mb-3 align-items-center">
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translations["Attachment"]) ? $translations["Attachment"] : "Attachment"; ?></label>
+                  <div class="col-sm-10">
+                          <input type="file" name="application_attachment[]" id="application_attachment" class="form-control" multiple
+                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/gif">
+                          <small class="text-muted">Allowed file types: PDF, Word (DOC/DOCX), JPEG, PNG, GIF (max 10MB each). You can select multiple files.</small>
+                    <?php
+                      $attachment_app_id = isset($appEdit_id) ? $appEdit_id : (isset($app_id) ? $app_id : null);
+                      $attachment_rows = (!empty($attachment_app_id)) ? ApplicationAttachmentList($attachment_app_id, $con) : [];
+                      if (!empty($attachment_rows)) {
+                    ?>
+                    <div class="mt-2" id="applicationAttachmentListWrap">
+                      <div class="fw-bold"><?php echo isset($translations["Uploaded files"]) ? $translations["Uploaded files"] : "Uploaded files"; ?></div>
+                      <ul class="mb-0 ps-3" id="applicationAttachmentList">
+                        <?php foreach ($attachment_rows as $attachment_item): ?>
+                          <?php
+                            $attachment_id = (int)($attachment_item['id'] ?? 0);
+                            $attachment_name = htmlspecialchars($attachment_item['original_filename'] ?? 'file', ENT_QUOTES);
+                            $attachment_path = htmlspecialchars($attachment_item['file_path'] ?? '#', ENT_QUOTES);
+                            $attachment_date_raw = $attachment_item['uploaded_at'] ?? '';
+                            $attachment_date = !empty($attachment_date_raw) ? date('d/m/Y H:i', strtotime($attachment_date_raw)) : '';
+                          ?>
+                          <li id="attachment-item-<?php echo $attachment_id; ?>">
+                            <a href="<?php echo $attachment_path; ?>" target="_blank" rel="noopener noreferrer"><?php echo $attachment_name; ?></a>
+                            <?php if (!empty($attachment_date)) { echo " <span class='text-muted'>($attachment_date)</span>"; } ?>
+                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 ms-2 delete-attachment-btn" data-attachment-id="<?php echo $attachment_id; ?>" title="Delete file" aria-label="Delete file">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </li>
+                        <?php endforeach; ?>
+                      </ul>
+                    </div>
+                    <?php } ?>
+                  </div>
+                </div>
+
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10 d-flex gap-2">
@@ -2854,10 +2963,9 @@ function selectExporter(info) {
                   .then(data => {
                     if (data.success) {
                       console.log('Multiple commodities data deleted successfully');
-                      // Optionally, refresh the commodities table or UI here
-                      const tableBody = document.getElementById('multiCommodityTableBody');
-                      if (tableBody) {
-                        tableBody.innerHTML = ''; // Clear existing rows
+                      const multipleTableWrapper = document.getElementById('multipleProductDataTableWrapper');
+                      if (multipleTableWrapper) {
+                        multipleTableWrapper.remove();
                       }
                     } else {
                       console.error('Error deleting multiple commodities data:', data.error);
@@ -3100,6 +3208,64 @@ function selectExporter(info) {
                 }
               }
             }, 100);
+          });
+        }
+
+        // Delete uploaded attachment from Application Form
+        const attachmentListEl = document.getElementById('applicationAttachmentList');
+        if (attachmentListEl) {
+          attachmentListEl.addEventListener('click', function(event) {
+            const deleteBtn = event.target.closest('.delete-attachment-btn');
+            if (!deleteBtn) {
+              return;
+            }
+
+            const attachmentId = deleteBtn.getAttribute('data-attachment-id');
+            const appidEl = document.getElementById('appid');
+            const appidVal = appidEl ? appidEl.value : '';
+
+            if (!attachmentId || !appidVal) {
+              alert('Missing attachment or application ID.');
+              return;
+            }
+
+            if (!confirm('Are you sure you want to delete this uploaded file?')) {
+              return;
+            }
+
+            fetch('transaction.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({
+                action: 'delete_application_attachment',
+                attachment_id: attachmentId,
+                appid: appidVal
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                const listItem = document.getElementById('attachment-item-' + attachmentId);
+                if (listItem) {
+                  listItem.remove();
+                }
+
+                if (attachmentListEl.children.length === 0) {
+                  const wrapper = document.getElementById('applicationAttachmentListWrap');
+                  if (wrapper) {
+                    wrapper.remove();
+                  }
+                }
+              } else {
+                alert(data.error || 'Failed to delete attachment.');
+              }
+            })
+            .catch(error => {
+              console.error('Attachment delete error:', error);
+              alert('Network error while deleting attachment.');
+            });
           });
         }
 

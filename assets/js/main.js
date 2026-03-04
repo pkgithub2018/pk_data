@@ -283,7 +283,7 @@
    */
   const datatables = select('.datatable', true)
   datatables.forEach(datatable => {
-    new simpleDatatables.DataTable(datatable, {
+    const datatableOptions = {
       perPageSelect: [5, 10, 15, ["All", -1]],
       columns: [{
           select: 2,
@@ -299,7 +299,15 @@
           headerClass: "red"
         }
       ]
-    });
+    }
+
+    if (datatable.classList.contains('datatable-no-controls')) {
+      datatableOptions.searchable = false
+      datatableOptions.perPageSelect = false
+      datatableOptions.footer = false
+    }
+
+    new simpleDatatables.DataTable(datatable, datatableOptions);
   })
 
   /**

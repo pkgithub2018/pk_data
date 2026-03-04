@@ -42,6 +42,178 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_certificate_status') {
 require("php-bin/connection.php");
 require("php-bin/supports.php");
 
+function SaveApplicationAttachment($fileInput, $appId, $userId, $con) {
+  if (!isset($_FILES[$fileInput])) {
+    return ['success' => true, 'skipped' => true, 'message' => 'No file uploaded'];
+  }
+
+  if (empty($appId) || !is_numeric($appId)) {
+    return ['success' => false, 'message' => 'Invalid application ID for attachment upload'];
+  }
+
+  $file = $_FILES[$fileInput];
+  $isMultiUpload = isset($file['name']) && is_array($file['name']);
+  if (!isset($file['error'])) {
+    return ['success' => false, 'message' => 'Invalid upload payload'];
+  }
+
+  if (!$isMultiUpload && $file['error'] === UPLOAD_ERR_NO_FILE) {
+    return ['success' => true, 'skipped' => true, 'message' => 'No file uploaded'];
+  }
+
+  if ($isMultiUpload) {
+    $hasAnyFile = false;
+    foreach ($file['error'] as $uploadError) {
+      if ((int)$uploadError !== UPLOAD_ERR_NO_FILE) {
+        $hasAnyFile = true;
+        break;
+      }
+    }
+    if (!$hasAnyFile) {
+      return ['success' => true, 'skipped' => true, 'message' => 'No file uploaded'];
+    }
+  }
+
+  $maxFileSize = 10 * 1024 * 1024;
+  $allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif'];
+  $allowedMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'application/octet-stream'
+  ];
+
+  $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'application_documents';
+  if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+    return ['success' => false, 'message' => 'Failed to create upload directory'];
+  }
+
+  $createTableSql = "CREATE TABLE IF NOT EXISTS tbapplication_uploads (
+            id SERIAL PRIMARY KEY,
+            application_id INTEGER NOT NULL,
+            original_filename TEXT NOT NULL,
+            stored_filename TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            mime_type TEXT,
+            file_size BIGINT,
+            uploaded_by TEXT,
+            uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )";
+  pg_query($con, $createTableSql);
+
+  $fileCount = $isMultiUpload ? count($file['name']) : 1;
+  $uploadedCount = 0;
+  $failedMessages = [];
+  $uploadedPaths = [];
+
+  for ($index = 0; $index < $fileCount; $index++) {
+    $currentError = $isMultiUpload ? (int)$file['error'][$index] : (int)$file['error'];
+    if ($currentError === UPLOAD_ERR_NO_FILE) {
+      continue;
+    }
+    if ($currentError !== UPLOAD_ERR_OK) {
+      $failedMessages[] = 'File upload failed with error code: ' . $currentError;
+      continue;
+    }
+
+    $currentSize = $isMultiUpload ? (int)$file['size'][$index] : (int)$file['size'];
+    if ($currentSize <= 0 || $currentSize > $maxFileSize) {
+      $failedMessages[] = 'Invalid file size. Maximum allowed size is 10MB';
+      continue;
+    }
+
+    $currentNameRaw = $isMultiUpload ? (string)$file['name'][$index] : (string)$file['name'];
+    $originalName = basename($currentNameRaw);
+    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowedExtensions, true)) {
+      $failedMessages[] = 'Invalid file type for ' . $originalName;
+      continue;
+    }
+
+    $tmpName = $isMultiUpload ? $file['tmp_name'][$index] : $file['tmp_name'];
+
+    $mimeType = '';
+    if (function_exists('finfo_open')) {
+      $finfo = finfo_open(FILEINFO_MIME_TYPE);
+      if ($finfo) {
+        $mimeType = finfo_file($finfo, $tmpName);
+        finfo_close($finfo);
+      }
+    }
+    if ($mimeType !== '' && !in_array($mimeType, $allowedMimes, true)) {
+      $failedMessages[] = 'MIME type not allowed for ' . $originalName;
+      continue;
+    }
+
+    if (function_exists('random_bytes')) {
+      $randomSuffix = bin2hex(random_bytes(5));
+    } else {
+      $randomSuffix = preg_replace('/[^a-zA-Z0-9]/', '', uniqid((string)mt_rand(), true));
+    }
+
+    $storedFilename = 'app_' . (int)$appId . '_' . date('YmdHis') . '_' . $randomSuffix . '.' . $extension;
+    $absolutePath = $uploadDir . DIRECTORY_SEPARATOR . $storedFilename;
+    $relativePath = 'uploads/application_documents/' . $storedFilename;
+
+    if (!move_uploaded_file($tmpName, $absolutePath)) {
+      $failedMessages[] = 'Could not save file ' . $originalName;
+      continue;
+    }
+
+    $safeAppId = pg_escape_string($con, (string)$appId);
+    $safeOriginal = pg_escape_string($con, $originalName);
+    $safeStored = pg_escape_string($con, $storedFilename);
+    $safePath = pg_escape_string($con, $relativePath);
+    $safeMime = pg_escape_string($con, $mimeType);
+    $safeSize = pg_escape_string($con, (string)$currentSize);
+    $safeUserId = pg_escape_string($con, (string)$userId);
+
+    $insertSql = "INSERT INTO tbapplication_uploads (application_id, original_filename, stored_filename, file_path, mime_type, file_size, uploaded_by)
+            VALUES ('$safeAppId', '$safeOriginal', '$safeStored', '$safePath', '$safeMime', '$safeSize', '$safeUserId')";
+    $insertResult = pg_query($con, $insertSql);
+
+    if (!$insertResult) {
+      if (file_exists($absolutePath)) {
+        unlink($absolutePath);
+      }
+      $failedMessages[] = 'Failed to save metadata for ' . $originalName;
+      continue;
+    }
+
+    $uploadedCount++;
+    $uploadedPaths[] = $relativePath;
+  }
+
+  if ($uploadedCount === 0 && !empty($failedMessages)) {
+    return ['success' => false, 'skipped' => false, 'message' => implode('; ', $failedMessages)];
+  }
+
+  if ($uploadedCount === 0) {
+    return ['success' => true, 'skipped' => true, 'message' => 'No file uploaded'];
+  }
+
+  if (!empty($failedMessages)) {
+    return [
+      'success' => true,
+      'skipped' => false,
+      'message' => 'Uploaded ' . $uploadedCount . ' file(s), some failed: ' . implode('; ', $failedMessages),
+      'paths' => $uploadedPaths,
+      'uploaded_count' => $uploadedCount
+    ];
+  }
+
+  return [
+    'success' => true,
+    'skipped' => false,
+    'message' => 'Uploaded ' . $uploadedCount . ' file(s) successfully',
+    'paths' => $uploadedPaths,
+    'uploaded_count' => $uploadedCount
+  ];
+}
+
 $_SESSION['lang'] = 'en'; // NOT WORKING -FIX- Default to English
 if (isset($_GET['lang'])) {
   $selectedLang = $_GET['lang'];
@@ -249,6 +421,10 @@ if (!empty($userid)) {
         ]; 
         $result = ApplicationUpdate($app_id, $data, $con); // Update tbapplication with the form data
         if ($result) {
+          $uploadResult = SaveApplicationAttachment('application_attachment', $app_id, $userid, $con);
+          if (!$uploadResult['success']) {
+            echo "<script>alert('Application saved, but attachment upload failed: " . addslashes($uploadResult['message']) . "');</script>";
+          }
            // echo "<script>alert('Application updated successfully!');</script>";
         } else {
             echo "<script>alert('Failed to update application. Please check the console for details.');</script>";
@@ -749,7 +925,7 @@ if (!empty($userid)) {
     }
 
     // Monthly pest detected line-chart data (last 3 months)
-    $monthlyPestData = MonthlyPestDetectedChartData($con);
+    $monthlyPestData = MonthlyPestDetectedChartData($guid, $con);
     $defaultLastThreeMonths = [];
     for ($i = 2; $i >= 0; $i--) {
       $defaultLastThreeMonths[] = date('M', strtotime("first day of -{$i} month"));
@@ -773,7 +949,7 @@ if (!empty($userid)) {
     }
 
     // Monthly pest category bar-chart data (last 3 months)
-    $monthlyPestCategoryData = MonthlyPestCategoryChartData($con);
+    $monthlyPestCategoryData = MonthlyPestCategoryChartData($guid, $con);
     if (!$monthlyPestCategoryData || !isset($monthlyPestCategoryData['months']) || !isset($monthlyPestCategoryData['series'])) {
       $monthlyPestCategoryData = [
         'success' => false,

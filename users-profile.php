@@ -40,13 +40,57 @@ elseif (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
     
   }
 }
-// Authentication check
-if(empty($userid)){
-    // If user ID is not set, redirect to login page
-    echo "<script>alert('Dynamic Authentication Required. Please log in to access this page.');</script>"; 
+
+if (!empty($userid)) {
+    // Get user data from database
+    $userdata = Userdata($userid, $con);  
+    if ($userdata) {
+        $username = $userdata['name'];
+        $email = $userdata['email'];
+        $position = $userdata['position'];
+        $groupid = isset($userdata['group_id']) && !empty($userdata['group_id']) ? $userdata['group_id'] : '1'; // Default to group 1 if not set
+        $groupname = GroupName($userdata['group_id'], $con);      
+        // Get and store user profile image
+        $uprofile = Profiledata($userid, $con);
+        if (!$uprofile) {
+            // Initialize profile if it doesn't exist
+            InitializeProfile($userid, $con);
+            $uprofile = Profiledata($userid, $con);
+        }
+        // Debug alert to show actual profile data - FIXED SYNTAX
+        if ($uprofile && is_array($uprofile)) {
+            $imgpath_value = isset($uprofile['imgfilepath']) ? $uprofile['imgfilepath'] : 'NOT SET';      
+        } else {
+            // echo "<script>alert('User profile: NO PROFILE DATA FOUND');</script>";
+        }  
+        if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
+            $uimage = $uprofile['imgfilepath'];
+        } else {
+            $uimage = 'assets/img/profile-img.jpg'; // default image if no profile or image
+        }
+    } else {
+        $username = '';
+        $position = '';
+        $groupid = '';
+        $groupname = '';
+        $uimage = 'assets/img/profile-img.jpg';
+    }
+ } else {
+    // No user ID provided, set defaults
+    $username = '';
+    $position = '';
+    $groupid = '';
+    $groupname = '';
+    $uimage = 'assets/img/profile-img.jpg';
+ }
+ // Authentication check
+ if(empty($userid)){
+    echo "<script>alert('You are not logged in. Please log in to access this page.');</script>"; 
     echo "<script>window.location.href = 'index.php';</script>";
     exit();
-}
+ }
+ // Use group ID from user data
+ $guid = $groupid;
 
 // Language handling for UI (mirror main.php)
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -214,9 +258,9 @@ if (!is_numeric($userid)) {
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-person"></i>
-                <span>My Profile</span>
+                <span><?php echo isset($translations['My Profile']) ? $translations['My Profile'] : 'My Profile'; ?></span>
               </a>
             </li>
             <li>
@@ -224,9 +268,9 @@ if (!is_numeric($userid)) {
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-gear"></i>
-                <span>Account Settings</span>
+                <span><?php echo isset($translations['Account Settings']) ? $translations['Account Settings'] : 'Account Settings'; ?></span>
               </a>
             </li>
             <li>
@@ -234,9 +278,9 @@ if (!is_numeric($userid)) {
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
+              <a class="dropdown-item d-flex align-items-center" href="#">
                 <i class="bi bi-question-circle"></i>
-                <span>Need Help?</span>
+                <span><?php echo isset($translations['Need Help?']) ? $translations['Need Help?'] : 'Need Help?'; ?></span>
               </a>
             </li>
             <li>
@@ -246,7 +290,7 @@ if (!is_numeric($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
               </a>
             </li>
 
@@ -264,59 +308,78 @@ if (!is_numeric($userid)) {
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
-          <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+        <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
         </a>
-      </li><!-- End Export Entity Nav -->
+      </li><!-- End Application Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
+        </a>
+      </li><!-- End Inspection Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
+        </a>
+      </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
-          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+        <a class="nav-link collapsed" href="<?php echo htmlspecialchars('entity.php?entity=export&uid='.$userid.'&lang='.$lang); ?>" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
         </a>
-      </li>
-      <!-- End Import Entity/Company form Nav -->
+      </li><!-- End Export Entity Nav -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
+        </a>
+      </li><!-- End Import Entity/Company form Nav -->
+
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
+            </a>
+          </li>
+        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+          <li>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
-            </a>
-          </li>
-          <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Countries</span>
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
             <a href="#">
-              <i class="bi bi-circle"></i><span>Districts</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Entity type</span>
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection method']) ? $translations['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
@@ -349,36 +412,36 @@ if (!is_numeric($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
-          
+         <?php } // End of Admin group check ?> 
         </ul>
       </li><!-- End Tables Nav -->
 
       <li class="nav-heading">Pages</li>
 
       <li class="nav-item">
-        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF']) == 'users-profile.php') echo 'active'; ?>" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF']) == 'users-profile.php') echo 'active'; ?>" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
-          <i class="bi bi-person-plus"></i><span>Users</span>
+        <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li><!-- End Users Page Nav -->
     </ul>
@@ -388,12 +451,12 @@ if (!is_numeric($userid)) {
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Profile</h1>
+      <h1><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Users</li>
-          <li class="breadcrumb-item active">Profile</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">Home</a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -491,7 +554,9 @@ if (!is_numeric($userid)) {
                 <div class="tab-pane fade profile-edit pt-3" id="profile-edit">
 
                   <!-- Profile Edit Form -->
-                  <form method="POST" action="users-profile.php?uid=<?php echo $userid; ?>" enctype="multipart/form-data">
+                  <form method="POST" action="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo htmlspecialchars($lang); ?>" enctype="multipart/form-data">
+                    <input type="hidden" name="huid" value="<?php echo $userid; ?>">
+                    <input type="hidden" name="hlang" value="<?php echo htmlspecialchars($lang); ?>">
                     <div class="row mb-3">
                       <label for="profileImage" class="col-md-4 col-lg-3 col-form-label">Profile Image</label>
                       <div class="col-md-8 col-lg-9">
@@ -563,7 +628,7 @@ if (!is_numeric($userid)) {
                         <input name="email" type="email" class="form-control" id="email" value="<?php echo $email; ?>">
                       </div>
                     </div>
-
+                  <!--
                     <div class="row mb-3">
                       <label for="Twitter" class="col-md-4 col-lg-3 col-form-label">Twitter Profile</label>
                       <div class="col-md-8 col-lg-9">
@@ -591,7 +656,7 @@ if (!is_numeric($userid)) {
                         <input name="linkedin" type="text" class="form-control" id="linkedin" value="<?php echo $plinkedin; ?>">
                       </div>
                     </div>
-
+                -->
                     <div class="text-center">
                       <button type="submit" class="btn btn-primary" name="submitEditProfile">Save Changes</button>
                     </div>
@@ -603,6 +668,8 @@ if (!is_numeric($userid)) {
 
                   <!-- Settings Form -->
                   <form>
+                     <input type="hidden" name="huid" value="<?php echo $userid; ?>">
+                    <input type="hidden" name="hlang" value="<?php echo htmlspecialchars($lang); ?>">
 
                     <div class="row mb-3">
                       <label for="fullName" class="col-md-4 col-lg-3 col-form-label">Email Notifications</label>

@@ -3077,6 +3077,105 @@ function MultipleProductList($app_id, $con) {
 }
 
 /*
+    MultipleProductdataTable: Render tbmultiple_product rows as a data table for application form
+*/
+function MultipleProductdataTable($appid, $productid, $guid) {
+        global $con;
+
+        if (!isset($con) || !$con) {
+                return;
+        }
+
+        if (empty($appid) || !is_numeric($appid)) {
+                return;
+        }
+
+        $safe_appid = pg_escape_string($con, (string)$appid);
+        $safe_guid = (isset($guid) && is_numeric($guid)) ? pg_escape_string($con, (string)$guid) : null;
+        $safe_productid = (isset($productid) && is_numeric($productid)) ? pg_escape_string($con, (string)$productid) : null;
+
+        $sql = "SELECT mp.id, mp.application_id, mp.product_id, mp.number_description, mp.quantity_net, mp.quantity_gross, mp.unit_id
+                        FROM tbmultiple_product mp
+                        INNER JOIN tbapplication app ON app.id = mp.application_id
+                        WHERE mp.application_id = '$safe_appid'";
+
+        if ($safe_guid !== null) {
+                $sql .= " AND app.guid = '$safe_guid'";
+        }
+
+        if ($safe_productid !== null) {
+                $sql .= " ORDER BY CASE WHEN mp.product_id = '$safe_productid' THEN 0 ELSE 1 END, mp.id ASC";
+        } else {
+                $sql .= " ORDER BY mp.id ASC";
+        }
+
+        $result = pg_query($con, $sql) or die(pg_last_error($con));
+        if (pg_num_rows($result) <= 0) {
+                return;
+        }
+
+                print "<style>
+                                .multiple-product-table-wrapper .datatable-bottom{display:none !important;}
+                                .multiple-product-table-wrapper .datatable-table th,
+                                .multiple-product-table-wrapper .datatable-table td,
+                                .multiple-product-table-wrapper .datatable-sorter{
+                                        font-family: var(--bs-body-font-family);
+                                        font-size: 1rem;
+                                        font-weight: 400;
+                                        color: var(--bs-body-color);
+                                }
+                                .multiple-product-table-wrapper .datatable-table thead th,
+                                .multiple-product-table-wrapper .datatable-table thead th .datatable-sorter{
+                                    font-weight: 700;
+                                    background-color: var(--bs-info-bg-subtle) !important;
+                                }
+                            </style>
+                    <div class='row mb-3 multiple-product-table-wrapper' id='multipleProductDataTableWrapper'>
+                        <div class='col-sm-10 offset-sm-2'>
+                            <div class='table-responsive'>
+                                <table class='table datatable table-striped table-bordered table-sm multiple-product-datatable datatable-no-controls'>
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Product</th>
+                                            <th>Number & Description</th>
+                                            <th>Net Quantity</th>
+                                            <th>Gross Quantity</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>";
+        $i = 0;
+        while ($row = pg_fetch_assoc($result)) {
+            $i++;
+                $id = htmlspecialchars($row['id'], ENT_QUOTES);
+                $application_id = htmlspecialchars($row['application_id'], ENT_QUOTES);
+                $product_id = htmlspecialchars($row['product_id'], ENT_QUOTES);
+                $product_name = ProductInfo($product_id, $con)['name'] ?? 'Unknown';
+                $number_description = htmlspecialchars($row['number_description'], ENT_QUOTES);
+                $quantity_net = htmlspecialchars($row['quantity_net'], ENT_QUOTES);
+                $quantity_gross = htmlspecialchars($row['quantity_gross'], ENT_QUOTES);
+                $unit_id = htmlspecialchars($row['unit_id'], ENT_QUOTES);
+                $unit_name = ProductUnitName($unit_id, $con);
+
+                print "<tr>
+                                <td align='center'>$i</td>
+                                <td>$product_name</td>
+                                <td>$number_description</td>
+                                <td align='center'>$quantity_net</td>
+                                <td align='center'>$quantity_gross</td>
+                                <td align='center'>$unit_name</td>
+                             </tr>";
+        }
+
+        print "      </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>";
+}
+
+/*
  ApplicationList: Show list of applications and their status from tbapplication
 */
 function ApplicationList($guid, $con, $lang, $userid = null) {
@@ -3162,6 +3261,43 @@ function ApplicationInfo($app_id, $con) {
     } else {
         return null;
     }
+}
+
+/*
+ ApplicationAttachmentList: Get uploaded attachment list for a given application ID
+*/
+function ApplicationAttachmentList($app_id, $con) {
+    if (empty($app_id) || !is_numeric($app_id)) {
+        return [];
+    }
+
+    $tableCheckSql = "SELECT to_regclass('public.tbapplication_uploads') AS table_name";
+    $tableCheckResult = pg_query($con, $tableCheckSql);
+    if (!$tableCheckResult) {
+        return [];
+    }
+
+    $tableRow = pg_fetch_assoc($tableCheckResult);
+    if (empty($tableRow['table_name'])) {
+        return [];
+    }
+
+    $safeAppId = pg_escape_string($con, (string)$app_id);
+    $sql = "SELECT id, original_filename, file_path, mime_type, file_size, uploaded_at
+            FROM tbapplication_uploads
+            WHERE application_id = '$safeAppId'
+            ORDER BY uploaded_at DESC, id DESC";
+    $result = pg_query($con, $sql);
+    if (!$result || pg_num_rows($result) <= 0) {
+        return [];
+    }
+
+    $attachments = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $attachments[] = $row;
+    }
+
+    return $attachments;
 }
 
 /*
@@ -4009,29 +4145,35 @@ function CertificateStatusInfo($appid, $con) {
     MonthlyPestDetectedChartData: Get monthly pest detection counts for last 3 months
     Returns month labels and line-series data grouped by pest scientific name
 */
-function MonthlyPestDetectedChartData($con) {
-        $monthKeys = [];
-        $monthLabels = [];
+function MonthlyPestDetectedChartData($guid, $con) {
+    if (empty($guid) || !is_numeric($guid)) {
+        return null;
+    }
+
+    $monthKeys = [];
+    $monthLabels = [];
     for ($i = 2; $i >= 0; $i--) {
-                $dt = strtotime("first day of -{$i} month");
-                $monthKeys[] = date('Y-m', $dt);
-                $monthLabels[] = date('M', $dt);
-        }
+        $dt = strtotime("first day of -{$i} month");
+        $monthKeys[] = date('Y-m', $dt);
+        $monthLabels[] = date('M', $dt);
+    }
 
-        $sql = "SELECT
-                                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
-                                COALESCE(NULLIF(TRIM(p.scientificname), ''), 'Unknown Pest') AS pest_name,
-                                COUNT(tpd.pestid)::int AS pest_count
-                        FROM tbinspection i
-                        INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
-                        LEFT JOIN tbpest p ON p.id = tpd.pestid
-                        WHERE i.inspection_date IS NOT NULL
-                            AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
-                            AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
-                        GROUP BY month_key, pest_name
-                        ORDER BY pest_name, month_key";
+    $sql = "SELECT
+                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
+                COALESCE(NULLIF(TRIM(p.scientificname), ''), 'Unknown Pest') AS pest_name,
+                COUNT(tpd.pestid)::int AS pest_count
+            FROM tbinspection i
+            INNER JOIN tbapplication a ON a.id = i.application_id
+            INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
+            LEFT JOIN tbpest p ON p.id = tpd.pestid
+            WHERE i.inspection_date IS NOT NULL
+              AND a.uid = $1
+              AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
+              AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+            GROUP BY month_key, pest_name
+            ORDER BY pest_name, month_key";
 
-    $result = pg_query($con, $sql);
+    $result = pg_query_params($con, $sql, array($guid));
     if (!$result) {
         error_log("MonthlyPestDetectedChartData Query Error: " . pg_last_error($con));
         return [
@@ -4077,10 +4219,14 @@ function MonthlyPestDetectedChartData($con) {
 }
 
 /*
-  MonthlyPestCategoryChartData: Get monthly pest detection counts by category for last 3 months
-  Returns month labels and bar-series data grouped by pest category
+    MonthlyPestCategoryChartData: Get monthly pest detection counts by category for last 3 months
+    Returns month labels and bar-series data grouped by pest category
 */
-function MonthlyPestCategoryChartData($con) {
+function MonthlyPestCategoryChartData($guid, $con) {
+        if (empty($guid) || !is_numeric($guid)) {
+                return null;
+        }
+
     $monthKeys = [];
     $monthLabels = [];
     for ($i = 2; $i >= 0; $i--) {
@@ -4089,20 +4235,22 @@ function MonthlyPestCategoryChartData($con) {
         $monthLabels[] = date('M', $dt);
     }
 
-    $sql = "SELECT
-                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
-                COALESCE(NULLIF(TRIM(p.category), ''), 'Unknown Category') AS pest_category,
-                COUNT(tpd.pestid)::int AS pest_count
-            FROM tbinspection i
-            INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
-            LEFT JOIN tbpest p ON p.id = tpd.pestid
-            WHERE i.inspection_date IS NOT NULL
-              AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
-              AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
-            GROUP BY month_key, pest_category
-            ORDER BY pest_category, month_key";
+        $sql = "SELECT
+                                TO_CHAR(DATE_TRUNC('month', i.inspection_date), 'YYYY-MM') AS month_key,
+                                COALESCE(NULLIF(TRIM(p.category), ''), 'Unknown Category') AS pest_category,
+                                COUNT(tpd.pestid)::int AS pest_count
+                        FROM tbinspection i
+                        INNER JOIN tbapplication a ON a.id = i.application_id
+                        INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
+                        LEFT JOIN tbpest p ON p.id = tpd.pestid
+                        WHERE i.inspection_date IS NOT NULL
+                            AND a.uid = $1
+                            AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
+                            AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+                        GROUP BY month_key, pest_category
+                        ORDER BY pest_category, month_key";
 
-    $result = pg_query($con, $sql);
+        $result = pg_query_params($con, $sql, array($guid));
     if (!$result) {
         error_log("MonthlyPestCategoryChartData Query Error: " . pg_last_error($con));
         return [

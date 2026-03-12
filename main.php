@@ -864,6 +864,8 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
+
+      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
@@ -881,6 +883,7 @@ if (!empty($userid)) {
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
+      <?php } // End of Admin group check ?>
       <!-- pk**: End of User Admin-->
     </ul>
   </aside><!-- End Sidebar-->

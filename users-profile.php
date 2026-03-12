@@ -414,9 +414,17 @@ if (!is_numeric($userid)) {
           </li>
          <?php } // End of Admin group check ?> 
         </ul>
-      </li><!-- End Tables Nav -->
+      </li><!-- End Master data -->
+       <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
 
-      <li class="nav-heading">Pages</li>
+      <li class="nav-heading"><?php echo isset($translations['Users Management']) ? $translations['Users Management'] : 'Users Management'; ?></li>
 
       <li class="nav-item">
         <a class="nav-link <?php if(basename($_SERVER['PHP_SELF']) == 'users-profile.php') echo 'active'; ?>" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
@@ -424,7 +432,7 @@ if (!is_numeric($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-
+     <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
@@ -444,7 +452,9 @@ if (!is_numeric($userid)) {
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li><!-- End Users Page Nav -->
+     <?php } // End of Admin group check ?>
     </ul>
+  
 
   </aside><!-- End Sidebar-->
 
@@ -490,11 +500,11 @@ if (!is_numeric($userid)) {
               <ul class="nav nav-tabs nav-tabs-bordered">
 
                 <li class="nav-item">
-                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#profile-overview">Overview</button>
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#profile-overview"><?php echo isset($translations['overview']) ? $translations['overview'] : 'Overview'; ?></button>
                 </li>
 
                 <li class="nav-item">
-                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-edit">Edit Profile</button>
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-edit"><?php echo isset($translations['Edit Profile']) ? $translations['Edit Profile'] : 'Edit Profile'; ?></button>
                 </li>
               <!--
                 <li class="nav-item">
@@ -502,7 +512,7 @@ if (!is_numeric($userid)) {
                 </li>
               -->
                 <li class="nav-item">
-                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-change-password">Change Password</button>
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-change-password"><?php echo isset($translations['Change Password']) ? $translations['Change Password'] : 'Change Password'; ?></button>
                 </li>
 
               </ul>

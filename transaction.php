@@ -131,7 +131,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'pest_detected_inspectionSave
     if ($appid_exist === 0) {
         // echo "<script>console.log('PK-Debug application id>0: Received appid = $appid, inspection_date = $inspection_date, sampleno = $sampleno');</script>";
         $result = InspectionAdd($dataInspection, $con);
-        if(result){
+        if($result){
           echo "<script>console.log('Inspection data added successfully for application ID: $appid');</script>";
         } else {
          echo "<script>console.log('Data aleady exists for appid = $appid, inspection_date = $inspection_date, sampleno = $sampleno');</script>";
@@ -142,6 +142,144 @@ if (isset($_POST['action']) && $_POST['action'] == 'pest_detected_inspectionSave
     }   
     exit;
 } // close if condition for pest_detected_inspectionSave
+
+// AJAX endpoint for loading pest detected records for modal form
+if (isset($_POST['action']) && $_POST['action'] == 'load_pest_detected_list') {
+  require("php-bin/connection.php");
+  require("php-bin/supports.php");
+
+  while (ob_get_level()) {
+    ob_end_clean();
+  }
+
+  header('Content-Type: application/json');
+  header('Cache-Control: no-cache, must-revalidate');
+  header('Pragma: no-cache');
+
+  $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+  if ($appid <= 0) {
+    echo json_encode(['success' => false, 'error' => 'Invalid application ID']);
+    exit;
+  }
+
+  $appid_escaped = pg_escape_string($con, (string)$appid);
+  $sql = "SELECT pd.id, pd.pestid, pd.infestation_level, pd.alive_status, pd.risk_category, pd.result_measure, p.pestname
+      FROM tbpest_detected pd
+      LEFT JOIN tbpest p ON p.id = pd.pestid
+      WHERE pd.application_id = '" . $appid_escaped . "'
+      ORDER BY pd.id ASC";
+  $result = pg_query($con, $sql);
+
+  if (!$result) {
+    echo json_encode(['success' => false, 'error' => pg_last_error($con)]);
+    exit;
+  }
+
+  $records = [];
+  while ($row = pg_fetch_assoc($result)) {
+    $records[] = [
+      'id' => (int)($row['id'] ?? 0),
+      'pestid' => (int)($row['pestid'] ?? 0),
+      'pest_name' => $row['pestname'] ?? '',
+      'infestation_level' => $row['infestation_level'] ?? '',
+      'alive_status' => $row['alive_status'] ?? '',
+      'risk_category' => $row['risk_category'] ?? '',
+      'result_measure' => $row['result_measure'] ?? ''
+    ];
+  }
+
+  echo json_encode(['success' => true, 'records' => $records]);
+  exit;
+}
+
+// AJAX endpoint for saving pest detected records from modal form
+if (isset($_POST['action']) && $_POST['action'] == 'save_pest_detected_list') {
+  require("php-bin/connection.php");
+  require("php-bin/supports.php");
+
+  while (ob_get_level()) {
+    ob_end_clean();
+  }
+
+  header('Content-Type: application/json');
+  header('Cache-Control: no-cache, must-revalidate');
+  header('Pragma: no-cache');
+
+  $appid = isset($_POST['appid']) ? (int)$_POST['appid'] : 0;
+  $items_json = $_POST['pest_items_json'] ?? '[]';
+  $items = json_decode($items_json, true);
+
+  if ($appid <= 0) {
+    echo json_encode(['success' => false, 'error' => 'Invalid application ID']);
+    exit;
+  }
+
+  if (!is_array($items)) {
+    $items = [];
+  }
+
+  $clean_items = [];
+  foreach ($items as $item) {
+    $pestid = isset($item['pestid']) ? (int)$item['pestid'] : 0;
+    if ($pestid <= 0) {
+      continue;
+    }
+    $clean_items[] = [
+      'pestid' => $pestid,
+      'infestation_level' => trim($item['infestation_level'] ?? ''),
+      'alive_status' => trim($item['alive_status'] ?? ''),
+      'risk_category' => trim($item['risk_category'] ?? ''),
+      'result_measure' => trim($item['result_measure'] ?? '')
+    ];
+  }
+
+  pg_query($con, 'BEGIN');
+  $ok = true;
+  $error_message = '';
+  $appid_escaped = pg_escape_string($con, (string)$appid);
+
+  $delete_sql = "DELETE FROM tbpest_detected WHERE application_id = '" . $appid_escaped . "'";
+  if (!pg_query($con, $delete_sql)) {
+    $ok = false;
+    $error_message = pg_last_error($con);
+  }
+
+  if ($ok) {
+    foreach ($clean_items as $item) {
+      $pestid_escaped = pg_escape_string($con, (string)$item['pestid']);
+      $infestation_escaped = pg_escape_string($con, $item['infestation_level']);
+      $alive_status_escaped = pg_escape_string($con, $item['alive_status']);
+      $risk_category_escaped = pg_escape_string($con, $item['risk_category']);
+      $result_measure_escaped = pg_escape_string($con, $item['result_measure']);
+
+      $insert_sql = "INSERT INTO tbpest_detected (application_id, pestid, infestation_level, alive_status, risk_category, result_measure)
+               VALUES ('" . $appid_escaped . "', '" . $pestid_escaped . "', '" . $infestation_escaped . "', '" . $alive_status_escaped . "', '" . $risk_category_escaped . "', '" . $result_measure_escaped . "')";
+      if (!pg_query($con, $insert_sql)) {
+        $ok = false;
+        $error_message = pg_last_error($con);
+        break;
+      }
+    }
+  }
+
+  if ($ok) {
+    $pest_flag = count($clean_items) > 0 ? '1' : '0';
+    $inspection_sql = "UPDATE tbinspection SET pest_detected = '" . $pest_flag . "' WHERE application_id = '" . $appid_escaped . "'";
+    if (!pg_query($con, $inspection_sql)) {
+      $ok = false;
+      $error_message = pg_last_error($con);
+    }
+  }
+
+  if ($ok) {
+    pg_query($con, 'COMMIT');
+    echo json_encode(['success' => true, 'message' => 'Pest data saved successfully']);
+  } else {
+    pg_query($con, 'ROLLBACK');
+    echo json_encode(['success' => false, 'error' => $error_message ?: 'Unable to save pest data']);
+  }
+  exit;
+}
 
 // Save application data before going to multiple commodities - AJAX endpoint
 if (isset($_POST['action']) && $_POST['action'] == 'save_application_before_multiple') {
@@ -573,6 +711,64 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
       font-size: 12px;
       color: #666;
       margin-top: 2px;
+    }
+
+    #pestDetectedModalTxn .form-control,
+    #pestDetectedModalTxn .form-select,
+    #pestSearchModalTxn .form-control {
+      background-color: #e7f3ff;
+      border-color: #4a9eff;
+      color: #0b57d0;
+    }
+
+    #pestDetectedModalTxn .form-control:focus,
+    #pestDetectedModalTxn .form-select:focus,
+    #pestSearchModalTxn .form-control:focus {
+      background-color: #e7f3ff;
+      border-color: #4a9eff;
+      box-shadow: 0 0 0 0.2rem rgba(74, 158, 255, 0.2);
+      color: #0b57d0;
+    }
+
+    #pestDetectedModalTxn .form-control[readonly] {
+      background-color: #e7f3ff;
+      opacity: 1;
+    }
+
+    #pestDetectedModalTxn .form-check-input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 1.55em;
+      height: 1.55em;
+      margin-top: 0.1em;
+      border: 1.5px solid #2f6fed;
+      border-radius: 0.35rem;
+      background-color: #ffffff;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 0.95em 0.95em;
+      cursor: pointer;
+    }
+
+    #pestDetectedModalTxn .form-check-input[type="radio"]:checked {
+      background-color: #2f6fed;
+      border-color: #2f6fed;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.2' d='M3.5 8.5l2.5 2.5 6-7'/%3e%3c/svg%3e");
+    }
+
+    #pestDetectedModalTxn .form-check-input[type="radio"]:focus {
+      border-color: #2f6fed;
+      box-shadow: 0 0 0 0.2rem rgba(47, 111, 237, 0.2);
+    }
+
+    #pestDetectedModalTxn .form-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+    }
+
+    #pestDetectedModalTxn .form-check-label {
+      padding-top: 0.05rem;
     }
   </style>
   <!-- =======================================================
@@ -1145,14 +1341,22 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations["Multiple commodities"]) ? $translations["Multiple commodities"] : "Multiple commodities"; ?></label>
                   <div class="col-sm-6 d-flex align-items-center">
                     <input type="checkbox" name="multiple_commodities" id="multiple_commodities" value="1" <?php echo (isset($multiple_commodities) && $multiple_commodities) ? 'checked' : ''; ?>>
-                    <label for="multiple_commodities" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label><span id="span_multiple" class="ms-3 text-muted">, <?php echo isset($translations["Please go to"]) ? $translations["Please go to"] : "Please go to"; ?> <a href="application.php?part=multiple_products&appid=<?php echo isset($_GET['appid_edit']) ? $_GET['appid_edit'] : $app_id; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>&lang=<?php echo isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en'; ?>" id="link_multiple_details">details</a></span>
+                    <label for="multiple_commodities" class="ms-2 mb-0"><?php echo isset($translations["Yes"]) ? $translations["Yes"] : "Yes"; ?></label><span id="span_multiple" class="ms-3 text-muted">, <?php echo isset($translations["Please go to"]) ? $translations["Please go to"] : "Please go to"; ?> <a href="#" id="link_multiple_details" data-bs-toggle="modal" data-bs-target="#multipleProductsModal">details</a></span>
                   </div>
                </div>
                <?php
                  $multiple_product_appid = isset($appEdit_id) ? $appEdit_id : (isset($app_id) ? $app_id : null);
                  $multiple_product_id = isset($product_id) ? $product_id : (isset($pid) ? $pid : null);
                  $multiple_product_guid = isset($guid) ? $guid : null;
-                 if (isset($multiple_commodities) && (int)$multiple_commodities === 1 && !empty($multiple_product_appid)) {
+                 $has_multiple_product_rows = false;
+                 if (!empty($multiple_product_appid) && is_numeric($multiple_product_appid)) {
+                   $multiple_exists_result = pg_query_params($con, "SELECT 1 FROM tbmultiple_product WHERE application_id = $1 LIMIT 1", array((int)$multiple_product_appid));
+                   if ($multiple_exists_result && pg_num_rows($multiple_exists_result) > 0) {
+                     $has_multiple_product_rows = true;
+                     $multiple_commodities = 1;
+                   }
+                 }
+                 if (((isset($multiple_commodities) && (int)$multiple_commodities === 1) || $has_multiple_product_rows) && !empty($multiple_product_appid)) {
                    MultipleProductdataTable($multiple_product_appid, $multiple_product_id, $multiple_product_guid);
                  }
                ?>
@@ -1441,6 +1645,148 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
       </div>
 <!-- End Modal form for Commodity -->
 
+<?php
+  $multiple_modal_appid = isset($appEdit_id) ? $appEdit_id : (isset($app_id) ? $app_id : '');
+?>
+<!-- Modal form for Multiple Commodities -->
+<div class="modal fade" id="multipleProductsModal" tabindex="-1" aria-labelledby="multipleProductsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="multipleProductsModalLabel"><?php echo isset($translations['Multiple commodities']) ? $translations['Multiple commodities'] : 'Multiple commodities'; ?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="mp_multipleProductsForm" method="POST">
+          <input type="hidden" id="mp_appid" name="appid" value="<?php echo htmlspecialchars((string)$multiple_modal_appid, ENT_QUOTES); ?>">
+
+          <div class="row mb-3 align-items-center">
+            <label for="mp_product_name" class="col-sm-2 col-form-label"><?php echo isset($translations['Product name']) ? $translations['Product name'] : 'Product Name'; ?></label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <input type="text" class="form-control" id="mp_product_name" name="mp_product_name" readonly style="background-color: #e7f3ff; border-color: #4a9eff;">
+                <button type="button" class="btn btn-outline-secondary" id="mp_searchProductBtn">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <input type="hidden" id="mp_product_id" name="mp_product_id" value="">
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="mp_scientific_name" class="col-sm-2 col-form-label"><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="mp_scientific_name" name="mp_scientific_name" readonly style="background-color: #e7f3ff; border-color: #4a9eff;">
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="mp_number_description" class="col-sm-2 col-form-label"><?php echo isset($translations['Number and description']) ? $translations['Number and description'] : 'Number and Description'; ?></label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="mp_number_description" name="mp_number_description" style="background-color: #e7f3ff; border-color: #4a9eff;">
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="mp_net_quantity" class="col-sm-2 col-form-label"><?php echo isset($translations['Net Quantity']) ? $translations['Net Quantity'] : 'Net Quantity'; ?></label>
+            <div class="col-sm-4">
+              <input type="number" step="0.01" min="0" class="form-control" id="mp_net_quantity" name="mp_net_quantity" style="background-color: #e7f3ff; border-color: #4a9eff;">
+            </div>
+            <label for="mp_gross_quantity" class="col-sm-2 col-form-label"><?php echo isset($translations['Gross Quantity']) ? $translations['Gross Quantity'] : 'Gross Quantity'; ?></label>
+            <div class="col-sm-4">
+              <input type="number" step="0.01" min="0" class="form-control" id="mp_gross_quantity" name="mp_gross_quantity" style="background-color: #e7f3ff; border-color: #4a9eff;">
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="mp_unit" class="col-sm-2 col-form-label"><?php echo isset($translations['Unit']) ? $translations['Unit'] : 'Unit'; ?></label>
+            <div class="col-sm-4">
+              <select class="form-select" id="mp_unit" name="mp_unit" style="background-color: #e7f3ff; border-color: #4a9eff;">
+                <option value="">&nbsp;</option>
+                <?php SelectUnit($unitid, $con); ?>
+              </select>
+            </div>
+            <div class="col-sm-6 text-end">
+              <button type="button" class="btn btn-primary" id="mp_addProductBtn">
+                <i class="bi bi-plus-circle"></i> Add
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <hr>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0"><?php echo isset($translations['Products List']) ? $translations['Products List'] : 'Products List'; ?></h5>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="mp_printTableBtn" title="Print Products List">
+            <i class="bi bi-printer"></i> Print
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped" id="mp_productsTable">
+            <thead>
+              <tr>
+                <th><?php echo isset($translations['No']) ? $translations['No'] : 'No'; ?></th>
+                <th><?php echo isset($translations['Product name']) ? $translations['Product name'] : 'Product Name'; ?></th>
+                <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
+                <th><?php echo isset($translations['Number and description']) ? $translations['Number and description'] : 'Number and Description'; ?></th>
+                <th><?php echo isset($translations['Net Quantity']) ? $translations['Net Quantity'] : 'Net Quantity'; ?></th>
+                <th><?php echo isset($translations['Gross Quantity']) ? $translations['Gross Quantity'] : 'Gross Quantity'; ?></th>
+                <th><?php echo isset($translations['Unit']) ? $translations['Unit'] : 'Unit'; ?></th>
+                <th><?php echo isset($translations['Action']) ? $translations['Action'] : 'Action'; ?></th>
+              </tr>
+            </thead>
+            <tbody id="mp_productsTableBody">
+              <?php MultipleProductList($multiple_modal_appid, $con); ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="mp_submitAllBtn">
+          <i class="bi bi-check-circle"></i> Submit
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Search Modal for Multiple Commodities -->
+<div class="modal fade" id="mpProductSearchModal" tabindex="-1" aria-labelledby="mpProductSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mpProductSearchModalLabel">Search Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <input type="text" id="mpProductSearchInput" class="form-control" placeholder="Search products...">
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped" id="mpProductSearchTable">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Scientific Name</th>
+                <th>Description</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php ApplicationMultipleProductList($con); ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal for Add New Product/commodity -->
 <div class="modal fade" id="addcommodityModal" tabindex="-1" aria-labelledby="addcommodityModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -1551,6 +1897,352 @@ function selectExporter(info) {
 }
 
     window.addEventListener('DOMContentLoaded', function() {
+      const mpProductsArray = [];
+      let mpProductCounter = document.querySelectorAll('#mp_productsTableBody tr').length;
+
+      const mpSearchBtn = document.getElementById('mp_searchProductBtn');
+      const mpProductSearchModal = document.getElementById('mpProductSearchModal');
+      const mpAddProductBtn = document.getElementById('mp_addProductBtn');
+      const mpSubmitAllBtn = document.getElementById('mp_submitAllBtn');
+      const mpPrintTableBtn = document.getElementById('mp_printTableBtn');
+      const mpProductSearchInput = document.getElementById('mpProductSearchInput');
+
+      function mpReorderTableRows() {
+        const rows = document.querySelectorAll('#mp_productsTableBody tr');
+        rows.forEach((row, index) => {
+          row.cells[0].textContent = index + 1;
+        });
+      }
+
+      function mpAddProductRow(product) {
+        const tableBody = document.getElementById('mp_productsTableBody');
+        if (!tableBody) {
+          return;
+        }
+
+        const row = document.createElement('tr');
+        row.setAttribute('data-id', product.id);
+
+        const currentRowCount = tableBody.querySelectorAll('tr').length + 1;
+        row.innerHTML = `
+          <td>${currentRowCount}</td>
+          <td>${product.productName}</td>
+          <td>${product.scientificName || '-'}</td>
+          <td>${product.numberDescription || '-'}</td>
+          <td>${product.netQuantity}</td>
+          <td>${product.grossQuantity}</td>
+          <td>${product.unitSymbol}</td>
+          <td>
+            <button type="button" class="btn btn-sm btn-warning" onclick="editProductFromDb(this, true)">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteProductFromDb(this, true)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        `;
+
+        tableBody.appendChild(row);
+      }
+
+      window.editProductFromDb = function(button, isClientOnly = false) {
+        const row = button.closest('tr');
+        if (!row) {
+          return;
+        }
+
+        const productId = row.getAttribute('data-product-id') || '';
+        const unitId = row.getAttribute('data-unit-id') || '';
+        const dataId = row.getAttribute('data-id') || null;
+        const cells = row.cells;
+
+        document.getElementById('mp_product_id').value = productId;
+        document.getElementById('mp_product_name').value = cells[1].textContent.trim() === '-' ? '' : cells[1].textContent;
+        document.getElementById('mp_scientific_name').value = cells[2].textContent.trim() === '-' ? '' : cells[2].textContent;
+        document.getElementById('mp_number_description').value = cells[3].textContent.trim() === '-' ? '' : cells[3].textContent;
+        document.getElementById('mp_net_quantity').value = cells[4].textContent;
+        document.getElementById('mp_gross_quantity').value = cells[5].textContent;
+        document.getElementById('mp_unit').value = unitId;
+
+        if (dataId) {
+          const index = mpProductsArray.findIndex((item) => String(item.id) === String(dataId));
+          if (index > -1) {
+            mpProductsArray.splice(index, 1);
+          }
+          row.remove();
+          mpReorderTableRows();
+          return;
+        }
+
+        deleteProductFromDb(button, isClientOnly, false);
+      };
+
+      window.deleteProductFromDb = function(button, isClientOnly = false, confirmDelete = true) {
+        const row = button.closest('tr');
+        if (!row) {
+          return;
+        }
+
+        if (confirmDelete && !confirm('Are you sure you want to delete this product?')) {
+          return;
+        }
+
+        const dataId = row.getAttribute('data-id');
+        if (dataId) {
+          const index = mpProductsArray.findIndex((item) => String(item.id) === String(dataId));
+          if (index > -1) {
+            mpProductsArray.splice(index, 1);
+          }
+          row.remove();
+          mpReorderTableRows();
+          return;
+        }
+
+        if (isClientOnly) {
+          row.remove();
+          mpReorderTableRows();
+          return;
+        }
+
+        const dbId = row.getAttribute('data-db-id');
+        const appid = document.getElementById('mp_appid') ? document.getElementById('mp_appid').value : '';
+
+        fetch('transaction-dataprocess.php?action=delete_multiple_product', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: dbId, appid: appid })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            row.remove();
+            mpReorderTableRows();
+          } else {
+            alert('Error deleting product: ' + (data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error deleting product. Please try again.');
+        });
+      };
+
+      if (mpSearchBtn && mpProductSearchModal) {
+        mpSearchBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          const bsModal = new bootstrap.Modal(mpProductSearchModal);
+          bsModal.show();
+        });
+      }
+
+      if (mpAddProductBtn) {
+        mpAddProductBtn.addEventListener('click', function() {
+          const productId = document.getElementById('mp_product_id').value;
+          const productName = document.getElementById('mp_product_name').value;
+          const scientificName = document.getElementById('mp_scientific_name').value;
+          const numberDescription = document.getElementById('mp_number_description').value;
+          const netQuantity = document.getElementById('mp_net_quantity').value;
+          const grossQuantity = document.getElementById('mp_gross_quantity').value;
+          const unitSelect = document.getElementById('mp_unit');
+          const unitId = unitSelect.value;
+          const unitSymbol = unitSelect.options[unitSelect.selectedIndex] ? unitSelect.options[unitSelect.selectedIndex].text : '';
+
+          if (!productName || !netQuantity || !grossQuantity || !unitId) {
+            alert('Please fill in all required fields: Product Name, Net Quantity, Gross Quantity, and Unit');
+            return;
+          }
+
+          mpProductCounter++;
+          const product = {
+            id: mpProductCounter,
+            productId: productId,
+            productName: productName,
+            scientificName: scientificName,
+            numberDescription: numberDescription,
+            netQuantity: netQuantity,
+            grossQuantity: grossQuantity,
+            unitId: unitId,
+            unitSymbol: unitSymbol
+          };
+
+          mpProductsArray.push(product);
+          mpAddProductRow(product);
+
+          const form = document.getElementById('mp_multipleProductsForm');
+          if (form) {
+            form.reset();
+          }
+          document.getElementById('mp_product_id').value = '';
+        });
+      }
+
+      if (mpSubmitAllBtn) {
+        mpSubmitAllBtn.addEventListener('click', function() {
+          const tableBody = document.getElementById('mp_productsTableBody');
+          const rows = tableBody ? tableBody.querySelectorAll('tr') : [];
+
+          if (rows.length === 0) {
+            alert('Please add at least one product before submitting.');
+            return;
+          }
+
+          const appid = document.getElementById('mp_appid') ? document.getElementById('mp_appid').value : '';
+          if (!appid || isNaN(appid)) {
+            alert('Invalid application id. Unable to submit products.');
+            return;
+          }
+
+          const allProducts = [];
+          rows.forEach(row => {
+            const cells = row.cells;
+            const productId = row.getAttribute('data-product-id');
+            const unitId = row.getAttribute('data-unit-id');
+            const dataId = row.getAttribute('data-id');
+
+            if (dataId) {
+              const product = mpProductsArray.find(item => String(item.id) === String(dataId));
+              if (product) {
+                allProducts.push({
+                  productId: product.productId,
+                  numberDescription: product.numberDescription || '',
+                  netQuantity: product.netQuantity,
+                  grossQuantity: product.grossQuantity,
+                  unitId: product.unitId
+                });
+              }
+            } else {
+              allProducts.push({
+                productId: productId,
+                numberDescription: cells[3].textContent.trim() === '-' ? '' : cells[3].textContent.trim(),
+                netQuantity: parseFloat(cells[4].textContent),
+                grossQuantity: parseFloat(cells[5].textContent),
+                unitId: unitId
+              });
+            }
+          });
+
+          fetch('transaction-dataprocess.php?action=save_multiple_products', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ appid: appid, products: allProducts })
+          })
+          .then(response => response.text())
+          .then(text => {
+            let data;
+            try {
+              data = text ? JSON.parse(text) : {};
+            } catch (err) {
+              console.error('Invalid JSON response from server:', text);
+              alert('Server returned an invalid response. Check console for details.');
+              return;
+            }
+
+            if (data && data.success) {
+              alert('Successfully submitted ' + allProducts.length + ' products!');
+              mpProductsArray.length = 0;
+              mpProductCounter = 0;
+
+              const modalElement = document.getElementById('multipleProductsModal');
+              const modal = bootstrap.Modal.getInstance(modalElement);
+              if (modal) {
+                modal.hide();
+              }
+              const langParam = '<?php echo isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en'; ?>';
+              window.location.href = 'transaction.php?part=application&appid_edit=' + encodeURIComponent(appid) + '&uid=<?php echo $userid; ?>&lang=' + encodeURIComponent(langParam);
+            } else {
+              alert('Error saving products: ' + (data && data.message ? data.message : 'Unknown error'));
+            }
+          })
+          .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Network error while submitting products. Please try again.');
+          });
+        });
+      }
+
+      if (mpPrintTableBtn) {
+        mpPrintTableBtn.addEventListener('click', function() {
+          const tableBody = document.getElementById('mp_productsTableBody');
+          const rows = tableBody ? tableBody.querySelectorAll('tr') : [];
+
+          if (rows.length === 0) {
+            alert('No products to print.');
+            return;
+          }
+
+          const appid = document.getElementById('mp_appid') ? document.getElementById('mp_appid').value : '';
+          let printContent = '<!DOCTYPE html>' +
+            '<html>' +
+            '<head>' +
+            '<title>Products List - Application #' + appid + '</title>' +
+            '<style>' +
+            'body { font-family: Arial, sans-serif; padding: 20px; }' +
+            'h2 { text-align: center; margin-bottom: 20px; }' +
+            'table { width: 100%; border-collapse: collapse; margin-top: 20px; }' +
+            'th, td { border: 1px solid #000; padding: 8px; text-align: left; }' +
+            'th { background-color: #f2f2f2; font-weight: bold; }' +
+            '.text-center { text-align: center; }' +
+            '@media print { button { display: none; } }' +
+            '</style>' +
+            '</head>' +
+            '<body>' +
+            '<h2>Products List - Application #' + appid + '</h2>' +
+            '<table>' +
+            '<thead>' +
+            '<tr>' +
+            '<th class="text-center">No</th>' +
+            '<th>Product Name</th>' +
+            '<th>Scientific Name</th>' +
+            '<th>Number and Description</th>' +
+            '<th class="text-center">Net Quantity</th>' +
+            '<th class="text-center">Gross Quantity</th>' +
+            '<th class="text-center">Unit</th>' +
+            '</tr>' +
+            '</thead>' +
+            '<tbody>';
+
+          rows.forEach((row, index) => {
+            const cells = row.cells;
+            printContent += '<tr>' +
+              '<td class="text-center">' + (index + 1) + '</td>' +
+              '<td>' + cells[1].textContent + '</td>' +
+              '<td>' + cells[2].textContent + '</td>' +
+              '<td>' + cells[3].textContent + '</td>' +
+              '<td class="text-center">' + cells[4].textContent + '</td>' +
+              '<td class="text-center">' + cells[5].textContent + '</td>' +
+              '<td class="text-center">' + cells[6].textContent + '</td>' +
+              '</tr>';
+          });
+
+          printContent += '</tbody>' +
+            '</table>' +
+            '<script>' +
+            'window.onload = function() { window.print(); }' +
+            '<\/script>' +
+            '</body>' +
+            '</html>';
+
+          const printWindow = window.open('', '_blank', 'width=800,height=600');
+          printWindow.document.write(printContent);
+          printWindow.document.close();
+        });
+      }
+
+      if (mpProductSearchInput) {
+        mpProductSearchInput.addEventListener('keyup', function() {
+          const filter = this.value.toLowerCase();
+          const rows = document.querySelectorAll('#mpProductSearchTable tbody tr');
+          rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+          });
+        });
+      }
+
       var applicationNo = document.querySelector('input[name="application_no"]');
           if (applicationNo) {
             applicationNo.focus();
@@ -1946,7 +2638,7 @@ function selectExporter(info) {
                 <div class="col-sm-10">
                   <div class="form-check mb-2">
                     <input class="form-check-input border border-success" type="checkbox" name="detected_pest" id="detected_pest" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($detected_pest) && $detected_pest) echo 'checked'; ?>> <!-- onclick="pest_inspected();" -->
-                     <label class="form-check-label" for="detected_pest">&nbsp;<?php echo isset($translations['Detected pest']) ? $translations['Detected pest'] : 'Detected pest'; ?>,</label>&nbsp;<span id="span_pest"><?php echo isset($translations['Please go to']) ? $translations['Please go to'] : 'Please go to'; ?>&nbsp;</span>&nbsp;&nbsp;<a id="link_pest_details" href="inspection.php?part=pest_detected&appid=<?php echo isset($_GET['appid']) ? $_GET['appid'] : ''; ?>&uid=<?php echo isset($userid) ? $userid : ''; ?>&lang=<?php echo isset($lang) ? $lang : 'en'; ?>" class="text-decoration-none"><i class='bi bi-box-arrow-right'></i>&nbsp;Details</a>
+                     <label class="form-check-label" for="detected_pest">&nbsp;<?php echo isset($translations['Detected pest']) ? $translations['Detected pest'] : 'Detected pest'; ?>,</label>&nbsp;<span id="span_pest"><?php echo isset($translations['Please go to']) ? $translations['Please go to'] : 'Please go to'; ?>&nbsp;</span>&nbsp;&nbsp;<a id="link_pest_details" href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#pestDetectedModalTxn"><i class='bi bi-box-arrow-right'></i>&nbsp;Details</a>
                   </div>
                   <div class="form-check mb-2">
                     <input class="form-check-input border border-warning" type="checkbox" name="treatment_ability" id="treatment_ability" style="width: 1.5em; height: 1.5em;" value="1" <?php if (isset($treatment_ability) && $treatment_ability) echo 'checked'; ?>>
@@ -2049,6 +2741,189 @@ function selectExporter(info) {
       </form> <!-- End Form for Inspection -->
      </div>
     </div>
+
+    <!-- Pest Detected Modal Form -->
+    <div class="modal fade" id="pestDetectedModalTxn" tabindex="-1" aria-labelledby="pestDetectedModalTxnLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="pestDetectedModalTxnLabel">Pest Detected Information</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="txn_pest_appid" value="<?php echo (int)$appid_inspection; ?>">
+            <input type="hidden" id="txn_pestid" value="">
+            <input type="hidden" id="txn_pest_edit_index" value="">
+
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <strong><?php echo isset($translations['Pest information']) ? $translations['Pest information'] : 'Pest information'; ?></strong>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translations['Pest name']) ? $translations['Pest name'] : "Pest's name"; ?> <span class="text-danger">*</span></label>
+                  <div class="col-sm-7">
+                    <input type="text" class="form-control" id="txn_pest_name_display" placeholder="Click search to select pest" readonly>
+                  </div>
+                  <div class="col-sm-2">
+                    <button type="button" class="btn btn-primary" id="txn_open_pest_search_btn">
+                      <i class="bi bi-search"></i> <?php echo isset($translations['Search']) ? $translations['Search'] : 'Search'; ?>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translations['Infestation Level']) ? $translations['Infestation Level'] : 'Infestation Level'; ?></label>
+                  <div class="col-sm-9">
+                    <select class="form-select" id="txn_infestation_level">
+                      <option value=""><?php echo isset($translations['Select level']) ? $translations['Select level'] : 'Select level'; ?></option>
+                      <option value="trace"><?php echo isset($translations['Trace']) ? $translations['Trace'] : 'Trace'; ?></option>
+                      <option value="low"><?php echo isset($translations['Low']) ? $translations['Low'] : 'Low'; ?></option>
+                      <option value="medium"><?php echo isset($translations['Medium']) ? $translations['Medium'] : 'Medium'; ?></option>
+                      <option value="high"><?php echo isset($translations['High']) ? $translations['High'] : 'High'; ?></option>
+                      <option value="severe"><?php echo isset($translations['Severe']) ? $translations['Severe'] : 'Severe'; ?></option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translations['Alive Status']) ? $translations['Alive Status'] : 'Alive Status'; ?></label>
+                  <div class="col-sm-9">
+                    <select class="form-select" id="txn_alive_status">
+                      <option value="">Select status</option>
+                      <option value="alive">Alive</option>
+                      <option value="dead">Dead</option>
+                      <option value="mixed">Mixed (Alive and Dead)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translations['Risk Category']) ? $translations['Risk Category'] : 'Risk Category'; ?></label>
+                  <div class="col-sm-9">
+                    <select class="form-select" id="txn_risk_category">
+                      <option value=""><?php echo isset($translations['Select category']) ? $translations['Select category'] : 'Select category'; ?></option>
+                      <option value="low"><?php echo isset($translations['Low']) ? $translations['Low'] : 'Low'; ?></option>
+                      <option value="medium"><?php echo isset($translations['Medium']) ? $translations['Medium'] : 'Medium'; ?></option>
+                      <option value="high"><?php echo isset($translations['High']) ? $translations['High'] : 'High'; ?></option>
+                      <option value="critical"><?php echo isset($translations['Critical']) ? $translations['Critical'] : 'Critical'; ?></option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translations['Measure of result']) ? $translations['Measure of result'] : 'Measure of Result'; ?></label>
+                  <div class="col-sm-9">
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="radio" name="txn_result_measure" id="txn_result_immediate_treatment" value="immediate_treatment">
+                      <label class="form-check-label" for="txn_result_immediate_treatment"><?php echo isset($translations['Immediately implement the treatment']) ? $translations['Immediately implement the treatment'] : 'Immediately implement the treatment'; ?></label>
+                    </div>
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="radio" name="txn_result_measure" id="txn_result_not_accordance" value="not_accordance">
+                      <label class="form-check-label" for="txn_result_not_accordance"><?php echo isset($translations['Regulated article was not accordance']) ? $translations['Regulated article was not accordance'] : 'Regulated article was not accordance'; ?></label>
+                    </div>
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="radio" name="txn_result_measure" id="txn_result_phytosanitary_requirements" value="phytosanitary_requirements">
+                      <label class="form-check-label" for="txn_result_phytosanitary_requirements"><?php echo isset($translations['The regulated article was in accordance with Lao Phytosanitary requirements']) ? $translations['The regulated article was in accordance with Lao Phytosanitary requirements'] : 'The regulated article was in accordance with Lao Phytosanitary requirements'; ?></label>
+                    </div>
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="radio" name="txn_result_measure" id="txn_result_other_conclusion" value="other_conclusion">
+                      <label class="form-check-label" for="txn_result_other_conclusion"><?php echo isset($translations['Other conclusion']) ? $translations['Other conclusion'] : 'Other conclusion'; ?></label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                  <span id="txn_pest_edit_status" class="text-muted small"></span>
+                  <button type="button" class="btn btn-primary" id="txn_add_pest_btn"><i class="bi bi-plus-circle"></i> Add</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mb-2">
+              <div class="card-header bg-light"><strong>Pests List</strong></div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-bordered align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th style="width: 60px;">No</th>
+                        <th>Pest Name</th>
+                        <th>Infestation Level</th>
+                        <th>Alive Status</th>
+                        <th>Risk Category</th>
+                        <th>Result Measure</th>
+                        <th style="width: 130px;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="txn_pest_list_body">
+                      <tr><td colspan="7" class="text-center text-muted">No pests added yet.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" id="txn_save_pest_btn"><i class="bi bi-save"></i> Save</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pest Search Modal for Pest Detected Modal -->
+    <div class="modal fade" id="pestSearchModalTxn" tabindex="-1" aria-labelledby="pestSearchModalTxnLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="pestSearchModalTxnLabel">Search and Select Pest</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <input type="text" class="form-control" id="txn_pest_search_input" placeholder="Search by pest name, scientific name, or category...">
+            </div>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover" id="txn_pest_search_table">
+                <thead>
+                  <tr>
+                    <th><?php echo isset($translations['Scientific Name']) ? $translations['Scientific Name'] : 'Scientific Name'; ?></th>
+                    <th><?php echo isset($translations['Pest Name']) ? $translations['Pest Name'] : 'Pest Name'; ?></th>
+                    <th><?php echo isset($translations['Category']) ? $translations['Category'] : 'Category'; ?></th>
+                    <th><?php echo isset($translations['Select']) ? $translations['Select'] : 'Select'; ?></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                  $pest_sql_txn = "SELECT id, pestname, scientificname, category FROM tbpest ORDER BY pestname ASC";
+                  $pest_result_txn = pg_query($con, $pest_sql_txn);
+                  if ($pest_result_txn && pg_num_rows($pest_result_txn) > 0) {
+                    while ($pest_row_txn = pg_fetch_assoc($pest_result_txn)) {
+                      $pid_txn = (int)$pest_row_txn['id'];
+                      $pname_txn = htmlspecialchars($pest_row_txn['pestname'] ?? '', ENT_QUOTES);
+                      $scientific_txn = htmlspecialchars($pest_row_txn['scientificname'] ?? '', ENT_QUOTES);
+                      $category_txn = htmlspecialchars($pest_row_txn['category'] ?? '', ENT_QUOTES);
+
+                      echo "<tr>";
+                      echo "<td><em>$scientific_txn</em></td>";
+                      echo "<td>$pname_txn</td>";
+                      echo "<td>$category_txn</td>";
+                      echo "<td><button type='button' class='btn btn-sm btn-danger' onclick='selectPestDetectedTxn($pid_txn, \"$pname_txn\")'>Select</button></td>";
+                      echo "</tr>";
+                    }
+                  } else {
+                    echo "<tr><td colspan='4' class='text-center'>No pests found</td></tr>";
+                  }
+                  ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     </div>
     </div>
   </section>
@@ -2678,6 +3553,26 @@ function selectExporter(info) {
         }
       }
 
+      // Function to select pest from search modal and populate pest modal fields
+      function selectPestDetectedTxn(pestId, pestName) {
+        const pestIdField = document.getElementById('txn_pestid');
+        const pestNameField = document.getElementById('txn_pest_name_display');
+        if (pestIdField) {
+          pestIdField.value = pestId;
+        }
+        if (pestNameField) {
+          pestNameField.value = pestName;
+        }
+
+        const searchModalElement = document.getElementById('pestSearchModalTxn');
+        if (searchModalElement) {
+          // Signal to reopen parent pest modal after the search modal closes.
+          window.txnReopenPestModalAfterSearch = true;
+          const searchModal = bootstrap.Modal.getOrCreateInstance(searchModalElement);
+          searchModal.hide();
+        }
+      }
+
       // Search/Filter importer functionality for certificate modal
       document.addEventListener('DOMContentLoaded', function() {
         const importerSearch = document.getElementById('importerSearch');
@@ -2855,6 +3750,285 @@ function selectExporter(info) {
                 }
             } // Close the if condition for UNCHECKING
           }); // Close the change event listener
+
+          // Pest detected modal behavior
+          const pestModalElement = document.getElementById('pestDetectedModalTxn');
+          const openPestSearchBtn = document.getElementById('txn_open_pest_search_btn');
+          const pestSearchModalElement = document.getElementById('pestSearchModalTxn');
+          const pestSearchInput = document.getElementById('txn_pest_search_input');
+          const pestSearchTable = document.getElementById('txn_pest_search_table');
+          const pestAppIdField = document.getElementById('txn_pest_appid');
+          const pestIdField = document.getElementById('txn_pestid');
+          const pestNameField = document.getElementById('txn_pest_name_display');
+          const infestationField = document.getElementById('txn_infestation_level');
+          const aliveStatusField = document.getElementById('txn_alive_status');
+          const riskCategoryField = document.getElementById('txn_risk_category');
+          const editIndexField = document.getElementById('txn_pest_edit_index');
+          const editStatusLabel = document.getElementById('txn_pest_edit_status');
+          const addPestBtn = document.getElementById('txn_add_pest_btn');
+          const savePestBtn = document.getElementById('txn_save_pest_btn');
+          const pestListBody = document.getElementById('txn_pest_list_body');
+          let txnPestRecords = [];
+          window.txnReopenPestModalAfterSearch = false;
+
+          const txnFieldLabels = {
+            infestation_level: { trace: 'Trace', low: 'Low', medium: 'Medium', high: 'High', severe: 'Severe' },
+            alive_status: { alive: 'Alive', dead: 'Dead', mixed: 'Mixed (Alive and Dead)' },
+            risk_category: { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' },
+            result_measure: {
+              immediate_treatment: 'Immediately implement the treatment',
+              not_accordance: 'Regulated article was not accordance',
+              phytosanitary_requirements: 'The regulated article was in accordance with Lao Phytosanitary requirements',
+              other_conclusion: 'Other conclusion'
+            }
+          };
+
+          function txnEscapeHtml(value) {
+            return String(value || '')
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+          }
+
+          function txnGetSelectedResultMeasure() {
+            const selected = document.querySelector('input[name="txn_result_measure"]:checked');
+            return selected ? selected.value : '';
+          }
+
+          function txnResetForm() {
+            if (pestIdField) pestIdField.value = '';
+            if (pestNameField) pestNameField.value = '';
+            if (infestationField) infestationField.value = '';
+            if (aliveStatusField) aliveStatusField.value = '';
+            if (riskCategoryField) riskCategoryField.value = '';
+            document.querySelectorAll('input[name="txn_result_measure"]').forEach(function(el) {
+              el.checked = false;
+            });
+            if (editIndexField) editIndexField.value = '';
+            if (editStatusLabel) editStatusLabel.textContent = '';
+          }
+
+          function txnPopulateForm(record, index) {
+            if (pestIdField) pestIdField.value = record.pestid || '';
+            if (pestNameField) pestNameField.value = record.pest_name || '';
+            if (infestationField) infestationField.value = record.infestation_level || '';
+            if (aliveStatusField) aliveStatusField.value = record.alive_status || '';
+            if (riskCategoryField) riskCategoryField.value = record.risk_category || '';
+            document.querySelectorAll('input[name="txn_result_measure"]').forEach(function(el) {
+              el.checked = el.value === (record.result_measure || '');
+            });
+            if (editIndexField) editIndexField.value = index;
+            if (editStatusLabel) editStatusLabel.textContent = 'Editing pest #' + (index + 1);
+          }
+
+          function txnRenderList() {
+            if (!pestListBody) {
+              return;
+            }
+            if (!txnPestRecords.length) {
+              pestListBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No pests added yet.</td></tr>';
+              return;
+            }
+
+            pestListBody.innerHTML = txnPestRecords.map(function(record, index) {
+              const infestationLabel = txnFieldLabels.infestation_level[record.infestation_level] || record.infestation_level || '-';
+              const aliveLabel = txnFieldLabels.alive_status[record.alive_status] || record.alive_status || '-';
+              const riskLabel = txnFieldLabels.risk_category[record.risk_category] || record.risk_category || '-';
+              const resultLabel = txnFieldLabels.result_measure[record.result_measure] || record.result_measure || '-';
+
+              return '<tr>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td>' + txnEscapeHtml(record.pest_name || '-') + '</td>' +
+                '<td>' + txnEscapeHtml(infestationLabel) + '</td>' +
+                '<td>' + txnEscapeHtml(aliveLabel) + '</td>' +
+                '<td>' + txnEscapeHtml(riskLabel) + '</td>' +
+                '<td>' + txnEscapeHtml(resultLabel) + '</td>' +
+                '<td>' +
+                  '<button type="button" class="btn btn-warning btn-sm text-dark me-1 txn-pest-edit" data-index="' + index + '"><i class="bi bi-pencil-square"></i></button>' +
+                  '<button type="button" class="btn btn-danger btn-sm txn-pest-delete" data-index="' + index + '"><i class="bi bi-trash"></i></button>' +
+                '</td>' +
+              '</tr>';
+            }).join('');
+          }
+
+          function txnLoadPestRecords() {
+            const appid = pestAppIdField ? pestAppIdField.value : '';
+            if (!appid) {
+              txnPestRecords = [];
+              txnRenderList();
+              return;
+            }
+
+            fetch('transaction.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ action: 'load_pest_detected_list', appid: appid })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+              if (data.success) {
+                txnPestRecords = Array.isArray(data.records) ? data.records : [];
+                txnRenderList();
+              } else {
+                alert('Unable to load pest records: ' + (data.error || 'Unknown error'));
+              }
+            })
+            .catch(function(error) {
+              console.error('Load pest records error:', error);
+              alert('Network error while loading pest records.');
+            });
+          }
+
+          function txnAddOrUpdateRecord() {
+            const pestid = parseInt((pestIdField && pestIdField.value) ? pestIdField.value : '0', 10);
+            const pestName = (pestNameField && pestNameField.value ? pestNameField.value : '').trim();
+            const infestation = infestationField ? infestationField.value : '';
+            const aliveStatus = aliveStatusField ? aliveStatusField.value : '';
+            const riskCategory = riskCategoryField ? riskCategoryField.value : '';
+            const resultMeasure = txnGetSelectedResultMeasure();
+            const editIndex = editIndexField && editIndexField.value !== '' ? parseInt(editIndexField.value, 10) : -1;
+
+            if (!pestid || !pestName) {
+              alert('Please select a pest before adding it to the list.');
+              return;
+            }
+
+            const row = {
+              id: editIndex >= 0 && txnPestRecords[editIndex] ? txnPestRecords[editIndex].id || 0 : 0,
+              pestid: pestid,
+              pest_name: pestName,
+              infestation_level: infestation,
+              alive_status: aliveStatus,
+              risk_category: riskCategory,
+              result_measure: resultMeasure
+            };
+
+            if (editIndex >= 0 && txnPestRecords[editIndex]) {
+              txnPestRecords[editIndex] = row;
+            } else {
+              txnPestRecords.push(row);
+            }
+
+            txnRenderList();
+            txnResetForm();
+          }
+
+          if (linkPestDetails) {
+            linkPestDetails.addEventListener('click', function(event) {
+              if (!detectedPestCheckbox.checked) {
+                event.preventDefault();
+                alert('Please check Detected pest first.');
+              }
+            });
+          }
+
+          if (pestModalElement) {
+            pestModalElement.addEventListener('shown.bs.modal', function() {
+              txnResetForm();
+              txnLoadPestRecords();
+            });
+          }
+
+          if (openPestSearchBtn && pestSearchModalElement) {
+            openPestSearchBtn.addEventListener('click', function() {
+              window.txnReopenPestModalAfterSearch = true;
+              const searchModal = bootstrap.Modal.getOrCreateInstance(pestSearchModalElement);
+              searchModal.show();
+            });
+
+            pestSearchModalElement.addEventListener('hidden.bs.modal', function() {
+              if (window.txnReopenPestModalAfterSearch && pestModalElement) {
+                const parentModal = bootstrap.Modal.getOrCreateInstance(pestModalElement);
+                parentModal.show();
+              }
+              window.txnReopenPestModalAfterSearch = false;
+            });
+          }
+
+          if (addPestBtn) {
+            addPestBtn.addEventListener('click', txnAddOrUpdateRecord);
+          }
+
+          if (pestListBody) {
+            pestListBody.addEventListener('click', function(event) {
+              const editBtn = event.target.closest('.txn-pest-edit');
+              const delBtn = event.target.closest('.txn-pest-delete');
+
+              if (editBtn) {
+                const index = parseInt(editBtn.getAttribute('data-index'), 10);
+                if (!isNaN(index) && txnPestRecords[index]) {
+                  txnPopulateForm(txnPestRecords[index], index);
+                }
+                return;
+              }
+
+              if (delBtn) {
+                const index = parseInt(delBtn.getAttribute('data-index'), 10);
+                if (!isNaN(index) && txnPestRecords[index] && confirm('Delete this pest record?')) {
+                  txnPestRecords.splice(index, 1);
+                  txnRenderList();
+                  const currentEdit = editIndexField && editIndexField.value !== '' ? parseInt(editIndexField.value, 10) : -1;
+                  if (currentEdit === index) {
+                    txnResetForm();
+                  } else if (currentEdit > index && editIndexField) {
+                    editIndexField.value = currentEdit - 1;
+                  }
+                }
+              }
+            });
+          }
+
+          if (savePestBtn) {
+            savePestBtn.addEventListener('click', function() {
+              const appid = pestAppIdField ? pestAppIdField.value : '';
+              if (!appid) {
+                alert('Application ID is missing.');
+                return;
+              }
+
+              fetch('transaction.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                  action: 'save_pest_detected_list',
+                  appid: appid,
+                  pest_items_json: JSON.stringify(txnPestRecords)
+                })
+              })
+              .then(function(response) { return response.json(); })
+              .then(function(data) {
+                if (data.success) {
+                  alert('Pest records saved successfully.');
+                  if (detectedPestCheckbox) {
+                    detectedPestCheckbox.checked = txnPestRecords.length > 0;
+                    togglePestDetails();
+                  }
+                  const modal = bootstrap.Modal.getInstance(pestModalElement);
+                  if (modal) {
+                    modal.hide();
+                  }
+                } else {
+                  alert('Unable to save pest records: ' + (data.error || 'Unknown error'));
+                }
+              })
+              .catch(function(error) {
+                console.error('Save pest records error:', error);
+                alert('Network error while saving pest records.');
+              });
+            });
+          }
+
+          if (pestSearchInput && pestSearchTable) {
+            pestSearchInput.addEventListener('keyup', function() {
+              const term = pestSearchInput.value.toLowerCase();
+              pestSearchTable.querySelectorAll('tbody tr').forEach(function(row) {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+              });
+            });
+          }
         } // Close the if condition for checkbox existence
 
         // Control visibility of treatment details based on checkbox

@@ -294,7 +294,16 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
             </a>
           </li>
         </ul>
-      </li><!-- End Master Data Nav -->     
+      </li><!-- End Master Data Nav -->    
+      
+       <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
 
       <li class="nav-heading"><?php echo isset($translations['USERS MANAGEMENT']) ? $translations['USERS MANAGEMENT'] : "Users' Management"; ?></li>
 
@@ -656,7 +665,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
         </div>
         <div>
           <a href="entity.php?frm=newEntity_import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New import entity']) ? $translations['Add New import entity'] : 'Add New import entity'; ?>
+            <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?>
           </a>
         </div>
       </div><!-- End Page Title - Import entity list -->

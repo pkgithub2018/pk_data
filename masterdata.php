@@ -34,7 +34,8 @@
     );
     $loginuser = Userdata($userid, $con)['name']; // User name
     $guid = Userdata($userid, $con)['group_id'];
-    $position = Userdata($userid, $con)['position'];       
+    $position = Userdata($userid, $con)['position']; 
+    $groupname = Groupname($guid, $con); // User group name
     // Get and store user profile image
     $uprofile = Profiledata($userid, $con);
     if (!$uprofile) {
@@ -188,7 +189,7 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
+              <a class="dropdown-item d-flex align-items-center" href="#">
                 <i class="bi bi-question-circle"></i>
                 <span><?php echo isset($translations['Need Help?']) ? $translations['Need Help?'] : 'Need Help?'; ?></span>
               </a>
@@ -271,6 +272,7 @@
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
+         <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -327,18 +329,20 @@
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment method']) ? $translations['Treatment method'] : 'Treatment method'; ?></span>
             </a>
           </li>
+         <?php } ?><!-- End of Admin group check -->
         </ul>
       </li><!-- End Tables Nav -->
 
-      <li class="nav-heading">Pages</li>
+      <li class="nav-heading"><?php echo isset($translations['Users Management']) ? $translations['Users Management'] : 'Users Management'; ?></li>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
-      </li><!-- End Profile Page Nav -->
+      </li><!-- End Profile -->
 
+      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
@@ -358,6 +362,7 @@
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  <!-- End Users Nav -->
+    <?php } ?><!-- End of Admin group check -->
     </ul>
 
   </aside><!-- End Sidebar-->

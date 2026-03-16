@@ -115,7 +115,6 @@ $approver_position = $cert_info['position_approved'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phytosanitary Certificate - <?php echo htmlspecialchars($certificate_no); ?></title>
     <link rel="stylesheet" href="stylecss/certificate_style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @media print {
             .certificate-main {
@@ -129,7 +128,6 @@ $approver_position = $cert_info['position_approved'] ?? '';
 <body>
     <div class="print-button">
         <button class="btn-print" onclick="window.print()">🖨️ Print Certificate</button>
-        <button class="btn-save-pdf" onclick="saveAsPDF()">💾 Save As PDF</button>
     </div>
     
     <div class="certificate-container">
@@ -491,129 +489,5 @@ $approver_position = $cert_info['position_approved'] ?? '';
      </div><!-- End certificate-main -->
     </div><!-- End certificate-container -->
     
-    <script>
-    function saveAsPDF() {
-        // Hide the buttons before generating PDF
-        const buttonContainer = document.querySelector('.print-button');
-        buttonContainer.style.display = 'none';
-        
-        // Clone the certificate container for manipulation
-        const originalContainer = document.querySelector('.certificate-container');
-        const clonedContainer = originalContainer.cloneNode(true);
-        
-        // Create a temporary wrapper
-        const tempWrapper = document.createElement('div');
-        tempWrapper.style.position = 'fixed';
-        tempWrapper.style.left = '-9999px';
-        tempWrapper.style.top = '0';
-        tempWrapper.style.width = '210mm';
-        tempWrapper.style.background = 'white';
-        tempWrapper.style.padding = '2mm';
-        document.body.appendChild(tempWrapper);
-        
-        // Restructure layout for PDF
-        const qrBox = clonedContainer.querySelector('.qr-box');
-        const certMain = clonedContainer.querySelector('.certificate-main');
-        
-        if (qrBox && certMain) {
-            // Create a wrapper table for side-by-side layout
-            const layoutTable = document.createElement('div');
-            layoutTable.style.display = 'table';
-            layoutTable.style.width = '100%';
-            layoutTable.style.tableLayout = 'fixed';
-            
-            // QR cell
-            const qrCell = document.createElement('div');
-            qrCell.style.display = 'table-cell';
-            qrCell.style.width = '35mm';
-            qrCell.style.verticalAlign = 'top';
-            qrCell.style.padding = '0';
-            
-            // Content cell
-            const contentCell = document.createElement('div');
-            contentCell.style.display = 'table-cell';
-            contentCell.style.verticalAlign = 'top';
-            contentCell.style.padding = '0';
-            contentCell.style.paddingLeft = '2mm';
-            
-            // Style QR box
-            qrBox.style.position = 'static';
-            qrBox.style.float = 'none';
-            qrBox.style.width = '32mm';
-            qrBox.style.height = 'auto';
-            qrBox.style.margin = '0';
-            qrBox.style.padding = '1mm';
-            
-            // Style cert main
-            certMain.style.margin = '0';
-            certMain.style.padding = '0';
-            // Preserve background image for PDF
-            certMain.style.backgroundImage = "url('images/certificate_bg.png')";
-            certMain.style.backgroundSize = 'cover';
-            certMain.style.backgroundPosition = 'center 150px';
-            certMain.style.backgroundRepeat = 'no-repeat';
-            
-            // Move elements into cells
-            qrCell.appendChild(qrBox);
-            contentCell.appendChild(certMain);
-            
-            // Clear and rebuild container
-            clonedContainer.innerHTML = '';
-            layoutTable.appendChild(qrCell);
-            layoutTable.appendChild(contentCell);
-            clonedContainer.appendChild(layoutTable);
-        }
-        
-        tempWrapper.appendChild(clonedContainer);
-        
-        // Minimal styling to ensure clean PDF output
-        clonedContainer.style.boxShadow = 'none';
-        clonedContainer.style.maxWidth = '100%';
-        clonedContainer.style.background = 'white';
-        
-        // Wait for rendering
-        setTimeout(function() {
-            const certificateNo = '<?php echo htmlspecialchars($certificate_no); ?>';
-            const filename = 'Phytosanitary_Certificate_' + certificateNo.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
-            
-            const opt = {
-                margin: [2, 2, 2, 2],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { 
-                    scale: 2,
-                    useCORS: true, 
-                    letterRendering: true,
-                    logging: false,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    windowHeight: clonedContainer.scrollHeight,
-                    height: clonedContainer.scrollHeight
-                },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: 'a4', 
-                    orientation: 'portrait',
-                    compress: true
-                },
-                pagebreak: { mode: 'avoid-all' }
-            };
-            
-            html2pdf().set(opt).from(clonedContainer).save().then(function() {
-                // Clean up
-                document.body.removeChild(tempWrapper);
-                buttonContainer.style.display = 'flex';
-            }).catch(function(error) {
-                console.error('PDF generation error:', error);
-                // Clean up on error
-                if (document.body.contains(tempWrapper)) {
-                    document.body.removeChild(tempWrapper);
-                }
-                buttonContainer.style.display = 'flex';
-                alert('Error generating PDF. Please try the Print button instead.');
-            });
-        }, 500);
-    }
-    </script>
 </body>
 </html>

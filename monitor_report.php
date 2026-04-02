@@ -99,6 +99,51 @@ if (!empty($userid)) {
  }
  // Use group ID from user data
  $guid = $groupid;
+ $monitorMenu = isset($_GET['mn']) ? trim($_GET['mn']) : '';
+
+ // Certificate search by certificate_no and guid
+ $cert_show_modal = false;
+ $cert_found = false;
+ $cert_search_data = null;
+ $cert_search_exporter = null;
+ $cert_search_importer = null;
+ $cert_search_import_country = null;
+ $cert_search_origin_country = null;
+ $cert_search_product = null;
+ $cert_search_approver = null;
+
+ if (isset($_GET['certificate_no']) && trim($_GET['certificate_no']) !== '') {
+     $cert_show_modal = true;
+     $search_cert_no = trim($_GET['certificate_no']);
+
+     $cert_sql = "SELECT c.*, a.application_no, a.company_id, a.importerid,
+                  a.country_import, a.certificate_type, a.commodity_id,
+                  a.place_origin, a.conveyance_id, a.conveyance_sign,
+                  a.quantity_gross, a.unit_id, a.name_scientific, a.marks_item,
+                  a.import_point
+                  FROM tbcertificate c
+                  INNER JOIN tbapplication a ON c.application_id = a.id
+                  WHERE c.certificate_no = \$1";
+
+     $cert_result = pg_query_params($con, $cert_sql, [$search_cert_no]);
+
+     if ($cert_result && pg_num_rows($cert_result) > 0) {
+         $cert_found = true;
+         $cert_search_data = pg_fetch_assoc($cert_result);
+
+         $cert_search_exporter       = EntityExportInfo($cert_search_data['company_id'], $con);
+         $cert_search_importer       = EntityImportInfo($cert_search_data['importerid'], $con);
+         $cert_search_import_country = CountryInfo($cert_search_data['country_import'], $con);
+         $cert_search_origin_country = CountryInfo($cert_search_data['place_origin'], $con);
+         $cert_search_product        = ProductInfo($cert_search_data['commodity_id'], $con);
+         $cert_search_approver       = ApproverInfo($cert_search_data['approved_by'], $con);
+     }
+ }
+
+   $last_six_month_labels = [];
+   for ($i = 5; $i >= 0; $i--) {
+     $last_six_month_labels[] = date('M', strtotime("-{$i} months"));
+   }
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
@@ -151,12 +196,15 @@ if (!empty($userid)) {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
+    <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+-->
+    <!-- End Search Bar -->
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
@@ -209,7 +257,7 @@ if (!empty($userid)) {
               <hr class="dropdown-divider">
             </li>
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Account Settings</span>
               </a>
@@ -218,7 +266,7 @@ if (!empty($userid)) {
               <hr class="dropdown-divider">
             </li>
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="pages-faq.html">
+              <a class="dropdown-item d-flex align-items-center" href="#">
                 <i class="bi bi-question-circle"></i>
                 <span>Need Help?</span>
               </a>
@@ -241,38 +289,38 @@ if (!empty($userid)) {
   <aside id="sidebar" class="sidebar">
     <ul class="sidebar-nav" id="sidebar-nav">
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>"&lang=<?php echo $lang; ?>">
           <i class="bi bi-grid"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav --> 
     <li class="nav-item">
-        <a class="nav-link collapsed" href="transaction.php?part=application&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>"&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
         </a>
       </li><!-- End Application Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
         </a>
       </li><!-- End Inspection Nav --> 
        <li class="nav-item">
-        <a class="nav-link collapsed" href="transaction.php?part=certificate&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav --> 
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
           <span>Export entity</span>
         </a>
       </li><!-- End Export Entity Nav -->
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
           <span>Import entity</span>
         </a>
@@ -356,9 +404,14 @@ if (!empty($userid)) {
       <!-- Monitoring and Reporting -->
        <li class="nav-heading">Monitoring and Reporting</li>
         <li class="nav-item">
-        <a class="nav-link" href="monitor_report.php?part=dashboard_monitor&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+         
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span>Certificate tracking</span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
     
@@ -371,6 +424,7 @@ if (!empty($userid)) {
           <span>Profile</span>
         </a>
       </li><!-- End Profile Page Nav -->
+    <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
@@ -388,6 +442,7 @@ if (!empty($userid)) {
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  
+      <?php } // End of Admin group check ?>
       <!-- pk**: End of User Admin-->
     </ul>
   </aside><!-- End Sidebar-->
@@ -399,21 +454,23 @@ if (!empty($userid)) {
       <h1> Monitor and Report</h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="#">Home</a></li>
-          <li class="breadcrumb-item active">Monitor and Report</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Monitor and Report']) ? $translations['Monitor and Report'] : 'Monitor and Report'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
     
+    <?php if ($monitorMenu === 'certtrack') { ?>
     <!-- Certificate Search Form -->
     <section class="section">
       <div class="row">
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Search Certificate</h5>
+              <h5 class="card-title"><?php echo isset($translations['Search Certificate']) ? $translations['Search Certificate'] : 'Search Certificate'; ?></h5>
               <form class="row g-3" method="GET" action="">
                 <input type="hidden" name="part" value="dashboard_monitor">
+                <input type="hidden" name="mn" value="certtrack">
                 <input type="hidden" name="uid" value="<?php echo $userid; ?>">
                 <input type="hidden" name="lang" value="<?php echo $lang; ?>">
                 <div class="col-md-8">
@@ -432,7 +489,9 @@ if (!empty($userid)) {
         </div>
       </div>
     </section><!-- End Certificate Search Form -->
+    <?php } ?>
     
+    <?php if ($monitorMenu === 'datareport') { ?>
     <section class="section dashboard">
       <div class="row">
         
@@ -443,26 +502,121 @@ if (!empty($userid)) {
             <div class="col-12">
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
-                  <h5 class="card-title">Phytosanitary Certificates <span>| Today</span></h5>
-                  <table class="table datatable" style="font-size: 10pt;">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Province Summary <span>| Last 6 Months</span></h5>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" title="Print Table" onclick="printProvinceSummary()">
+                        <i class="bi bi-printer"></i>
+                      </button>
+                      <button type="button" class="btn btn-outline-success btn-sm" title="Export to Excel" onclick="exportProvinceSummaryToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <table id="provinceSummaryTable" class="table table-bordered" style="font-size: 10pt;">
                     <thead>
                       <tr>
-                        <th scope="col">Application No</th>
-                        <th scope="col">Exporters</th>
-                        <th scope="col">Submission date</th>
-                        <th scope="col">Application</th>
-                        <th scope="col">Inspection</th>
-                        <th scope="col">Certificate</th>
-                        <th scope="col">Certificate status</th>
+                        <th scope="col">No</th>
+                        <th scope="col">Provinces</th>
+                        <th scope="col"># of Export entities</th>
+                        <th scope="col"># of Import entities</th>
+                        <th scope="col">Values ($)</th>
                       </tr>
                     </thead>
                     <tbody>
-                     <?php ApplicationList($guid, $con, $userid); ?>
+                     <?php ProvinceEntitySummaryLastSixMonths($con); ?>
                     </tbody>
                   </table>
                 </div>
               </div>
             </div><!-- End Recent Sales -->
+
+            <!-- Province Monthly Matrix -->
+            <div class="col-12 mt-3">
+              <div class="card recent-sales overflow-auto">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Province Monthly Values Matrix <span>| Last 6 Months</span></h5>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" title="Print Table" onclick="printProvinceMonthlyMatrix()">
+                        <i class="bi bi-printer"></i>
+                      </button>
+                      <button type="button" class="btn btn-outline-success btn-sm" title="Export to Excel" onclick="exportProvinceMonthlyMatrixToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Province Filter Box -->
+                  <div class="row mt-3 mb-3">
+                    <div class="col-md-6">
+                      <small class="text-muted d-block mt-4">Showing <span id="provinceMonthlyRowCount">0</span> rows</small>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="provinceFilter" class="form-label">Filter by Province</label>
+                      <div class="input-group">
+                        <select class="form-control" id="provinceFilter" onchange="filterProvinceMonthlyTable()">
+                          <option value="">-- All Provinces --</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearProvinceMonthlyFilter()" title="Clear filter">
+                          <i class="bi bi-x"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- End Province Filter Box -->
+                  
+                  <table id="provinceMonthlyMatrixTable" class="table table-bordered" style="font-size: 10pt;">
+                    <thead>
+                      <tr>
+                        <th scope="col">No</th>
+                        <th scope="col">Province</th>
+                        <?php foreach ($last_six_month_labels as $month_label): ?>
+                          <th scope="col"><?php echo htmlspecialchars($month_label); ?></th>
+                        <?php endforeach; ?>
+                        <th scope="col">Values ($)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php ProvinceMonthlyValueMatrixLastSixMonths($con); ?>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div><!-- End Province Monthly Matrix -->
+
+            <div class="col-12 mt-3">
+              <div class="card recent-sales overflow-auto">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Product Monthly Values Matrix <span>| Last 6 Months</span></h5>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" title="Print Table" onclick="printProductMonthlyMatrix()">
+                        <i class="bi bi-printer"></i>
+                      </button>
+                      <button type="button" class="btn btn-outline-success btn-sm" title="Export to Excel" onclick="exportProductMonthlyMatrixToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <table id="productMonthlyMatrixTable" class="table table-bordered mt-3" style="font-size: 10pt;">
+                    <thead>
+                      <tr>
+                        <th scope="col">No</th>
+                        <th scope="col">Product</th>
+                        <?php foreach ($last_six_month_labels as $month_label): ?>
+                          <th scope="col"><?php echo htmlspecialchars($month_label); ?></th>
+                        <?php endforeach; ?>
+                        <th scope="col">Values ($)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php ProductMonthlyValueMatrixLastSixMonths($con); ?>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div><!-- End Product Monthly Matrix -->
           </div>
         </div><!-- End Left side columns -->
         
@@ -472,27 +626,67 @@ if (!empty($userid)) {
           <!-- Chart 1: Application Status Chart -->
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Application Status <span>| This Month</span></h5>
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Province Values <span>| Last 6 Months</span></h5>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" title="Expand chart" onclick="expandChart('donutChart', 'Province Values - Last 6 Months')">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-success btn-sm" title="Download chart image" onclick="downloadChartImage('donutChart', 'province_values_last_6_months')">
+                    <i class="bi bi-download"></i>
+                  </button>
+                </div>
+              </div>
               <!-- Donut Chart -->
               <div id="donutChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                  const tableRows = document.querySelectorAll('#provinceSummaryTable tbody tr');
+                  const pieData = [];
+
+                  tableRows.forEach((row) => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 5) {
+                      return;
+                    }
+
+                    // Skip total row and any malformed rows.
+                    if (cells[0].colSpan > 1 || cells[0].textContent.trim().toLowerCase() === 'total') {
+                      return;
+                    }
+
+                    const province = cells[1].textContent.trim();
+                    const rawValue = cells[4].textContent.trim();
+                    const value = parseFloat(rawValue.replace(/[^0-9.-]/g, '')) || 0;
+
+                    if (province !== '') {
+                      pieData.push({ value: value, name: province });
+                    }
+                  });
+
+                  if (pieData.length === 0) {
+                    pieData.push({ value: 1, name: 'No Data' });
+                  }
+
                   echarts.init(document.querySelector("#donutChart")).setOption({
                     tooltip: {
                       trigger: 'item'
                     },
                     legend: {
-                      top: '5%',
+                      top: '2%',
                       left: 'center'
                     },
                     series: [{
-                      name: 'Applications',
+                      name: 'Consignment Value',
                       type: 'pie',
-                      radius: ['40%', '70%'],
+                      radius: ['35%', '62%'],
+                      center: ['50%', '68%'],
                       avoidLabelOverlap: false,
                       label: {
-                        show: false,
-                        position: 'center'
+                        show: true,
+                        position: 'inside',
+                        formatter: '{c}',
+                        fontSize: 10
                       },
                       emphasis: {
                         label: {
@@ -504,13 +698,7 @@ if (!empty($userid)) {
                       labelLine: {
                         show: false
                       },
-                      data: [
-                        { value: 1048, name: 'Submitted' },
-                        { value: 735, name: 'Under Review' },
-                        { value: 580, name: 'Approved' },
-                        { value: 484, name: 'Rejected' },
-                        { value: 300, name: 'Pending' }
-                      ]
+                      data: pieData
                     }]
                   });
                 });
@@ -522,51 +710,92 @@ if (!empty($userid)) {
           <!-- Chart 2: Monthly Applications Trend -->
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Monthly Trends <span>| Last 6 Months</span></h5>
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Monthly Trends <span>| Last 6 Months</span></h5>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" title="Expand chart" onclick="expandChart('reportsChart', 'Monthly Trends - Last 6 Months')">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-success btn-sm" title="Download chart image" onclick="downloadChartImage('reportsChart', 'monthly_trends_last_6_months')">
+                    <i class="bi bi-download"></i>
+                  </button>
+                </div>
+              </div>
               <!-- Line Chart -->
               <div id="reportsChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                  const matrixTable = document.getElementById('provinceMonthlyMatrixTable');
+                  const monthLabels = [];
+                  const seriesData = [];
+
+                  if (matrixTable) {
+                    const headerCells = matrixTable.querySelectorAll('thead th');
+                    // Columns: No, Province, [6 month columns], Values ($)
+                    for (let i = 2; i < headerCells.length - 1; i++) {
+                      monthLabels.push(headerCells[i].textContent.trim());
+                    }
+
+                    const bodyRows = matrixTable.querySelectorAll('tbody tr');
+                    bodyRows.forEach((row) => {
+                      const cells = row.querySelectorAll('td');
+                      if (cells.length < 9) {
+                        return;
+                      }
+
+                      const provinceName = cells[1].textContent.trim();
+                      const values = [];
+                      for (let i = 2; i < cells.length - 1; i++) {
+                        const numericValue = parseFloat(cells[i].textContent.trim().replace(/[^0-9.-]/g, '')) || 0;
+                        values.push(numericValue);
+                      }
+
+                      seriesData.push({
+                        name: provinceName,
+                        type: 'line',
+                        data: values,
+                        smooth: true
+                      });
+                    });
+                  }
+
+                  if (monthLabels.length === 0) {
+                    monthLabels.push('No Data');
+                  }
+
+                  if (seriesData.length === 0) {
+                    seriesData.push({
+                      name: 'No Data',
+                      type: 'line',
+                      data: [0],
+                      smooth: true
+                    });
+                  }
+
                   echarts.init(document.querySelector("#reportsChart")).setOption({
                     tooltip: {
-                      trigger: 'item'
+                      trigger: 'axis'
                     },
                     legend: {
-                      data: ['Applications', 'Certificates', 'Inspections']
+                      top: '2%',
+                      data: seriesData.map((s) => s.name)
                     },
-                    toolbox: {
-                      show: true,
-                      feature: {
-                        dataView: { show: true, readOnly: false },
-                        magicType: { show: true, type: ['line', 'bar'] },
-                        restore: { show: true },
-                        saveAsImage: { show: true }
-                      }
+                    grid: {
+                      left: '8%',
+                      right: '5%',
+                      top: '22%',
+                      bottom: '10%',
+                      containLabel: true
                     },
                     xAxis: {
                       type: 'category',
                       boundaryGap: false,
-                      data: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+                      data: monthLabels
                     },
                     yAxis: {
                       type: 'value'
                     },
-                    series: [{
-                      name: 'Applications',
-                      type: 'line',
-                      data: [120, 132, 101, 134, 90, 230],
-                      smooth: true
-                    }, {
-                      name: 'Certificates',
-                      type: 'line',
-                      data: [220, 182, 191, 234, 290, 330],
-                      smooth: true
-                    }, {
-                      name: 'Inspections',
-                      type: 'line',
-                      data: [150, 232, 201, 154, 190, 330],
-                      smooth: true
-                    }]
+                    series: seriesData
                   });
                 });
               </script>
@@ -577,11 +806,57 @@ if (!empty($userid)) {
           <!-- Chart 3: Export Entities Performance -->
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Export Entities <span>| Performance</span></h5>
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Top 3 Products <span>| Consignment Value (Last 6 Months)</span></h5>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" title="Expand chart" onclick="expandChart('columnChart', 'Top 3 Products - Last 6 Months')">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-success btn-sm" title="Download chart image" onclick="downloadChartImage('columnChart', 'top_3_products_last_6_months')">
+                    <i class="bi bi-download"></i>
+                  </button>
+                </div>
+              </div>
               <!-- Column Chart -->
               <div id="columnChart" style="min-height: 250px;" class="echart"></div>
               <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                  const table = document.getElementById('productMonthlyMatrixTable');
+                  const dataRows = [];
+
+                  if (table) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach((row) => {
+                      const cells = row.querySelectorAll('td');
+                      if (cells.length < 3) {
+                        return;
+                      }
+
+                      const firstCellText = cells[0].innerText.trim().toLowerCase();
+                      const hasSummaryColspan = cells[0].colSpan && cells[0].colSpan > 1;
+                      if (hasSummaryColspan || firstCellText === 'total') {
+                        return;
+                      }
+
+                      const productName = cells[1].innerText.trim();
+                      if (!productName) {
+                        return;
+                      }
+
+                      const totalText = cells[cells.length - 1].innerText.replace(/,/g, '').trim();
+                      const totalValue = parseFloat(totalText);
+                      dataRows.push({
+                        name: productName,
+                        value: Number.isNaN(totalValue) ? 0 : totalValue
+                      });
+                    });
+                  }
+
+                  dataRows.sort((a, b) => b.value - a.value);
+                  const topProducts = dataRows.slice(0, 3);
+                  const xCategories = topProducts.map(item => item.name);
+                  const yValues = topProducts.map(item => item.value);
+
                   echarts.init(document.querySelector("#columnChart")).setOption({
                     tooltip: {
                       trigger: 'axis',
@@ -589,34 +864,43 @@ if (!empty($userid)) {
                         type: 'shadow'
                       }
                     },
-                    legend: {},
+                    legend: {
+                      top: '2%'
+                    },
                     grid: {
                       left: '3%',
                       right: '4%',
-                      bottom: '3%',
+                      bottom: '10%',
                       containLabel: true
                     },
                     xAxis: [{
                       type: 'category',
-                      data: ['Entity A', 'Entity B', 'Entity C', 'Entity D', 'Entity E', 'Entity F']
+                      data: xCategories,
+                      axisLabel: {
+                        interval: 0,
+                        rotate: 20
+                      }
                     }],
                     yAxis: [{
                       type: 'value'
                     }],
                     series: [{
-                      name: 'Applications',
+                      name: 'Consignment Value',
                       type: 'bar',
+                      label: {
+                        show: true,
+                        position: 'top',
+                        formatter: function (params) {
+                          return Number(params.value).toLocaleString();
+                        }
+                      },
                       emphasis: {
                         focus: 'series'
                       },
-                      data: [320, 302, 301, 334, 390, 330]
-                    }, {
-                      name: 'Certificates',
-                      type: 'bar',
-                      emphasis: {
-                        focus: 'series'
-                      },
-                      data: [120, 132, 101, 134, 90, 230]
+                      data: yValues,
+                      itemStyle: {
+                        color: '#2E7D32'
+                      }
                     }]
                   });
                 });
@@ -629,6 +913,7 @@ if (!empty($userid)) {
         
       </div>
     </section>
+    <?php } ?>
    <?php
    // }  // End of dashboard Monitor and report
    ?>
@@ -879,6 +1164,370 @@ if (!empty($userid)) {
   
   <!-- Custom JavaScript for Pest Selection -->
   <script>
+    function printProvinceSummary() {
+      const table = document.getElementById('provinceSummaryTable');
+      if (!table) {
+        return;
+      }
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        return;
+      }
+
+      const printableHtml = `
+        <html>
+          <head>
+            <title>Province Summary - Last 6 Months</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h3 { margin-bottom: 12px; }
+              table { width: 100%; border-collapse: collapse; font-size: 12px; }
+              th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+              th { background: #f2f2f2; }
+            </style>
+          </head>
+          <body>
+            <h3>Province Summary | Last 6 Months</h3>
+            ${table.outerHTML}
+          </body>
+        </html>`;
+
+      printWindow.document.open();
+      printWindow.document.write(printableHtml);
+      printWindow.document.close();
+
+      // Wait for the new document to fully render before triggering print.
+      printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+      };
+
+      // Close only after print dialog completes.
+      printWindow.onafterprint = function() {
+        printWindow.close();
+      };
+    }
+
+    function exportProvinceSummaryToExcel() {
+      const table = document.getElementById('provinceSummaryTable');
+      if (!table) {
+        return;
+      }
+
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              table { border-collapse: collapse; }
+              th, td { border: 1px solid #000; padding: 6px; }
+            </style>
+          </head>
+          <body>
+            <table>${table.innerHTML}</table>
+          </body>
+        </html>`;
+
+      const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'province_summary_last_6_months.xls';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function printProvinceMonthlyMatrix() {
+      const table = document.getElementById('provinceMonthlyMatrixTable');
+      if (!table) {
+        return;
+      }
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        return;
+      }
+
+      const printableHtml = `
+        <html>
+          <head>
+            <title>Province Monthly Values Matrix - Last 6 Months</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h3 { margin-bottom: 12px; }
+              table { width: 100%; border-collapse: collapse; font-size: 12px; }
+              th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+              th { background: #f2f2f2; }
+            </style>
+          </head>
+          <body>
+            <h3>Province Monthly Values Matrix | Last 6 Months</h3>
+            ${table.outerHTML}
+          </body>
+        </html>`;
+
+      printWindow.document.open();
+      printWindow.document.write(printableHtml);
+      printWindow.document.close();
+
+      printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+      };
+
+      printWindow.onafterprint = function() {
+        printWindow.close();
+      };
+    }
+
+    function exportProvinceMonthlyMatrixToExcel() {
+      const table = document.getElementById('provinceMonthlyMatrixTable');
+      if (!table) {
+        return;
+      }
+
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              table { border-collapse: collapse; }
+              th, td { border: 1px solid #000; padding: 6px; }
+            </style>
+          </head>
+          <body>
+            <table>${table.innerHTML}</table>
+          </body>
+        </html>`;
+
+      const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'province_monthly_values_matrix_last_6_months.xls';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Province Monthly Table Filter Functions
+    function populateProvinceFilter() {
+      const table = document.getElementById('provinceMonthlyMatrixTable');
+      const select = document.getElementById('provinceFilter');
+      if (!table || !select) return;
+
+      const rows = table.querySelectorAll('tbody tr');
+      const provinces = new Set();
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const noCell = cells[0]; // First column (No)
+        const provinceCell = cells[1]; // Province is in 2nd column
+        
+        if (noCell && provinceCell) {
+          const noText = noCell.textContent.trim().toLowerCase();
+          const provinceName = provinceCell.textContent.trim();
+          
+          // Skip total rows (where No column contains "total") and empty entries
+          if (provinceName && noText !== 'total') {
+            provinces.add(provinceName);
+          }
+        }
+      });
+
+      // Sort provinces alphabetically
+      const sortedProvinces = Array.from(provinces).sort();
+
+      // Clear existing options (keep the first "All Provinces" option)
+      while (select.options.length > 1) {
+        select.remove(1);
+      }
+
+      // Add province options
+      sortedProvinces.forEach(province => {
+        const option = document.createElement('option');
+        option.value = province;
+        option.textContent = province;
+        select.appendChild(option);
+      });
+    }
+
+    function filterProvinceMonthlyTable() {
+      const filterValue = document.getElementById('provinceFilter').value.trim();
+      const table = document.getElementById('provinceMonthlyMatrixTable');
+      const rows = table.querySelectorAll('tbody tr');
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const provinceCell = row.querySelectorAll('td')[1]; // Province is in 2nd column
+        const provinceName = provinceCell ? provinceCell.textContent.trim() : '';
+        
+        if (filterValue === '' || provinceName === filterValue) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Update row count
+      document.getElementById('provinceMonthlyRowCount').textContent = visibleCount;
+    }
+
+    function clearProvinceMonthlyFilter() {
+      document.getElementById('provinceFilter').value = '';
+      const table = document.getElementById('provinceMonthlyMatrixTable');
+      const rows = table.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        row.style.display = '';
+      });
+
+      document.getElementById('provinceMonthlyRowCount').textContent = rows.length;
+    }
+
+    function printProductMonthlyMatrix() {
+      const table = document.getElementById('productMonthlyMatrixTable');
+      if (!table) {
+        return;
+      }
+
+      const printWindow = window.open('', '_blank', 'width=900,height=600');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Product Monthly Values Matrix - Last 6 Months</title>
+            <style>
+              body { font-family: Arial, sans-serif; font-size: 10pt; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+              th { background-color: #f0f0f0; }
+            </style>
+          </head>
+          <body>
+            <h3>Product Monthly Values Matrix | Last 6 Months</h3>
+            <table>${table.innerHTML}</table>
+          </body>
+        </html>`);
+      printWindow.document.close();
+      printWindow.onload = function() {
+        printWindow.print();
+      };
+      printWindow.onafterprint = function() {
+        printWindow.close();
+      };
+    }
+
+    function exportProductMonthlyMatrixToExcel() {
+      const table = document.getElementById('productMonthlyMatrixTable');
+      if (!table) {
+        return;
+      }
+
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              table { border-collapse: collapse; }
+              th, td { border: 1px solid #000; padding: 6px; }
+            </style>
+          </head>
+          <body>
+            <table>${table.innerHTML}</table>
+          </body>
+        </html>`;
+
+      const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'product_monthly_values_matrix_last_6_months.xls';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function expandChart(chartId, chartTitle) {
+      const chartElement = document.getElementById(chartId);
+      if (!chartElement) {
+        return;
+      }
+
+      const chartInstance = echarts.getInstanceByDom(chartElement);
+      if (!chartInstance) {
+        return;
+      }
+
+      const imageDataUrl = chartInstance.getDataURL({
+        type: 'png',
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
+      });
+
+      const popup = window.open('', '_blank', 'width=1200,height=800');
+      if (!popup) {
+        return;
+      }
+
+      popup.document.write(`
+        <html>
+          <head>
+            <title>${chartTitle}</title>
+            <style>
+              body { margin: 0; padding: 16px; font-family: Arial, sans-serif; background: #f5f5f5; }
+              h3 { margin: 0 0 12px 0; }
+              .chart-wrap { background: #fff; border: 1px solid #ddd; padding: 12px; }
+              img { width: 100%; height: auto; display: block; }
+            </style>
+          </head>
+          <body>
+            <h3>${chartTitle}</h3>
+            <div class="chart-wrap">
+              <img src="${imageDataUrl}" alt="${chartTitle}">
+            </div>
+          </body>
+        </html>
+      `);
+      popup.document.close();
+    }
+
+    function downloadChartImage(chartId, fileName) {
+      const chartElement = document.getElementById(chartId);
+      if (!chartElement) {
+        return;
+      }
+
+      const chartInstance = echarts.getInstanceByDom(chartElement);
+      if (!chartInstance) {
+        return;
+      }
+
+      const imageDataUrl = chartInstance.getDataURL({
+        type: 'png',
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
+      });
+
+      const link = document.createElement('a');
+      link.href = imageDataUrl;
+      link.download = `${fileName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     // Very simple pest selection function
     function selectPest(pestid, pestName, commonName, scientificName, pestType) {
       console.log('selectPest called with:', pestid, pestName, commonName, scientificName, pestType);
@@ -990,6 +1639,168 @@ if (!empty($userid)) {
       }
     });
   </script>
+
+<!-- Certificate Search Result Modal -->
+<div class="modal fade" id="certSearchModal" tabindex="-1" aria-labelledby="certSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); color: white;">
+        <h5 class="modal-title" id="certSearchModalLabel">
+          <i class="bi bi-shield-check me-2"></i>Certificate Search Result
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <?php if ($cert_show_modal): ?>
+          <?php if ($cert_found && $cert_search_data): ?>
+
+            <div class="text-center mb-3">
+              <span class="badge bg-success fs-6 px-4 py-2">
+                <i class="bi bi-check-circle-fill me-2"></i>Certificate Found
+              </span>
+            </div>
+
+            <!-- Certificate Details -->
+            <h6 class="text-success fw-bold border-bottom border-2 pb-2 mb-3">
+              <i class="bi bi-file-earmark-text me-2"></i>Certificate Details
+            </h6>
+            <div class="row mb-2">
+              <div class="col-md-6">
+                <div class="py-2 border-bottom">
+                  <div class="fw-semibold text-muted small">Certificate Number:</div>
+                  <div class="fw-bold"><?php echo htmlspecialchars($cert_search_data['certificate_no']); ?></div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="py-2 border-bottom">
+                  <div class="fw-semibold text-muted small">Application Number:</div>
+                  <div><?php echo htmlspecialchars($cert_search_data['application_no']); ?></div>
+                </div>
+              </div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-md-6">
+                <div class="py-2 border-bottom">
+                  <div class="fw-semibold text-muted small">Date Issued:</div>
+                  <div><?php echo !empty($cert_search_data['date_issued']) ? date('d-M-Y', strtotime($cert_search_data['date_issued'])) : 'N/A'; ?></div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="py-2 border-bottom">
+                  <div class="fw-semibold text-muted small">Place Issued:</div>
+                  <div><?php echo htmlspecialchars($cert_search_data['place_issued'] ?? 'N/A'); ?></div>
+                </div>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="py-2 border-bottom">
+                  <div class="fw-semibold text-muted small">Certificate Type:</div>
+                  <div><span class="badge bg-success"><?php echo strtoupper(htmlspecialchars($cert_search_data['certificate_type'] ?? '')); ?></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exporter Information -->
+            <h6 class="text-success fw-bold border-bottom border-2 pb-2 mb-3">
+              <i class="bi bi-building me-2"></i>Exporter Information
+            </h6>
+            <div class="py-2 border-bottom mb-2">
+              <div class="fw-semibold text-muted small">Exporter Name:</div>
+              <div><?php echo htmlspecialchars($cert_search_exporter['title'] ?? 'N/A'); ?></div>
+            </div>
+            <div class="py-2 border-bottom mb-3">
+              <div class="fw-semibold text-muted small">Address:</div>
+              <div><?php echo htmlspecialchars($cert_search_exporter['address'] ?? 'N/A'); ?></div>
+            </div>
+
+            <!-- Importer Information -->
+            <h6 class="text-success fw-bold border-bottom border-2 pb-2 mb-3">
+              <i class="bi bi-globe me-2"></i>Importer Information
+            </h6>
+            <div class="py-2 border-bottom mb-2">
+              <div class="fw-semibold text-muted small">Importer Name:</div>
+              <div><?php echo htmlspecialchars($cert_search_importer['title'] ?? 'N/A'); ?></div>
+            </div>
+            <div class="py-2 border-bottom mb-3">
+              <div class="fw-semibold text-muted small">Destination Country:</div>
+              <div><i class="bi bi-geo-alt-fill text-danger me-1"></i><?php echo htmlspecialchars($cert_search_import_country['title'] ?? 'N/A'); ?></div>
+            </div>
+
+            <!-- Product Information -->
+            <h6 class="text-success fw-bold border-bottom border-2 pb-2 mb-3">
+              <i class="bi bi-box-seam me-2"></i>Product Information
+            </h6>
+            <div class="py-2 border-bottom mb-2">
+              <div class="fw-semibold text-muted small">Product / Commodity:</div>
+              <div><?php echo htmlspecialchars($cert_search_product['name'] ?? 'N/A'); ?></div>
+            </div>
+            <div class="py-2 border-bottom mb-3">
+              <div class="fw-semibold text-muted small">Place of Origin:</div>
+              <div><?php echo htmlspecialchars($cert_search_origin_country['title'] ?? 'N/A'); ?></div>
+            </div>
+
+            <!-- Authorized Officer -->
+            <h6 class="text-success fw-bold border-bottom border-2 pb-2 mb-3">
+              <i class="bi bi-person-badge me-2"></i>Authorized By
+            </h6>
+            <div class="py-2 border-bottom mb-2">
+              <div class="fw-semibold text-muted small">Authorized Officer:</div>
+              <div>
+                <?php
+                  $cs_officer = trim(($cert_search_approver['name'] ?? '') . ' ' . ($cert_search_approver['surname'] ?? ''));
+                  echo htmlspecialchars(strtoupper($cs_officer)) ?: 'N/A';
+                ?>
+              </div>
+            </div>
+            <div class="py-2 border-bottom mb-3">
+              <div class="fw-semibold text-muted small">Position:</div>
+              <div><?php echo htmlspecialchars($cert_search_data['position_approved'] ?? 'N/A'); ?></div>
+            </div>
+
+          <?php else: ?>
+
+            <!-- Certificate not found -->
+            <div class="text-center py-5">
+              <i class="bi bi-x-circle-fill text-danger" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-danger">The certificate is not found</h5>
+              <p class="text-muted">No certificate matching "<strong><?php echo htmlspecialchars($_GET['certificate_no'] ?? ''); ?></strong>" was found in the system.</p>
+            </div>
+
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
+      <div class="modal-footer">
+        <a href="monitor_report.php?part=dashboard_monitor&uid=<?php echo urlencode($userid); ?>&lang=<?php echo urlencode($lang); ?>" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back to Monitor Report
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<?php if ($cert_show_modal): ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var certModal = new bootstrap.Modal(document.getElementById('certSearchModal'));
+    certModal.show();
+  });
+</script>
+<?php endif; ?>
+
+<!-- Initialize Province Monthly Table Row Count and Populate Filter -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('provinceMonthlyMatrixTable');
+    if (table) {
+      const rows = table.querySelectorAll('tbody tr');
+      document.getElementById('provinceMonthlyRowCount').textContent = rows.length;
+      // Populate the province filter dropdown
+      populateProvinceFilter();
+    }
+  });
+</script>
 
 </body>
 </html>

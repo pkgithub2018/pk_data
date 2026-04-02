@@ -41,6 +41,8 @@ $uname = isset($userinfo['email']) ? $userinfo['email'] : ''; // Use email as lo
 $usname = isset($userinfo['surname']) ? $userinfo['surname'] : ''; // Surname
 $ufullname = $loginuser."  ".$usname;  // Full name
 $position = isset($userinfo['position']) ? $userinfo['position'] : '';
+$groupid = isset($userinfo['group_id']) && !empty($userinfo['group_id']) ? $userinfo['group_id'] : '0';
+$groupname = $groupid !== '0' ? GroupName($groupid, $con) : '';
 
  // Get and store user profile image
 $uprofile = Profiledata($userid, $con);
@@ -55,7 +57,7 @@ $uprofile = Profiledata($userid, $con);
   }
 
 // User group ID - get from user data instead of session
-$guid = isset($userinfo['group_id']) && is_numeric($userinfo['group_id']) ? $userinfo['group_id'] : '0';
+$guid = $groupid;
 
 // Build main link preserving uid and lang
 $mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => isset($lang) ? $lang : 'en'];
@@ -237,39 +239,40 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
+       <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
-            <a href="masterdata.php?part=conveyance">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries">
-              <i class="bi bi-circle"></i><span>Countries</span>
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Countries']) ? $translations['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
-            <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Districts</span>
+            <a href="#">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Entity_type']) ? $translations['Entity_type'] : 'Entity_type'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Inspection Method']) ? $translations['Inspection Method'] : 'Inspection Method'; ?></span>
             </a>
           </li>
           <li>
             <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Locations']) ? $translations['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
             <li>
             <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
-              <i class="bi bi-circle"></i><span>Product</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Product']) ? $translations['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
@@ -284,24 +287,29 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           </li>
 
           <li>
-            <a href="masterdata.php?part=provinces">
-              <i class="bi bi-circle"></i><span>Provinces</span>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
+        <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->    
       
        <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
 
@@ -313,7 +321,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-
+   <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
@@ -334,6 +342,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
+      <?php } // End of Admin group check ?>
       <!-- pk**: End of User Admin-->
     </ul>
 

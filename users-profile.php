@@ -224,13 +224,15 @@ if (!is_numeric($userid)) {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
-
+   <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+-->
+    <!-- End Search Bar -->
 
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
@@ -418,9 +420,13 @@ if (!is_numeric($userid)) {
        <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
 
@@ -464,7 +470,7 @@ if (!is_numeric($userid)) {
       <h1><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">Home</a></li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
           <li class="breadcrumb-item"><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></li>
           <li class="breadcrumb-item active"><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></li>
         </ol>
@@ -482,10 +488,12 @@ if (!is_numeric($userid)) {
               <h2><?php echo $ufullname; ?></h2>
               <h3><?php echo $position; ?></h3>
               <div class="social-links mt-2">
-                <a href="#" class="twitter"><i class="bi bi-twitter"></i></a>
+                <a href="#" class="twitter"><i class="bi bi-whatsapp"></i></a>
                 <a href="#" class="facebook"><i class="bi bi-facebook"></i></a>
+               <!--
                 <a href="#" class="instagram"><i class="bi bi-instagram"></i></a>
                 <a href="#" class="linkedin"><i class="bi bi-linkedin"></i></a>
+               -->
               </div>
             </div>
           </div>
@@ -519,43 +527,43 @@ if (!is_numeric($userid)) {
               <div class="tab-content pt-2">
 
                 <div class="tab-pane fade show active profile-overview" id="profile-overview">
-                  <h5 class="card-title">About</h5>
+                  <h5 class="card-title"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></h5>
                   <p class="small fst-italic"><?php echo $pdescription; ?></p>
 
-                  <h5 class="card-title">Profile Details</h5>
+                  <h5 class="card-title"><?php echo isset($translations['Profile Details']) ? $translations['Profile Details'] : 'Profile Details'; ?></h5>
 
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label ">Full Name</div>
+                    <div class="col-lg-3 col-md-4 label "><?php echo isset($translations['Full Name']) ? $translations['Full Name'] : 'Full Name'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $ufullname; ?></div>
                   </div>
 
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Work Unit</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Work Unit']) ? $translations['Work Unit'] : 'Work Unit'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $unit; ?></div>
                   </div>
 
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Position</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $position; ?></div>
                   </div>
 
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Country</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Country']) ? $translations['Country'] : 'Country'; ?></div>
                     <div class="col-lg-9 col-md-8">Lao PDR</div>
                   </div>
-
+                <!--
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Address</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $paddress; ?></div>
                   </div>
-
+                -->
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Phone</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $phone; ?></div>
                   </div>
 
                   <div class="row">
-                    <div class="col-lg-3 col-md-4 label">Email</div>
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $email; ?></div>
                   </div>
 
@@ -568,7 +576,7 @@ if (!is_numeric($userid)) {
                     <input type="hidden" name="huid" value="<?php echo $userid; ?>">
                     <input type="hidden" name="hlang" value="<?php echo htmlspecialchars($lang); ?>">
                     <div class="row mb-3">
-                      <label for="profileImage" class="col-md-4 col-lg-3 col-form-label">Profile Image</label>
+                      <label for="profileImage" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Profile Image']) ? $translations['Profile Image'] : 'Profile Image'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <img src="<?php echo $pimagfilepath; ?>" alt="Profile">
                         <div class="pt-2">
@@ -583,7 +591,7 @@ if (!is_numeric($userid)) {
                     </div>
 
                     <div class="row mb-3">
-                      <label for="fullName" class="col-md-4 col-lg-3 col-form-label">Full Name</label>
+                      <label for="fullName" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Full Name']) ? $translations['Full Name'] : 'Full Name'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="fullName" type="text" class="form-control" id="fullName" value="<?php echo $ufullname; ?>">
                         <input name="userid_profile" type="hidden" value="<?php echo $userid; ?>">
@@ -591,84 +599,84 @@ if (!is_numeric($userid)) {
                     </div>
 
                     <div class="row mb-3">
-                      <label for="about" class="col-md-4 col-lg-3 col-form-label">About</label>
+                      <label for="about" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <textarea name="about" class="form-control" id="about" style="height: 100px"><?php echo $pdescription; ?></textarea>
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="company" class="col-md-4 col-lg-3 col-form-label">Work Unit</label>
+                      <label for="company" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Work Unit']) ? $translations['Work Unit'] : 'Work Unit'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="workunit" type="text" class="form-control" id="workunit" value="<?php echo $unit; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Job" class="col-md-4 col-lg-3 col-form-label">Position</label>
+                      <label for="Job" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="position" type="text" class="form-control" id="position" value="<?php echo $position; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Country" class="col-md-4 col-lg-3 col-form-label">Country</label>
+                      <label for="Country" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Country']) ? $translations['Country'] : 'Country'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="country" type="text" class="form-control" id="Country" value="Lao PDR">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Address" class="col-md-4 col-lg-3 col-form-label">Address</label>
+                      <label for="Address" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="address" type="text" class="form-control" id="address" value="<?php echo $paddress; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Phone" class="col-md-4 col-lg-3 col-form-label">Phone</label>
+                      <label for="Phone" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="phone" type="text" class="form-control" id="phone" value="<?php echo $phone; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Email" class="col-md-4 col-lg-3 col-form-label">Email</label>
+                      <label for="Email" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="email" type="email" class="form-control" id="email" value="<?php echo $email; ?>">
                       </div>
                     </div>
                   <!--
                     <div class="row mb-3">
-                      <label for="Twitter" class="col-md-4 col-lg-3 col-form-label">Twitter Profile</label>
+                      <label for="Twitter" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Twitter Profile']) ? $translations['Twitter Profile'] : 'Twitter Profile'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="twitter" type="text" class="form-control" id="twitter" value="<?php echo $ptwitter; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Facebook" class="col-md-4 col-lg-3 col-form-label">Facebook Profile</label>
+                      <label for="Facebook" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Facebook Profile']) ? $translations['Facebook Profile'] : 'Facebook Profile'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="facebook" type="text" class="form-control" id="facebook" value="<?php echo $pfacebook; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Instagram" class="col-md-4 col-lg-3 col-form-label">Instagram Profile</label>
+                      <label for="Instagram" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Instagram Profile']) ? $translations['Instagram Profile'] : 'Instagram Profile'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="instagram" type="text" class="form-control" id="instagram" value="<?php echo $pinstagram; ?>">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="Linkedin" class="col-md-4 col-lg-3 col-form-label">Linkedin Profile</label>
+                      <label for="Linkedin" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Linkedin Profile']) ? $translations['Linkedin Profile'] : 'Linkedin Profile'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="linkedin" type="text" class="form-control" id="linkedin" value="<?php echo $plinkedin; ?>">
                       </div>
                     </div>
                 -->
                     <div class="text-center">
-                      <button type="submit" class="btn btn-primary" name="submitEditProfile">Save Changes</button>
+                      <button type="submit" class="btn btn-primary" name="submitEditProfile"><?php echo isset($translations['Save Changes']) ? $translations['Save Changes'] : 'Save Changes'; ?></button>
                     </div>
                   </form><!-- End Profile Edit Form -->
 
@@ -724,7 +732,7 @@ if (!is_numeric($userid)) {
                   <form method="POST" action="users-profile.php?uid=<?php echo $userid; ?>">
 
                     <div class="row mb-3">
-                      <label for="currentPassword" class="col-md-4 col-lg-3 col-form-label">Current Password</label>
+                      <label for="currentPassword" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Current Password']) ? $translations['Current Password'] : 'Current Password'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="password" type="password" class="form-control" id="currentPassword">
                         <input name="huserid_profile" type="hidden" value="<?php echo $userid; ?>">
@@ -732,14 +740,14 @@ if (!is_numeric($userid)) {
                     </div>
 
                     <div class="row mb-3">
-                      <label for="newPassword" class="col-md-4 col-lg-3 col-form-label">New Password</label>
+                      <label for="newPassword" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['New Password']) ? $translations['New Password'] : 'New Password'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="newpassword" type="password" class="form-control" id="newPassword">
                       </div>
                     </div>
 
                     <div class="row mb-3">
-                      <label for="renewPassword" class="col-md-4 col-lg-3 col-form-label">Re-enter New Password</label>
+                      <label for="renewPassword" class="col-md-4 col-lg-3 col-form-label"><?php echo isset($translations['Re-enter New Password']) ? $translations['Re-enter New Password'] : 'Re-enter New Password'; ?></label>
                       <div class="col-md-8 col-lg-9">
                         <input name="renewpassword" type="password" class="form-control" id="renewPassword">
                       </div>

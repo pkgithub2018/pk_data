@@ -138,13 +138,15 @@
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
-
+<!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+    -->
+    <!-- End Search Bar -->
 
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
@@ -332,6 +334,19 @@
          <?php } ?><!-- End of Admin group check -->
         </ul>
       </li><!-- End Tables Nav -->
+
+      <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
 
       <li class="nav-heading"><?php echo isset($translations['Users Management']) ? $translations['Users Management'] : 'Users Management'; ?></li>
 
@@ -1482,7 +1497,7 @@
                 </thead>
                 <tbody>
                   <?php
-                    Conveyancelist($con); // List of Conveyance
+                    Conveyancelist($userid, $con); // List of Conveyance
                   ?>
                 </tbody>
               </table>
@@ -1504,16 +1519,20 @@
         $cCode = $_POST['conveyanceCode'];
         $cType = $_POST['conveyanceType'];
         $cDescription = $_POST['conveyanceDescription'];
+        $cuid = isset($_POST['huid']) ? $_POST['huid'] : '';
+        $clang = isset($_POST['hlang']) ? $_POST['hlang'] : '';
         
         if($cid === 'new') {
             // Add new conveyance
-            AddConveyance($cCode, $cType, $cDescription, $con); // Function to add new conveyance
-            echo "<script>alert('New conveyance added-Done');</script>"; // Debugging line
+            AddConveyance($cuid, $cCode, $cType, $cDescription, $con); // Function to add new conveyance
+            // Redirect to conveyance list with uid and lang parameters preserved
+            echo "<script>alert('New conveyance added-Done');</script>";
+            echo "<script>setTimeout(function() { window.location.href = 'masterdata.php?part=conveyance&uid=" . urlencode($cuid) . "&lang=" . urlencode($clang) . "'; }, 500);</script>";
         } else {
             // Update existing conveyance
-            echo "<script>alert('Conveyance with ID: " . $cid . " updated.');</script>"; // Debugging line
             UpdateConveyance($cid, $cCode, $cType, $cDescription, $con); // Function to update conveyance
-           
+            echo "<script>alert('Conveyance with ID: " . $cid . " updated.');</script>";
+            echo "<script>setTimeout(function() { window.location.href = 'masterdata.php?part=conveyance&uid=" . urlencode($cuid) . "&lang=" . urlencode($clang) . "'; }, 500);</script>";
         }
       } // End of if submitConveyance
 

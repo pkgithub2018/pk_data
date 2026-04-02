@@ -166,12 +166,15 @@ if (!empty($userid)) {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
+    <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+-->
+    <!-- End Search Bar -->
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
@@ -285,7 +288,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Import Entity/Company form Nav -->
 
-      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+         
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -296,6 +299,7 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
+        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -357,16 +361,22 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
+          <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->
-      <?php } // End of Admin group check ?>
+     
+      
 
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
 
@@ -377,6 +387,7 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
+     <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
@@ -394,6 +405,7 @@ if (!empty($userid)) {
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li>  
+      <?php } // End of Admin group check ?>
       <!-- pk**: End of User Admin-->
     </ul>
   </aside><!-- End Sidebar-->

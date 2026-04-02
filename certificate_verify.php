@@ -204,12 +204,13 @@ if (!empty($certificate_no)) {
 <body>
     <div class="verification-container">
         <!-- Header -->
+      <!--
         <div class="text-center mb-4">
             <img src="assets/img/national_logo.jpg" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 15px;">
             <h2 class="text-white">Phytosanitary Certificate Verification</h2>
             <p class="text-white">Department of Agriculture, Lao PDR</p>
         </div>
-        
+      --> 
         <!-- Search Form (if no certificate searched yet) -->
         <?php if (empty($certificate_no)): ?>
         <div class="search-form">
@@ -398,7 +399,7 @@ if (!empty($certificate_no)) {
             <!-- Footer -->
             <div class="verification-footer">
                 <p class="mb-2">
-                    <strong>Department of Agriculture</strong><br>
+                    <strong>Department of Agriculture and Environment</strong><br>
                     P.O Box 811, Nongbone, Lao PDR<br>
                     Tel: (856) 21 416350 | Email: ppd@doa.gov.la
                 </p>

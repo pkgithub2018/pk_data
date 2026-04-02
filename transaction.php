@@ -598,7 +598,9 @@ if (!$userdata) {
     exit();
 }
 $loginuser = $userdata['name']; // User name
-$guid = $userdata['group_id'];
+$groupid = isset($userdata['group_id']) && !empty($userdata['group_id']) ? $userdata['group_id'] : '0';
+$groupname = $groupid !== '0' ? GroupName($groupid, $con) : '';
+$guid = $groupid;
 $position = $userdata['position'];       
 // Get and store user profile image
 $uprofile = Profiledata($userid, $con);
@@ -639,6 +641,31 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     echo json_encode($importers);
     exit;
 }
+
+  // AJAX endpoint for auto-filling approver position in certificate form
+  if (isset($_GET['action']) && $_GET['action'] === 'get_approver_position') {
+    header('Content-Type: application/json');
+
+    $approverId = isset($_GET['approver_id']) ? (int)$_GET['approver_id'] : 0;
+    if ($approverId <= 0) {
+      echo json_encode(['success' => false, 'position' => '']);
+      exit;
+    }
+
+    $sql = "SELECT position FROM tbapprovers WHERE id = $1 AND enabled = 'yes' AND gid = $2 LIMIT 1";
+    $result = pg_query_params($con, $sql, [$approverId, $guid]);
+
+    if ($result && pg_num_rows($result) > 0) {
+      $row = pg_fetch_assoc($result);
+      echo json_encode([
+        'success' => true,
+        'position' => isset($row['position']) ? $row['position'] : ''
+      ]);
+    } else {
+      echo json_encode(['success' => false, 'position' => '']);
+    }
+    exit;
+  }
 
 ?>
 <!DOCTYPE html>
@@ -947,6 +974,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
+        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -1002,15 +1030,20 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
+        <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->
       
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
 
@@ -1022,7 +1055,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-
+    <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
@@ -1044,6 +1077,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
+    <?php } // End of Admin group check ?>
     </ul>
 
   </aside><!-- End Sidebar-->
@@ -3125,14 +3159,14 @@ function selectExporter(info) {
             <div class="row mb-3 align-items-center">
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Approved by']) ? $translations['Approved by'] : 'Approved by'; ?></label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="approved_by" aria-label="Select approver">
+                    <select class="form-select" name="approved_by" id="approved_by" aria-label="Select approver">
                       <option value="">Select approver...</option>
                       <?php CertificateApprovedBy($con, $guid, isset($approved_by) ? $approved_by : null); ?>
                     </select>
                   </div>
               <label class="col-sm-2 col-form-label"><?php echo isset($translations["Approver position"]) ? $translations["Approver position"] : "Approver's position"; ?></label>
               <div class="col-sm-4">
-                <input type="text" class="form-control" name="approver_position" id="approver_position" required value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
+                <input type="text" class="form-control" name="approver_position" id="approver_position" required readonly value="<?php echo isset($approver_position) ? $approver_position : ''; ?>">
               </div>
             </div>
 
@@ -3396,6 +3430,8 @@ function selectExporter(info) {
       document.addEventListener('DOMContentLoaded', function() {
         const exportCert = document.getElementById('export_certificate');
         const transitCert = document.getElementById('transit_certificate');
+        const approvedBySelect = document.getElementById('approved_by');
+        const approverPositionInput = document.getElementById('approver_position');
 
         if (exportCert && transitCert) {
           exportCert.addEventListener('change', function() {
@@ -3404,6 +3440,33 @@ function selectExporter(info) {
           transitCert.addEventListener('change', function() {
             if (this.checked) exportCert.checked = false;
           });
+        }
+
+        async function syncApproverPosition() {
+          if (!approvedBySelect || !approverPositionInput) {
+            return;
+          }
+
+          const approverId = approvedBySelect.value;
+          if (!approverId) {
+            approverPositionInput.value = '';
+            return;
+          }
+
+          try {
+            const response = await fetch(`transaction.php?action=get_approver_position&approver_id=${encodeURIComponent(approverId)}`);
+            const data = await response.json();
+            approverPositionInput.value = (data && data.success && data.position) ? data.position : '';
+          } catch (error) {
+            console.error('Failed to load approver position:', error);
+          }
+        }
+
+        if (approvedBySelect && approverPositionInput) {
+          approvedBySelect.addEventListener('change', syncApproverPosition);
+          if (approvedBySelect.value) {
+            syncApproverPosition();
+          }
         }
       });
 

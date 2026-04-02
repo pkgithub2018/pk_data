@@ -1,5 +1,6 @@
 <?php
       // Pk: 2025-04-30
+  session_start();
   /* NOT WORKING *************
   ini_set('session.cookie_secure', 1);
   ini_set('session.cookie_httponly', 1);
@@ -10,6 +11,34 @@
 */
   require("php-bin/connection.php"); // replace include with require
   require("php-bin/supports.php"); // replace include with require
+
+  if (isset($_GET['lang'])) {
+    $selectedLang = $_GET['lang'];
+    $_SESSION['lang'] = $selectedLang;
+  } else {
+    if (!isset($_SESSION['lang'])) {
+      $_SESSION['lang'] = 'en';
+    }
+  }
+
+  // Fixed language loading for cloud server compatibility
+  $lang = 'en';
+  if (isset($_SESSION['lang']) && !empty($_SESSION['lang'])) {
+      $lang = $_SESSION['lang'];
+  } elseif (isset($_GET['lang']) && !empty($_GET['lang'])) {
+      $lang = $_GET['lang'];
+  }
+
+  $langFile = "php-bin/lang_" . $lang . ".php";
+  if (file_exists($langFile)) {
+      $translations = include($langFile);
+  } else {
+      $translations = array(
+          'dashboard' => 'Dashboard',
+          'Dashboard' => 'Dashboard'
+      );
+  }
+    $translation = $translations;
 
   // Authentication check with dynamic detection
  
@@ -30,6 +59,8 @@
   $usname = isset($userinfo['surname']) ? $userinfo['surname'] : ''; // Surname
   $ufullname = $loginuser."  ".$usname;  // Full name
   $position = isset($userinfo['position']) ? $userinfo['position'] : '';
+  $groupid = isset($userinfo['group_id']) && !empty($userinfo['group_id']) ? $userinfo['group_id'] : '1';
+  $groupname = GroupName($groupid, $con);
   // Get and store user profile image
     $uprofile = Profiledata($userid, $con);
     if (!$uprofile) {
@@ -43,7 +74,7 @@
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo ($lang === 'la') ? 'lo' : 'en'; ?>">
 
 <head>
   <meta charset="utf-8">
@@ -82,6 +113,7 @@
   <!--  CSS File- PK -->
   <link href="stylecss/scss.css" rel="stylesheet">
   <link href="stylecss/dformelement.css" rel="stylesheet">
+  <link href="stylecss/lang.css" rel="stylesheet">
 
   <!-- =======================================================
   * Template Name: NiceAdmin
@@ -99,7 +131,7 @@
     <div class="d-flex align-items-center justify-content-between">
       <a href="main.php" class="logo d-flex align-items-center">
         <img src="assets/img/logo.png" alt="">
-        <span class="d-none d-lg-block">e-Phytosanitary</span>
+        <span class="d-none d-lg-block"><?php echo isset($translations['e-Phytosanitary']) ? $translations['e-Phytosanitary'] : 'e-Phytosanitary'; ?></span>
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
@@ -135,9 +167,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-person"></i>
-                <span>My Profile</span>
+                <span><?php echo isset($translation['My Profile']) ? $translation['My Profile'] : 'My Profile'; ?></span>
               </a>
             </li>
             <li>
@@ -145,9 +177,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-gear"></i>
-                <span>Account Settings</span>
+                <span><?php echo isset($translation['Account Settings']) ? $translation['Account Settings'] : 'Account Settings'; ?></span>
               </a>
             </li>
             <li>
@@ -157,7 +189,7 @@
             <li>
               <a class="dropdown-item d-flex align-items-center" href="#">
                 <i class="bi bi-question-circle"></i>
-                <span>Need Help?</span>
+                <span><?php echo isset($translation['Need Help?']) ? $translation['Need Help?'] : 'Need Help?'; ?></span>
               </a>
             </li>
             <li>
@@ -165,9 +197,9 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="index.php">
+              <a class="dropdown-item d-flex align-items-center" href="index.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span><?php echo isset($translation['Sign Out']) ? $translation['Sign Out'] : 'Sign Out'; ?></span>
               </a>
             </li>
 
@@ -185,118 +217,149 @@
     <ul class="sidebar-nav" id="sidebar-nav">
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
+          <span><?php echo isset($translation['Dashboard']) ? $translation['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
- 
+      <li class="nav-item">
+        <a class="nav-link" href="transaction.php?part=application&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
+        </a>
+      </li><!-- End Application Nav --> 
+      
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
+        </a>
+      </li><!-- End Inspection Nav --> 
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
+          <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
+        </a>
+      </li><!-- End Certificate Nav -->
       
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
-          <span>Export entity</span>
+          <span><?php echo isset($translation['Export entity']) ? $translation['Export entity'] : 'Export entity'; ?></span>
         </a>
       </li><!-- End Export Entity Nav -->
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>" >
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span>Import entity</span>
+          <span><?php echo isset($translation['Import entity']) ? $translation['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
 
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#M-masterdata-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-layout-text-window-reverse"></i><span>Master data</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translation['Master data']) ? $translation['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="M-masterdata-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
           <li>
-            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Approvers</span>
+            <a href="masterdata.php?part=approvers&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Approvers']) ? $translation['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Conveyance</span>
+            <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Conveyance']) ? $translation['Conveyance'] : 'Conveyance'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Countries</span>
+            <a href="masterdata.php?part=countries&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Countries']) ? $translation['Countries'] : 'Countries'; ?></span>
             </a>
           </li>
           <li>
             <a href="tables-data.html">
-              <i class="bi bi-circle"></i><span>Districts</span>
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Districts']) ? $translation['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Entity_type</span>
+            <a href="masterdata.php?part=entitytype&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Entity Type']) ? $translation['Entity Type'] : 'Entity Type'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Inspection Method</span>
+            <a href="masterdata.php?part=inspectionmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Inspection method']) ? $translation['Inspection method'] : 'Inspection method'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Locations</span>
+            <a href="masterdata.php?part=locations&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Locations']) ? $translation['Locations'] : 'Locations'; ?></span>
             </a>
           </li>
           <!--
           <li>
-            <a href="masterdata.php?part=modules&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Module List</span>
+            <a href="masterdata.php?part=modules&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Module List']) ? $translation['Module List'] : 'Module List'; ?></span>
             </a>
           </li>
   -->
           <li>
-            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?> ">
-              <i class="bi bi-circle"></i><span>Product</span>
+            <a href="masterdata.php?part=product&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Product']) ? $translation['Product'] : 'Product'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Provinces</span>
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Provinces']) ? $translation['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
           <li>
-            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>">
-              <i class="bi bi-circle"></i><span>Treatment Method</span>
+            <a href="masterdata.php?part=treatmentmethod&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+              <i class="bi bi-circle"></i><span><?php echo isset($translation['Treatment Method']) ? $translation['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
         </ul>
       </li><!-- End Tables Nav -->
 
-      <li class="nav-heading">Users' Management</li>
+      <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
+
+      <li class="nav-heading"><?php echo isset($translation["USERS MANAGEMENT"]) ? $translation["USERS MANAGEMENT"] : "Users' Management"; ?></li>
         
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person"></i>
-          <span>Profile</span>
+          <span><?php echo isset($translation['Profile']) ? $translation['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
       
       <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
-          <span>Users group</span>
+          <span><?php echo isset($translation['Users group']) ? $translation['Users group'] : 'Users group'; ?></span>
         </a>
       </li> <!-- End Users group -->
       
        <li class="nav-item">
-        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
+        <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
-          <span>Group permits</span>
+          <span><?php echo isset($translation['Group permits']) ? $translation['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li> <!-- End User Group permit -->
       
       <li class="nav-item">
-        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' active' : ''; ?>" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
-          <i class="bi bi-person-plus"></i><span>Users</span>
+        <a class="nav-link<?php echo (isset($_GET['part']) && $_GET['part'] === 'userslist') ? ' active' : ''; ?>" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-person-plus"></i><span><?php echo isset($translation['Users']) ? $translation['Users'] : 'Users'; ?></span>
         </a>
       </li>  <!-- End Users Nav -->
      
@@ -312,18 +375,17 @@
  <section class="section">
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-      <h1>Users Group</h1>
+      <h1><?php echo isset($translation["Users group"]) ? $translation["Users group"] : "Users Group"; ?></h1>
       <nav>
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-          <li class="breadcrumb-item">Tables</li>
-          <li class="breadcrumb-item">Users Group</li>
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translation["Home"]) ? $translation["Home"] : "Home"; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translation["Users group"]) ? $translation["Users group"] : "Users Group"; ?></li>
         </ol>
       </nav>
       </div>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addGroupModal" data-gid="new">
-          <i class="bi bi-plus-circle"></i> Add New Group
+          <i class="bi bi-plus-circle"></i> <?php echo isset($translation["Add New Group"]) ? $translation["Add New Group"] : "Add New Group"; ?>
         </button>
       </div>
     </div><!-- End Page Title - Users Group -->
@@ -332,19 +394,19 @@
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Users Group</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - List of Users Group</p>
+              <h5 class="card-title"><?php echo isset($translation["Users group"]) ? $translation["Users group"] : "Users Group"; ?></h5>
+              <p><?php echo isset($translation["ePhytosanitary - Department of Agriculture, MAF"]) ? $translation["ePhytosanitary - Department of Agriculture, MAF"] : "ePhytosanitary by Department of Agriculture, MAF - List of Users Group"; ?></p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th><b>Group</b>Name</th>
-                   <th>Description</th>
-                   <th>Status</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
+                   <th><?php echo isset($translation["No"]) ? $translation["No"] : "<b>N</b>o"; ?></th>
+                   <th><?php echo isset($translation["Group Name"]) ? $translation["Group Name"] : "Group Name"; ?></th>
+                   <th><?php echo isset($translation["Description"]) ? $translation["Description"] : "Description"; ?></th>
+                   <th><?php echo isset($translation["Status"]) ? $translation["Status"] : "Status"; ?></th>
+                   <th><?php echo isset($translation["Edit"]) ? $translation["Edit"] : "Edit"; ?></th>
+                   <th><?php echo isset($translation["Delete"]) ? $translation["Delete"] : "Delete"; ?></th>
                  </tr>
                 </thead>
                 <tbody>
@@ -365,24 +427,24 @@
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addGroupModalLabel">Add New Group</h5>
+                <h5 class="modal-title" id="addGroupModalLabel"><?php echo isset($translation["Add New Group"]) ? $translation["Add New Group"] : "Add New Group"; ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <!-- Hidden input for gid -->
                 <input type="hidden" id="groupId" name="groupId">
                 <div class="mb-3">
-                  <label for="groupName" class="form-label">Group Name</label>
+                  <label for="groupName" class="form-label"><?php echo isset($translation["Group Name"]) ? $translation["Group Name"] : "Group Name"; ?></label>
                   <input type="text" class="form-control" id="groupName" name="groupName" required>
                 </div>
                 <div class="mb-3">
-                  <label for="groupDescription" class="form-label">Description</label>
+                  <label for="groupDescription" class="form-label"><?php echo isset($translation["Description"]) ? $translation["Description"] : "Description"; ?></label>
                   <textarea class="form-control" id="groupDescription" name="groupDescription" rows="3" required></textarea>
                 </div>
               </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" id="submitGroup" name="submitGroup" class="btn btn-success">Submit</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translation["Close"]) ? $translation["Close"] : "Close"; ?></button>
+              <button type="submit" id="submitGroup" name="submitGroup" class="btn btn-success"><?php echo isset($translation["Submit"]) ? $translation["Submit"] : "Submit"; ?></button>
             </div>
             </form>
           </div>
@@ -395,7 +457,12 @@
       if (isset($_POST['submitGroup']) && $_POST['submitGroup'] === 'Submit') {
         $groupName = pg_escape_string($con, $_POST['groupName']);
         $groupDescription = pg_escape_string($con, $_POST['groupDescription']);
-        Groupnew($groupName,$groupDescription,$con); // List of Groups
+        $groupInsertResult = Groupnew($groupName,$groupDescription,$con); // List of Groups
+        if ($groupInsertResult !== "yes") {
+          $redirectUrl = 'users.php?part=ugroup&uid=' . urlencode($userid) . '&lang=' . urlencode($lang);
+          echo "<script>window.location.href = '" . $redirectUrl . "';</script>";
+          exit();
+        }
       }
       //2.) Delete group:  link in Grouplist function in supports.php
       if (isset($_GET['ug']) && isset($_GET['ugid'])) { 
@@ -428,18 +495,17 @@
    <section class="section">
       <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Users</h1>
+        <h1><?php echo isset($translation["Users"]) ? $translation["Users"] : "Users"; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item">Tables</li>
-            <li class="breadcrumb-item">Users List</li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translation["Home"]) ? $translation["Home"] : "Home"; ?></a></li>
+             <li class="breadcrumb-item"><?php echo isset($translation["Users List"]) ? $translation["Users List"] : "Users List"; ?></li>
           </ol>
           </nav>
         </div>
         <div>
-          <a href="users.php?frm=newuser" class="btn btn-success btn-sm" role="button">
-            <i class="bi bi-plus-circle"></i> Add New User
+          <a href="users.php?frm=newuser&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
+            <i class="bi bi-plus-circle"></i> <?php echo isset($translation["Add New User"]) ? $translation["Add New User"] : "Add New User"; ?>
           </a>
         </div>
       </div><!-- End Page Title - Users list -->
@@ -447,31 +513,31 @@
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Users List</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - Users list</p>
+              <h5 class="card-title"><?php echo isset($translation["Users List"]) ? $translation["Users List"] : "Users List"; ?></h5>
+              <p><?php echo isset($translation["ePhytosanitary - Department of Agriculture, MAF"]) ? $translation["ePhytosanitary - Department of Agriculture, MAF"] : "ePhytosanitary - Department of Agriculture, MAF"; ?></p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
                 <thead>
                   <tr>
                    <th>
-                      <b>N</b>o
+                      <?php echo isset($translation["No"]) ? $translation["No"] : "No"; ?>
                     </th>
                     <th>
-                      <b>N</b>ame
+                      <?php echo isset($translation["Name"]) ? $translation["Name"] : "Name"; ?>
                     </th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Last login</th>
-                    <th>Group</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Edit</th>
-                    <th>Delete</th>
+                    <th><?php echo isset($translation["Phone"]) ? $translation["Phone"] : "Phone"; ?></th>
+                    <th><?php echo isset($translation["Email"]) ? $translation["Email"] : "Email"; ?></th>
+                    <th><?php echo isset($translation["Last login"]) ? $translation["Last login"] : "Last login"; ?></th>
+                    <th><?php echo isset($translation["Group"]) ? $translation["Group"] : "Group"; ?></th>
+                    <th><?php echo isset($translation["Location"]) ? $translation["Location"] : "Location"; ?></th>
+                    <th><?php echo isset($translation["Status"]) ? $translation["Status"] : "Status"; ?></th>
+                    <th><?php echo isset($translation["Edit"]) ? $translation["Edit"] : "Edit"; ?></th>
+                    <th><?php echo isset($translation["Delete"]) ? $translation["Delete"] : "Delete"; ?></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <?php Userlist($con); ?>
+                  <?php Userlist($con, $userid, $lang); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -566,12 +632,11 @@
       
     ?>
       <div class="pagetitle">
-        <h1>Add/Update Users</h1>
+        <h1><?php echo isset($translation["ADD/UPDATE USERS"]) ? $translation["ADD/UPDATE USERS"] : "Add/Update Users"; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item">Forms</li>
-            <li class="breadcrumb-item">Users</li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translation["Home"]) ? $translation["Home"] : "Home"; ?></a></li>
+            <li class="breadcrumb-item"><?php echo isset($translation["Users"]) ? $translation["Users"] : "Users"; ?></li>
           </ol>
         </nav>
       </div>
@@ -580,25 +645,25 @@
         <div class="col-lg-6" style="width: 80%;"> <!-- Pk-Update: style -->
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title"><?php echo (isset($_GET['frm']) && $_GET['frm'] == 'userupdate') ? 'Users Update' : 'New Users'; ?></h5>
+              <h5 class="card-title"><?php echo (isset($_GET['frm']) && $_GET['frm'] == 'userupdate') ? (isset($translation["USERS UPDATE"]) ? $translation["USERS UPDATE"] : "Users Update") : (isset($translation["NEW USERS"]) ? $translation["NEW USERS"] : "New Users"); ?></h5>
               <!-- Users Form -->
-              <form action="users.php?part=userslist&uid=<?php echo $userid; ?>" method="POST">
+              <form action="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" method="POST">
                 <!-- Hidden input for uid : User ID -->
                 <input type="hidden" id="huid" name="huid" value="<?php echo isset($uid) ? $uid : ''; ?>">
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Name</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translation["Name"]) ? $translation["Name"] : "Name"; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Surname</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translation["Surname"]) ? $translation["Surname"] : "Surname"; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="surname" class="form-control" value="<?php echo isset($surname) ? $surname : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Gender</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translation["Gender"]) ? $translation["Gender"] : "Gender"; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="gender" aria-label="Default select example">
                       <option selected>*** Please select one ***</option>
@@ -608,38 +673,38 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputPassword" class="col-sm-2 col-form-label">Password</label>
+                  <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translation["Password"]) ? $translation["Password"] : "Password"; ?></label>
                   <div class="col-sm-5">
                     <input type="password" name="password" class="form-control" value="<?php echo isset($psw) ? htmlspecialchars($psw) : ''; ?>">
                   </div>
                 </div>
                 
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Phone</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translation["Phone"]) ? $translation["Phone"] : "Phone"; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="phone" class="form-control" value="<?php echo isset($phone) ? $phone : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputEmail" class="col-sm-2 col-form-label">Email</label>
+                  <label for="inputEmail" class="col-sm-2 col-form-label"><?php echo isset($translation["Email"]) ? $translation["Email"] : "Email"; ?></label>
                   <div class="col-sm-10">
                     <input type="email" name="email" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputText" class="col-sm-2 col-form-label">Position</label>
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translation["Position"]) ? $translation["Position"] : "Position"; ?></label>
                   <div class="col-sm-10">
                     <input type="text" name="position" class="form-control me-2" value="<?php echo isset($position) ? $position : ''; ?>"><span id="usermiss"><?php if(!empty($cfuser)){ echo "Already exists";} ?></span>
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label for="inputPassword" class="col-sm-2 col-form-label">Work Unit</label>
+                  <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translation["Work Unit"]) ? $translation["Work Unit"] : "Work Unit"; ?></label>
                   <div class="col-sm-10">
                     <textarea class="form-control" name="workunit" style="height: 100px"><?php echo isset($unit) ? $unit : ''; ?></textarea>
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Location</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translation["Location"]) ? $translation["Location"] : "Location"; ?></label>
                   <div class="col-sm-10">
                     <select class="form-select" name="location" aria-label="Default select example">
                      <option value="">*** Please select one ***</option>
@@ -648,7 +713,7 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Group</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translation["Group"]) ? $translation["Group"] : "Group"; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="usergroup" aria-label="Default select example">
                       <option value="">*** Please select one ***</option>
@@ -657,7 +722,7 @@
                   </div>
                 </div>
                 <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">Admin Group</label>
+                  <label class="col-sm-2 col-form-label"><?php echo isset($translation["Admin Group"]) ? $translation["Admin Group"] : "Admin Group"; ?></label>
                   <div class="col-sm-5">
                     <select class="form-select" name="admingroup" aria-label="Default select example">
                       <option selected>*** Please select one ***</option>
@@ -707,17 +772,16 @@
     ?>
     <div class="pagetitle d-flex justify-content-between align-items-center">
       <div>
-        <h1>Group Permits</h1>
+        <h1><?php echo isset($translation["Group Permits"]) ? $translation["Group Permits"] : "Group Permits"; ?></h1>
         <nav>
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>">Home</a></li>
-            <li class="breadcrumb-item">Tables</li>
-            <li class="breadcrumb-item">Group Permits</li>
+            <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translation["Home"]) ? $translation["Home"] : "Home"; ?></a></li>
+            <li class="breadcrumb-item"><?php echo isset($translation["Group Permits"]) ? $translation["Group Permits"] : "Group Permits"; ?></li>
           </ol>
         </nav>
       </div>
       <div>
-        <a href='users.php?part=upermits&apermit=new' class='btn btn-primary btn-sm'><i class="bi bi-plus-circle"></i>Add New Permit</a>
+        <a href='users.php?part=upermits&apermit=new&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>' class='btn btn-primary btn-sm'><i class="bi bi-plus-circle"></i><?php echo isset($translation["Add New Permit"]) ? $translation["Add New Permit"] : "Add New Permit"; ?></a>
       </div>
     </div><!-- End Page Title -->
 
@@ -727,7 +791,7 @@
           <div class="modal-content">
             <form method="POST" action="">
               <div class="modal-header">
-                <h5 class="modal-title" id="addPermitModalLabel"><b>Add New Group permit</b></h5>
+                <h5 class="modal-title" id="addPermitModalLabel"><b><?php echo isset($translation["Add New Group Permit"]) ? $translation["Add New Group Permit"] : "Add New Group Permit"; ?></b></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
@@ -735,42 +799,42 @@
                 <input type="hidden" id="permitid" name="permitid"> 
                 <input type="hidden" id="permitstatus" name="permitstatus"> 
                 <div class="mb-3">
-                  <label class="col-sm-3 col-form-label">Users Group</label>
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translation["Users group"]) ? $translation["Users group"] : "Users group"; ?></label>
                    <select class="form-select" id="grouppermitid" name="grouppermitid" aria-label="Default select example">
-                     <option value="">*** Please select one ***</option>
+                     <option value=""><?php echo isset($translation["Please select one"]) ? $translation["Please select one"] : "*** Please select one ***"; ?></option>
                       <?php SelectUsergroup($groupPermitId, $con); ?>
                     </select> 
                 </div>
                 <div class="mb-3">
-                  <label class="col-sm-3 col-form-label">Module</label>
+                  <label class="col-sm-3 col-form-label"><?php echo isset($translation["Module"]) ? $translation["Module"] : "Module"; ?></label>
                    <select class="form-select" id="moduleid" name="moduleid" aria-label="Default select example">
-                     <option value="">*** Please select one ***</option>
+                     <option value=""><?php echo isset($translation["Please select one"]) ? $translation["Please select one"] : "*** Please select one ***"; ?></option>
                       <?php SelectModules($modulePermitId, $con); ?>
                     </select>  
                 </div>
                 <div class="mb-3">
-                  <label class="form-label d-block">Permissions</label>
+                  <label class="form-label d-block"><?php echo isset($translation["Permissions"]) ? $translation["Permissions"] : "Permissions"; ?></label>
                   <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="permitRead" name="permitRead" value="1">
-                    <label class="form-check-label" for="permitRead">Read</label>
+                    <label class="form-check-label" for="permitRead"><?php echo isset($translation["Read"]) ? $translation["Read"] : "Read"; ?></label>
                   </div>
                   <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="permitAdd" name="permitAdd" value="1">
-                    <label class="form-check-label" for="permitAdd">Add</label>
+                    <label class="form-check-label" for="permitAdd"><?php echo isset($translation["Add"]) ? $translation["Add"] : "Add"; ?></label>
                   </div>
                   <div class="form-check">
                       <input class="form-check-input" type="checkbox" id="permitUpdate" name="permitUpdate" value="1">
-                      <label class="form-check-label" for="permitUpdate">Update</label>
+                      <label class="form-check-label" for="permitUpdate"><?php echo isset($translation["Update"]) ? $translation["Update"] : "Update"; ?></label>
                   </div>
                   <div class="form-check">
                       <input class="form-check-input" type="checkbox" id="permitDelete" name="permitDelete" value="1">
-                      <label class="form-check-label" for="permitDelete">Delete</label>
+                      <label class="form-check-label" for="permitDelete"><?php echo isset($translation["Delete"]) ? $translation["Delete"] : "Delete"; ?></label>
                   </div>
                 </div>
               </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button type="submit" id="submitgroupPermit" name="submitgroupPermit" class="btn btn-success">Submit</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translation["Close"]) ? $translation["Close"] : "Close"; ?></button>
+              <button type="submit" id="submitgroupPermit" name="submitgroupPermit" class="btn btn-success"><?php echo isset($translation["Submit"]) ? $translation["Submit"] : "Submit"; ?></button>
             </div>
             </form>
           </div>
@@ -783,26 +847,26 @@
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Group Permits</h5>
-              <p>ePhytosanitary by Department of Agriculture, MAF - List of Group Permits</p>
+              <h5 class="card-title"><?php echo isset($translation["Group Permits"]) ? $translation["Group Permits"] : "Group Permits"; ?></h5>
+              <p><?php echo isset($translation["ePhytosanitary - Department of Agriculture, MAF"]) ? $translation["ePhytosanitary - Department of Agriculture, MAF"] : "ePhytosanitary - Department of Agriculture, MAF"; ?></p>
 
               <!-- Table with stripped rows -->
               <table class="table datatable tabledata-fonts" >
                 <thead>
                   <tr>
-                   <th><b>N</b>o</th>
-                   <th><b>Group</b> Name</th>
-                   <th>Module</th>
-                   <th>Read</th>
-                   <th>Write</th>
-                   <th>Edit</th>
-                   <th>Delete</th>
-                   <th>Update</th>
-                   <th>Remove</th>
+                   <th><?php echo isset($translation["No"]) ? $translation["No"] : "No"; ?></th>
+                   <th><?php echo isset($translation["Group Name"]) ? $translation["Group Name"] : "Group Name"; ?></th>
+                   <th><?php echo isset($translation["Module"]) ? $translation["Module"] : "Module"; ?></th>
+                   <th><?php echo isset($translation["Read"]) ? $translation["Read"] : "Read"; ?></th>
+                   <th><?php echo isset($translation["Write"]) ? $translation["Write"] : "Write"; ?></th>
+                   <th><?php echo isset($translation["Edit"]) ? $translation["Edit"] : "Edit"; ?></th>
+                   <th><?php echo isset($translation["Delete"]) ? $translation["Delete"] : "Delete"; ?></th>
+                   <th><?php echo isset($translation["Update"]) ? $translation["Update"] : "Update"; ?></th>
+                   <th><?php echo isset($translation["Remove"]) ? $translation["Remove"] : "Remove"; ?></th>
                  </tr>
                 </thead>
                 <tbody>
-                  <?php GroupPermitList($con); ?> 
+                  <?php GroupPermitList($con, $userid, $lang); ?> 
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->

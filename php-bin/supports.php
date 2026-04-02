@@ -45,7 +45,7 @@ if (!empty($compatibility_issues)) {
   Grouplist: Show list of users group from tbusersgroup table
 */
 function Grouplist($con){
-    $sqlgroup="SELECT * FROM tbusergroup ORDER BY id ASC";
+    $sqlgroup="SELECT * FROM tbusergroup ORDER BY id DESC";
     $result = pg_query($con,$sqlgroup) or die(pg_last_error());
     $i = 0;
     if(pg_num_rows($result) > 0) {
@@ -261,10 +261,14 @@ function Deleteuser($uid,$con, $current_userid = null){
 /*
   Userlist: List all users from tbusers table
 */
-function Userlist($con){
+function Userlist($con, $currentUserid = '', $lang = ''){
     $sqluserlist="SELECT * FROM tbusers ORDER BY id DESC"; // Order by ID in descending order
     $result = pg_query($con,$sqluserlist) or die(pg_last_error());
     $i = 0;
+    $uidValue = $currentUserid !== '' ? $currentUserid : (isset($_GET['uid']) ? $_GET['uid'] : '');
+    $langValue = $lang !== '' ? $lang : (isset($_GET['lang']) ? $_GET['lang'] : '');
+    $uidParam = $uidValue !== '' ? '&uid=' . urlencode($uidValue) : '';
+    $langParam = $langValue !== '' ? '&lang=' . urlencode($langValue) : '';
     if(pg_num_rows($result) > 0) {
        
        while($row = pg_fetch_array($result)){
@@ -296,8 +300,8 @@ function Userlist($con){
                       <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleUserCheckboxChange(this)'>
                     </div>
                     </td>
-                    <td><a href='users.php?frm=userupdate&uidup=$uid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td><a href='users.php?frm=userdelete&uidup=$uid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
+                                        <td><a href='users.php?frm=userupdate&uidup=$uid$uidParam$langParam' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
+                                        <td><a href='users.php?frm=userdelete&uidup=$uid$uidParam$langParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
                   </tr>";
        } // end of while loop     
     }
@@ -723,12 +727,16 @@ function Groupname($gid, $con) {
 }
 
 /*
-  GroupPermitList: List all group permissions from tbgrouppermits table
+    GroupPermitList: List all group permissions from tbgrouppermits table
 */
-function GroupPermitList($con) {
+function GroupPermitList($con, $uid = '', $lang = '') {
     $sqlpermit = "SELECT * FROM tbgrouppermits ORDER BY id ASC";
     $result = pg_query($con, $sqlpermit) or die(pg_last_error());
     $i = 0;
+    $uidValue = $uid !== '' ? $uid : (isset($_GET['uid']) ? $_GET['uid'] : '');
+    $langValue = $lang !== '' ? $lang : (isset($_GET['lang']) ? $_GET['lang'] : '');
+    $uidParam = $uidValue !== '' ? '&uid=' . urlencode($uidValue) : '';
+    $langParam = $langValue !== '' ? '&lang=' . urlencode($langValue) : '';
     if (pg_num_rows($result) > 0) {
         while ($row = pg_fetch_array($result)) {
             $i++;
@@ -763,9 +771,9 @@ function GroupPermitList($con) {
                       </div>
                     </td>
                     <td>
-                      <a href='users.php?part=upermits&id=$id&epermit=edit' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a>
+                                            <a href='users.php?part=upermits&id=$id&epermit=edit$uidParam$langParam' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a>
                     </td>
-                    <td><a href='users.php?part=upermits&id=$id&dpermit=del' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='users.php?part=upermits&id=$id&dpermit=del$uidParam$langParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
                   </tr>";
         } // end of while loop     
     }
@@ -1824,7 +1832,8 @@ function ProductUnitName($uid, $con) {
 /*
  Conveyancelist: Show list of conveyance from tbconveyance table
 */
-function Conveyancelist($con) {
+function Conveyancelist($uid, $con) {
+    $uidParam = !empty($uid) ? '&uid=' . urlencode($uid) : '';
     $sqlconveyance = "SELECT * FROM tbconveyance ORDER BY id ASC";
     $result = pg_query($con, $sqlconveyance) or die(pg_last_error());
     $i = 0;
@@ -1853,7 +1862,7 @@ function Conveyancelist($con) {
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
                       <i class='bi bi-pencil-square table-icon'></i></button>   
                     </td>
-                    <td><a href='masterdata.php?part=conveyance&cid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    <td><a href='masterdata.php?part=conveyance&cid=$id&del=yes$uidParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -1862,7 +1871,7 @@ function Conveyancelist($con) {
 /*
  AddConveyance: Add new conveyance into tbconveyance table
 */
-function AddConveyance($code, $conveytype, $desc, $con) {
+function AddConveyance($uid, $code, $conveytype, $desc, $con) {
     // Escape all inputs
     $code = pg_escape_string($con, $code);
     $conveytype = pg_escape_string($con, $conveytype);
@@ -1880,7 +1889,7 @@ function AddConveyance($code, $conveytype, $desc, $con) {
                              VALUES ('".$code."', '".$conveytype."', '".$desc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdconveyance) or die(pg_last_error($con));
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=conveyance';</script>";
+            echo "<script>window.location.href = 'masterdata.php?part=conveyance&uid=" . urlencode($uid) . "';</script>";
         } else {
             echo "<script>alert('Error adding conveyance: " . pg_last_error($con) . "');</script>";
         }
@@ -2064,7 +2073,7 @@ function Inspection_TreatmentList($guid, $con, $userid) {
      (SELECT title FROM tbtreatment_method WHERE tbtreatment_method.id = tbinspection.treatment_method) AS treatment_method,
      (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS application_date,
      (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS company_id, 
-     (SELECT pestid FROM tbpest_detected WHERE tbinspection.application_id = tbpest_detected.application_id) AS pestid FROM tbinspection WHERE (SELECT guid FROM tbapplication 
+     (SELECT pestid FROM tbpest_detected WHERE tbinspection.application_id = tbpest_detected.application_id ORDER BY id DESC LIMIT 1) AS pestid FROM tbinspection WHERE (SELECT guid FROM tbapplication 
      WHERE tbapplication.id = tbinspection.application_id) = '$guid' AND pest_detected ='1' and treat_ability='1' ORDER BY application_id DESC";
     $result = pg_query($con, $sqlmethod) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
@@ -3771,6 +3780,262 @@ function CertificateStatus($appid, $con) {
         }
     }
  }
+
+/*
+ ProvinceEntitySummaryLastSixMonths: Show province-level summary for the last 6 months
+ - Counts distinct export entities from tbapplication.company_id
+ - Counts distinct import entities from tbapplication.importerid
+ - Sums tbcertificate.consignment_value linked by application_id
+*/
+function ProvinceEntitySummaryLastSixMonths($con) {
+    $sql = "SELECT 
+                COALESCE(p.pname, 'N/A') AS province_name,
+                COUNT(DISTINCT a.company_id) AS export_count,
+                COUNT(DISTINCT a.importerid) AS import_count,
+                COALESCE(
+                    SUM(
+                        COALESCE(
+                            NULLIF(regexp_replace(COALESCE(c.consignment_value::text, ''), '[^0-9.-]', '', 'g'), ''),
+                            '0'
+                        )::numeric
+                    ),
+                    0
+                ) AS total_value
+            FROM tbapplication a
+            INNER JOIN tbentity_export ee ON ee.id = a.company_id
+            LEFT JOIN tbprovinces p ON p.id = ee.province
+            LEFT JOIN tbcertificate c ON c.application_id = a.id
+                WHERE a.application_date >= (CURRENT_DATE - INTERVAL '6 months')
+            GROUP BY p.pname
+            ORDER BY p.pname ASC";
+
+            $result = pg_query($con, $sql);
+    if (!$result) {
+        echo "<tr><td colspan='5' class='text-center text-danger'>Error loading summary data.</td></tr>";
+        return;
+    }
+
+    if (pg_num_rows($result) === 0) {
+        echo "<tr><td colspan='5' class='text-center'>No data found for the last 6 months.</td></tr>";
+        return;
+    }
+
+    $i = 0;
+    $total_export = 0;
+    $total_import = 0;
+    $total_value = 0;
+
+    while ($row = pg_fetch_assoc($result)) {
+        $i++;
+        $province_name = htmlspecialchars($row['province_name'], ENT_QUOTES);
+        $export_count = (int)$row['export_count'];
+        $import_count = (int)$row['import_count'];
+        $value_num = (float)$row['total_value'];
+
+        $total_export += $export_count;
+        $total_import += $import_count;
+        $total_value += $value_num;
+
+        $value_display = number_format($value_num, 0);
+
+        echo "<tr>
+                <td>{$i}</td>
+                <td>{$province_name}</td>
+                <td>{$export_count}</td>
+                <td>{$import_count}</td>
+                <td>{$value_display}</td>
+              </tr>";
+    }
+
+    echo "<tr>
+            <td colspan='2' class='text-end fw-bold'>Total</td>
+            <td class='fw-bold'>" . number_format($total_export) . "</td>
+            <td class='fw-bold'>" . number_format($total_import) . "</td>
+                        <td class='fw-bold'>" . number_format($total_value, 0) . "</td>
+          </tr>";
+}
+
+/*
+ ProvinceMonthlyValueMatrixLastSixMonths: Show province rows with monthly values for last 6 months and total
+*/
+function ProvinceMonthlyValueMatrixLastSixMonths($con) {
+    $month_keys = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month_keys[] = date('Y-m', strtotime("-{$i} months"));
+    }
+
+    $sql = "SELECT
+                COALESCE(p.pname, 'N/A') AS province_name,
+                to_char(date_trunc('month', a.application_date), 'YYYY-MM') AS month_key,
+                COALESCE(
+                    SUM(
+                        COALESCE(
+                            NULLIF(regexp_replace(COALESCE(c.consignment_value::text, ''), '[^0-9.-]', '', 'g'), ''),
+                            '0'
+                        )::numeric
+                    ),
+                    0
+                ) AS month_value
+            FROM tbapplication a
+            INNER JOIN tbentity_export ee ON ee.id = a.company_id
+            LEFT JOIN tbprovinces p ON p.id = ee.province
+            LEFT JOIN tbcertificate c ON c.application_id = a.id
+            WHERE a.application_date >= (date_trunc('month', CURRENT_DATE) - INTERVAL '5 months')
+              AND a.application_date < (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')
+            GROUP BY p.pname, date_trunc('month', a.application_date)
+            ORDER BY p.pname ASC, month_key ASC";
+
+    $result = pg_query($con, $sql);
+    if (!$result) {
+        echo "<tr><td colspan='9' class='text-center text-danger'>Error loading monthly summary data.</td></tr>";
+        return;
+    }
+
+    if (pg_num_rows($result) === 0) {
+        echo "<tr><td colspan='9' class='text-center'>No data found for the last 6 months.</td></tr>";
+        return;
+    }
+
+    $province_map = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $province = $row['province_name'];
+        $month_key = $row['month_key'];
+        $value = (float)$row['month_value'];
+
+        if (!isset($province_map[$province])) {
+            $province_map[$province] = array_fill_keys($month_keys, 0);
+        }
+
+        if (isset($province_map[$province][$month_key])) {
+            $province_map[$province][$month_key] = $value;
+        }
+    }
+
+    $i = 0;
+    $month_totals = array_fill_keys($month_keys, 0);
+    $grand_total = 0;
+    foreach ($province_map as $province => $values_by_month) {
+        $i++;
+        $province_safe = htmlspecialchars($province, ENT_QUOTES);
+        $row_total = 0;
+
+        echo "<tr>";
+        echo "<td>{$i}</td>";
+        echo "<td>{$province_safe}</td>";
+
+        foreach ($month_keys as $month_key) {
+            $val = (float)$values_by_month[$month_key];
+            $row_total += $val;
+            $month_totals[$month_key] += $val;
+            $display = $val > 0 ? number_format($val, 0) : '';
+            echo "<td>{$display}</td>";
+        }
+
+        $grand_total += $row_total;
+        echo "<td>" . number_format($row_total, 0) . "</td>";
+        echo "</tr>";
+    }
+
+    echo "<tr>";
+    echo "<td colspan='2' class='text-end fw-bold'>Total</td>";
+    foreach ($month_keys as $month_key) {
+        $month_total_display = $month_totals[$month_key] > 0 ? number_format($month_totals[$month_key], 0) : '';
+        echo "<td class='fw-bold'>{$month_total_display}</td>";
+    }
+    echo "<td class='fw-bold'>" . number_format($grand_total, 0) . "</td>";
+    echo "</tr>";
+}
+
+/*
+ ProductMonthlyValueMatrixLastSixMonths: Show product rows with monthly values for last 6 months and total
+*/
+function ProductMonthlyValueMatrixLastSixMonths($con) {
+    $month_keys = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month_keys[] = date('Y-m', strtotime("-{$i} months"));
+    }
+
+    $sql = "SELECT
+                COALESCE(p.name, 'N/A') AS product_name,
+                to_char(date_trunc('month', a.application_date), 'YYYY-MM') AS month_key,
+                COALESCE(
+                    SUM(
+                        COALESCE(
+                            NULLIF(regexp_replace(COALESCE(c.consignment_value::text, ''), '[^0-9.-]', '', 'g'), ''),
+                            '0'
+                        )::numeric
+                    ),
+                    0
+                ) AS month_value
+            FROM tbapplication a
+            INNER JOIN tbproduct p ON p.id = a.commodity_id
+            LEFT JOIN tbcertificate c ON c.application_id = a.id
+            WHERE a.application_date >= (date_trunc('month', CURRENT_DATE) - INTERVAL '5 months')
+              AND a.application_date < (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')
+            GROUP BY p.name, date_trunc('month', a.application_date)
+            ORDER BY p.name ASC, month_key ASC";
+
+    $result = pg_query($con, $sql);
+    if (!$result) {
+        echo "<tr><td colspan='9' class='text-center text-danger'>Error loading product monthly summary data.</td></tr>";
+        return;
+    }
+
+    if (pg_num_rows($result) === 0) {
+        echo "<tr><td colspan='9' class='text-center'>No data found for the last 6 months.</td></tr>";
+        return;
+    }
+
+    $product_map = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $product = $row['product_name'];
+        $month_key = $row['month_key'];
+        $value = (float)$row['month_value'];
+
+        if (!isset($product_map[$product])) {
+            $product_map[$product] = array_fill_keys($month_keys, 0);
+        }
+
+        if (isset($product_map[$product][$month_key])) {
+            $product_map[$product][$month_key] = $value;
+        }
+    }
+
+    $i = 0;
+    $month_totals = array_fill_keys($month_keys, 0);
+    $grand_total = 0;
+
+    foreach ($product_map as $product => $values_by_month) {
+        $i++;
+        $product_safe = htmlspecialchars($product, ENT_QUOTES);
+        $row_total = 0;
+
+        echo "<tr>";
+        echo "<td>{$i}</td>";
+        echo "<td>{$product_safe}</td>";
+
+        foreach ($month_keys as $month_key) {
+            $val = (float)$values_by_month[$month_key];
+            $row_total += $val;
+            $month_totals[$month_key] += $val;
+            $display = $val > 0 ? number_format($val, 0) : '';
+            echo "<td>{$display}</td>";
+        }
+
+        $grand_total += $row_total;
+        echo "<td>" . number_format($row_total, 0) . "</td>";
+        echo "</tr>";
+    }
+
+    echo "<tr>";
+    echo "<td colspan='2' class='text-end fw-bold'>Total</td>";
+    foreach ($month_keys as $month_key) {
+        $month_total_display = $month_totals[$month_key] > 0 ? number_format($month_totals[$month_key], 0) : '';
+        echo "<td class='fw-bold'>{$month_total_display}</td>";
+    }
+    echo "<td class='fw-bold'>" . number_format($grand_total, 0) . "</td>";
+    echo "</tr>";
+}
 
 /*
   GenerateCertificatePDF: Generate PDF from certificate view

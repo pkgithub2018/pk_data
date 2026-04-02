@@ -307,7 +307,8 @@
       datatableOptions.footer = false
     }
 
-    new simpleDatatables.DataTable(datatable, datatableOptions);
+    const dataTableInstance = new simpleDatatables.DataTable(datatable, datatableOptions);
+    datatable._dataTableInstance = dataTableInstance
   })
 
   /**

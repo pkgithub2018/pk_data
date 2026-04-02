@@ -168,12 +168,15 @@ if (!empty($userid)) {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
+    <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+    -->
+    <!-- End Search Bar -->
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
@@ -218,7 +221,7 @@ if (!empty($userid)) {
               <hr class="dropdown-divider">
             </li>
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>">
+              <a class="dropdown-item d-flex align-items-center" href="users-profile.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
                 <i class="bi bi-gear"></i>
                 <span><?php echo isset($translations['Account Settings']) ? $translations['Account Settings'] : 'Account Settings'; ?></span>
               </a>
@@ -256,7 +259,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Dashboard Nav --> 
     <li class="nav-item">
-        <a class="nav-link" href="transaction.php?part=application&uid=<?php echo $userid; ?>">
+        <a class="nav-link" href="transaction.php?part=application&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
         </a>
@@ -361,6 +364,19 @@ if (!empty($userid)) {
         <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->
+
+      <!-- Monitoring and Reporting -->
+       <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
+        <li class="nav-item">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bxs-file-find" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
+        </a>
+      </li><!-- End Monitoring and Reporting Nav -->
      
       <li class="nav-heading"><?php echo isset($translations["USERS MANAGEMENT"]) ? $translations["USERS MANAGEMENT"] : "USERS' MANAGEMENT"; ?></li>
       <li class="nav-item">
@@ -369,6 +385,7 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
+     <?php if($groupname == "admin"){ ?><!-- Admin group check -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
@@ -387,6 +404,7 @@ if (!empty($userid)) {
         </a>
       </li>  
       <!-- pk**: End of User Admin-->
+    <?php } // End of Admin group check ?>
     </ul>
   </aside><!-- End Sidebar-->
   <main id="main" class="main">

@@ -646,12 +646,15 @@ if (!empty($userid)) {
       </a>
       <i class="bi bi-list toggle-sidebar-btn"></i>
     </div><!-- End Logo -->
+    <!--
     <div class="search-bar">
       <form class="search-form d-flex align-items-center" method="POST" action="#">
         <input type="text" name="query" placeholder="Search" title="Enter search keyword">
         <button type="submit" title="Search"><i class="bi bi-search"></i></button>
       </form>
-    </div><!-- End Search Bar -->
+    </div>
+    -->
+    <!-- End Search Bar -->
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
         <!-- Language Switcher -->
@@ -851,9 +854,13 @@ if (!empty($userid)) {
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
-        <a class="nav-link collapsed" href="monitor_report.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+        <a class="nav-link collapsed" href="monitor_report.php?mn=certtrack&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bx bxs-file-find" style="font-size: 20px;"></i>
-          <span><?php echo isset($translations['Certificate tracking']) ? $translations['Certificate tracking'] : 'Certificate tracking'; ?></span>
+          <span><?php echo isset($translations['Certificate verification']) ? $translations['Certificate verification'] : 'Certificate verification'; ?></span>
+        </a>
+        <a class="nav-link collapsed" href="monitor_report.php?mn=datareport&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bx bx-bar-chart-alt-2" style="font-size: 20px;"></i>
+          <span><?php echo isset($translations['Data reporting']) ? $translations['Data reporting'] : 'Data reporting'; ?></span>
         </a>
       </li><!-- End Monitoring and Reporting Nav -->
     
@@ -1239,7 +1246,33 @@ if (!empty($userid)) {
               <div class="card recent-sales overflow-auto">
                 <div class="card-body">
                   <h5 class="card-title"><?php echo isset($translations['Document list']) ? $translations['Document list'] : 'Document list'; ?> <span>| <?php echo isset($translations['Recent']) ? $translations['Recent'] : 'Recent'; ?></span></h5>
-                  <table class="table datatable" style="font-size: 10pt;">
+                  <style>
+                    #document-list-table-wrapper .datatable-custom-controls {
+                      display: flex;
+                      align-items: flex-end;
+                      gap: 0.75rem;
+                      flex-wrap: wrap;
+                    }
+
+                    #document-list-table-wrapper .datatable-date-filter {
+                      min-width: 180px;
+                    }
+
+                    #document-list-table-wrapper .datatable-date-filter .datatable-input {
+                      width: 100%;
+                      height: 37px;      /* adjust */
+                      padding: 0.375rem 0.75rem;
+                      font-size: 0.8rem;
+                    }
+
+                    #document-list-table-wrapper .datatable-date-filter label {
+                      font-size: 0.875rem;
+                      color: #6c757d;
+                      margin-bottom: 0.25rem;
+                    }
+                  </style>
+                  <div id="document-list-table-wrapper">
+                  <table id="document-list-table" class="table datatable" style="font-size: 10pt;">
                     <thead>
                       <tr>
                         <th scope="col"><?php echo isset($translations['Application No']) ? $translations['Application No'] : 'Application No'; ?></th>
@@ -1255,6 +1288,7 @@ if (!empty($userid)) {
                      <?php ApplicationList($guid, $con, $lang, $userid); ?>
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             </div><!-- End Dashboard - main -->
@@ -1320,6 +1354,132 @@ if (!empty($userid)) {
   <script src="assets/vendor/php-email-form/validate.js"></script>
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var table = document.getElementById('document-list-table');
+
+      if (!table) {
+        return;
+      }
+
+      var attemptCount = 0;
+      var maxAttempts = 30;
+
+      function initDateFilter() {
+        var dataTable = table._dataTableInstance || table.dataTable || null;
+        var wrapper = dataTable && dataTable.wrapperDOM ? dataTable.wrapperDOM : table.closest('.datatable-wrapper');
+        var hiddenDateFilterInputId = 'application-date-hidden-filter';
+
+        if (!wrapper) {
+          attemptCount += 1;
+
+          if (attemptCount < maxAttempts) {
+            setTimeout(initDateFilter, 200);
+          }
+
+          return;
+        }
+
+        var topBar = wrapper.querySelector('.datatable-top');
+        var searchContainer = wrapper.querySelector('.datatable-search');
+
+        if (!topBar || !searchContainer || wrapper.querySelector('.datatable-date-filter')) {
+          return;
+        }
+
+        var customControls = document.createElement('div');
+        customControls.className = 'datatable-custom-controls';
+
+        searchContainer.parentNode.insertBefore(customControls, searchContainer);
+        customControls.appendChild(searchContainer);
+
+        var filterContainer = document.createElement('div');
+        filterContainer.className = 'datatable-date-filter';
+
+        var filterLabel = document.createElement('label');
+        filterLabel.setAttribute('for', 'application-date-filter');
+        filterLabel.textContent = '<?php echo isset($translations['Submission date']) ? addslashes($translations['Submission date']) : 'Submission date'; ?>';
+
+        var filterSelect = document.createElement('select');
+        filterSelect.id = 'application-date-filter';
+        filterSelect.className = 'datatable-input';
+        filterSelect.setAttribute('aria-label', filterLabel.textContent);
+
+        var defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '<?php echo isset($translations['All dates']) ? addslashes($translations['All dates']) : 'All dates'; ?>';
+        filterSelect.appendChild(defaultOption);
+
+        var uniqueDates = Array.from(new Set(
+          Array.from(table.querySelectorAll('tbody tr td:nth-child(3)'))
+            .map(function (cell) {
+              return cell.textContent.trim();
+            })
+            .filter(Boolean)
+        )).sort(function (left, right) {
+          function toTime(value) {
+            var parts = value.split('/');
+
+            if (parts.length !== 3) {
+              return 0;
+            }
+
+            return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+          }
+
+          return toTime(right) - toTime(left);
+        });
+
+        uniqueDates.forEach(function (dateValue) {
+          var option = document.createElement('option');
+          option.value = dateValue;
+          option.textContent = dateValue;
+          filterSelect.appendChild(option);
+        });
+
+        filterSelect.addEventListener('change', function () {
+          if (dataTable && typeof dataTable.multiSearch === 'function') {
+            if (filterSelect.value) {
+              dataTable.multiSearch([
+                {
+                  terms: [filterSelect.value],
+                  columns: [2]
+                }
+              ], 'application-date-filter');
+
+              return;
+            }
+
+            dataTable.multiSearch([], 'application-date-filter');
+            return;
+          }
+
+          var hiddenDateFilterInput = wrapper.querySelector('#' + hiddenDateFilterInputId);
+
+          if (!hiddenDateFilterInput) {
+            hiddenDateFilterInput = document.createElement('input');
+            hiddenDateFilterInput.type = 'search';
+            hiddenDateFilterInput.id = hiddenDateFilterInputId;
+            hiddenDateFilterInput.className = 'datatable-input';
+            hiddenDateFilterInput.setAttribute('data-columns', '[2]');
+            hiddenDateFilterInput.setAttribute('aria-hidden', 'true');
+            hiddenDateFilterInput.tabIndex = -1;
+            hiddenDateFilterInput.style.display = 'none';
+            wrapper.appendChild(hiddenDateFilterInput);
+          }
+
+          hiddenDateFilterInput.value = filterSelect.value || '';
+          hiddenDateFilterInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        filterContainer.appendChild(filterLabel);
+        filterContainer.appendChild(filterSelect);
+        customControls.appendChild(filterContainer);
+      }
+
+      initDateFilter();
+    });
+  </script>
   
   <script>
     // Function to view certificate status

@@ -222,6 +222,21 @@
           <span><?php echo isset($translation['Dashboard']) ? $translation['Dashboard'] : 'Dashboard'; ?></span>
         </a>
       </li><!-- End Dashboard Nav -->
+
+       <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span><?php echo isset($translation['Export entity']) ? $translation['Export entity'] : 'Export entity'; ?></span>
+        </a>
+      </li><!-- End Export Entity Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span><?php echo isset($translation['Import entity']) ? $translation['Import entity'] : 'Import entity'; ?></span>
+        </a>
+      </li><!-- End Import Entity Nav -->
+
       <li class="nav-item">
         <a class="nav-link" href="transaction.php?part=application&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
@@ -241,20 +256,6 @@
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav -->
-      
-      <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
-          <i class="bi bi-box-arrow-up-right"></i>
-          <span><?php echo isset($translation['Export entity']) ? $translation['Export entity'] : 'Export entity'; ?></span>
-        </a>
-      </li><!-- End Export Entity Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
-          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span><?php echo isset($translation['Import entity']) ? $translation['Import entity'] : 'Import entity'; ?></span>
-        </a>
-      </li><!-- End Import Entity Nav -->
 
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#M-masterdata-nav" data-bs-toggle="collapse" href="#">

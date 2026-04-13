@@ -227,6 +227,20 @@
         </a>
       </li><!-- End Dashboard Nav -->
 
+       <li class="nav-item">
+        <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
+          <i class="bi bi-box-arrow-up-right"></i>
+          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
+        </a>
+      </li><!-- End Export Entity Nav -->
+
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
+          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
+          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
+        </a>
+      </li><!-- End Import Entity Nav -->
+
       <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
@@ -246,21 +260,7 @@
         </a>
       </li><!-- End Certificate Nav --> 
 
-      <li class="nav-item">
-        <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
-          <i class="bi bi-box-arrow-up-right"></i>
-          <span><?php echo isset($translations['Export entity']) ? $translations['Export entity'] : 'Export entity'; ?></span>
-        </a>
-      </li><!-- End Export Entity Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link collapsed" href="entity.php?entity=import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
-          <i class="bi bi-box-arrow-in-down" style="font-size: 1.2rem;"></i>
-          <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
-        </a>
-      </li><!-- End Import Entity Nav -->
-
-       <?php
+     <?php
           $masterParts = ['countries', 'locations', 'provinces','product', 'productgroup', 'productunit', 'conveyance', 'inspectionmethod','treatmentmethod', 'entitytype', 'approvers']; // Add all relevant parts here
           $isMasterActive = (isset($_GET['part']) && in_array($_GET['part'], $masterParts));
       ?>

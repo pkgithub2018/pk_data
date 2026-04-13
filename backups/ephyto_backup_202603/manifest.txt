@@ -1,0 +1,51 @@
+﻿Backup created: 2026-03-06 14:59:30
+Project root: C:\xampp\htdocs
+
+Requested folders:
+- assets
+- jspk
+- php-bin
+- stylecss
+- uploads
+Requested files:
+- application.php
+- certificate.php
+- certificate_pdf.php
+- certificate_preview_new.php
+- certificate_verify.php
+- certificate_view.php
+- entity.php
+- index.php
+- inspection.php
+- main.php
+- masterdata.php
+- monitor_report.php
+- transaction.php
+- transaction-dataprocess.php
+- transaction-productreload.php
+- users.php
+- users-profile.php
+
+Copied items:
+[DIR] assets
+[DIR] jspk
+[DIR] php-bin
+[DIR] stylecss
+[DIR] uploads
+[FILE] application.php
+[FILE] certificate.php
+[FILE] certificate_pdf.php
+[FILE] certificate_preview_new.php
+[FILE] certificate_verify.php
+[FILE] certificate_view.php
+[FILE] entity.php
+[FILE] index.php
+[FILE] inspection.php
+[FILE] main.php
+[FILE] masterdata.php
+[FILE] monitor_report.php
+[FILE] transaction.php
+[FILE] transaction-dataprocess.php
+[FILE] transaction-productreload.php
+[FILE] users.php
+[FILE] users-profile.php

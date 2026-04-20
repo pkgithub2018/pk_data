@@ -1210,6 +1210,151 @@ function CountryInfo($cid, $con) {
 }
 
 /*
+ DistrictList: Select from tbdistricts table
+*/
+function DistrictList($userid, $con) {
+    $sql = "SELECT d.id, d.dname, d.pid, p.pname FROM tbdistricts d LEFT JOIN tbprovinces p ON d.pid = p.id ORDER BY p.pname ASC, d.dname ASC";
+    $result = pg_query($con, $sql) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $did   = $row['id'];
+            $dname = $row['dname'];
+            $pid   = $row['pid'];
+            $pname = $row['pname'];
+            print "<tr>
+                    <td>$i</td>
+                    <td>" . htmlspecialchars($pname, ENT_QUOTES) . "</td>
+                    <td>" . htmlspecialchars($dname, ENT_QUOTES) . "</td>
+                    <td>
+                      <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addDistrictModal'
+                        data-did='$did'
+                        data-dname='" . htmlspecialchars($dname, ENT_QUOTES) . "'
+                        data-pid='$pid'>
+                        <i class='bi bi-pencil-square table-icon'></i>
+                      </button>
+                    </td>
+                    <td><a href='masterdata.php?part=districts&did=$did&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                  </tr>";
+        }
+    }
+}
+/*
+  AddDistrict: Add new district into tbdistricts table
+*/
+function AddDistrict($pid, $dname, $con) {
+    $pid   = pg_escape_string($con, $pid);
+    $dname = pg_escape_string($con, $dname);
+
+    $sqlcheck = "SELECT dname FROM tbdistricts WHERE dname='$dname' AND pid='$pid'";
+    $result = pg_query($con, $sqlcheck) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('District name already exists for this province.');</script>";
+        return;
+    }
+    $sqladd = "INSERT INTO tbdistricts (pid, dname) VALUES ('$pid', '$dname')";
+    $result = pg_query($con, $sqladd) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=districts';</script>";
+    } else {
+        echo "<script>alert('Error adding district: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+  UpdateDistrict: Update district in tbdistricts table
+*/
+function UpdateDistrict($did, $pid, $dname, $con) {
+    $did   = pg_escape_string($con, $did);
+    $pid   = pg_escape_string($con, $pid);
+    $dname = pg_escape_string($con, $dname);
+
+    $sqlupdate = "UPDATE tbdistricts SET pid='$pid', dname='$dname' WHERE id='$did'";
+    $result = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=districts';</script>";
+    } else {
+        echo "<script>alert('Error updating district: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+  DeleteDistrict: Delete district from tbdistricts table
+*/
+function DeleteDistrict($did, $con) {
+    $did = pg_escape_string($con, $did);
+    $sql = "DELETE FROM tbdistricts WHERE id='$did'";
+    $result = pg_query($con, $sql) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>alert('District deleted successfully.');</script>";
+    } else {
+        echo "<script>alert('Error deleting district: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+/*
+ ProvinceList: Select from tbprovinces table
+*/
+function ProvinceList($userid, $con) {
+    $sql = "SELECT id, pname FROM tbprovinces ORDER BY pname ASC";
+    $result = pg_query($con, $sql) or die(pg_last_error());
+    $i = 0;
+    if (pg_num_rows($result) > 0) {
+        while ($row = pg_fetch_array($result)) {
+            $i++;
+            $pid = $row['id'];
+            $pname = $row['pname'];
+            print "<tr>
+                    <td>$i</td>
+                                        <td>" . htmlspecialchars($pname, ENT_QUOTES) . "</td>
+                                        <td>
+                                            <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProvinceModal'
+                                                data-provid='$pid'
+                                                data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "'>
+                                                <i class='bi bi-pencil-square table-icon'></i>
+                                            </button>
+                                        </td>
+                  </tr>";
+        }
+    }
+}
+/*
+  AddProvince: Add new province into tbprovinces table
+*/
+function AddProvince($pname, $con) {
+    $pname = pg_escape_string($con, $pname);
+
+    $sqlcheck = "SELECT pname FROM tbprovinces WHERE pname='$pname'";
+    $result = pg_query($con, $sqlcheck) or die(pg_last_error($con));
+    if (pg_num_rows($result) > 0) {
+        echo "<script>alert('Province name already exists.');</script>";
+        return;
+    }
+    $sqladd = "INSERT INTO tbprovinces (pname) VALUES ('$pname')";
+    $result = pg_query($con, $sqladd) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=provinces';</script>";
+    } else {
+        echo "<script>alert('Error adding province: " . pg_last_error($con) . "');</script>";
+    }
+}
+/*
+  UpdateProvince: Update province in tbprovinces table
+*/
+function UpdateProvince($pid, $pname, $con) {
+    $pid = pg_escape_string($con, $pid);
+    $pname = pg_escape_string($con, $pname);
+
+    $sqlupdate = "UPDATE tbprovinces SET pname='$pname' WHERE id='$pid'";
+    $result = pg_query($con, $sqlupdate) or die(pg_last_error($con));
+    if ($result) {
+        echo "<script>window.location.href = 'masterdata.php?part=provinces';</script>";
+    } else {
+        echo "<script>alert('Error updating province: " . pg_last_error($con) . "');</script>";
+    }
+}
+
+
+/*
   SelectCountryCurrency: Select country currency from tbcountries table
 */
 function SelectCurrency($currency, $con) {

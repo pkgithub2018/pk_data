@@ -286,7 +286,7 @@
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="masterdata.php?part=districts&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'districts') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></span>
             </a>
           </li>
@@ -322,7 +322,7 @@
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="masterdata.php?part=provinces&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'provinces') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
@@ -749,6 +749,117 @@
     }
   }
   ?>
+ <!-- ****************** District ****************** -->
+  <!-- ======= *************** Districts ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='districts') {
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDistrictModal" data-did="new">
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New District']) ? $translations['Add New District'] : 'Add New District'; ?>
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Districts == -->
+      <div class="modal fade" id="addDistrictModal" tabindex="-1" aria-labelledby="addDistrictModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addDistrictModalLabel"><b><?php echo isset($translations['Add New District']) ? $translations['Add New District'] : 'Add New District'; ?></b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <!-- Hidden input for did -->
+                <input type="hidden" id="districtId" name="districtId">
+                <div class="mb-3">
+                  <label for="districtProvince" class="form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
+                  <select class="form-select" id="districtProvince" name="districtProvince" required>
+                    <option value="">-- <?php echo isset($translations['Select Province']) ? $translations['Select Province'] : 'Select Province'; ?> --</option>
+                    <?php SelectProvinces(null, $con); ?>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="districtName" class="form-label"><?php echo isset($translations['District']) ? $translations['District'] : 'District'; ?></label>
+                  <input type="text" class="form-control" id="districtName" name="districtName" required>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translations['Close']) ? $translations['Close'] : 'Close'; ?></button>
+                <button type="submit" id="submitDistrict" name="submitDistrict" class="btn btn-success"><?php echo isset($translations['Add']) ? $translations['Add'] : 'Add'; ?></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Districts -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title"><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
+              <!-- Table with stripped rows -->
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                    <th><b>N</b>o</th>
+                    <th><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></th>
+                    <th><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'Districts'; ?></th>
+                    <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                    <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    DistrictList($userid, $con); // List of Districts
+                  ?>
+                </tbody>
+              </table>
+              <!-- End Table with stripped rows -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table districts -->
+
+    <?php } ?>
+    <!-- ********* End of if part=districts ********* -->
+    <?php
+    // Districts form processing/submission - MODAL form
+    if(isset($_POST['submitDistrict'])) {
+        $did = $_POST['districtId'];
+        $pid = $_POST['districtProvince'];
+        $dname = $_POST['districtName'];
+
+        if(empty($did) || $did === 'new') {
+            AddDistrict($pid, $dname, $con);
+        } else {
+            UpdateDistrict($did, $pid, $dname, $con);
+        }
+    }
+
+    if((isset($_GET['part']) && $_GET['part']==='districts') && (isset($_GET['del']) && $_GET['del'] === 'yes')) {
+        if(isset($_GET['did']) && !empty($_GET['did'])) {
+            $districtId = $_GET['did'];
+            DeleteDistrict($districtId, $con);
+            echo "<script>window.location.href='masterdata.php?part=districts&uid=" . $userid . "&lang=" . $lang . "';</script>";
+        }
+    }
+    ?>
+
   <!-- ======= *************** Pest ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='pest') {
@@ -1260,6 +1371,94 @@
         }
     }
   ?>
+ <!-- ======= *************** Provinces ************************* ======= -->
+    <?php
+     if(isset($_GET['part']) && $_GET['part']==='provinces') {
+    ?>
+    <div class="pagetitle d-flex justify-content-between align-items-center">
+      <div>
+      <h1><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
+          <li class="breadcrumb-item"><?php echo isset($translations['Tables']) ? $translations['Tables'] : 'Tables'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></li>
+        </ol>
+      </nav>
+      </div>
+      <div>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProvinceModal" data-provid="new">
+          <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Province']) ? $translations['Add New Province'] : 'Add New Province'; ?>
+        </button>
+      </div>
+    </div><!-- End Page Title -->
+    <!-- == Modal form - Provinces == -->
+      <div class="modal fade" id="addProvinceModal" tabindex="-1" aria-labelledby="addProvinceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addProvinceModalLabel"><b><?php echo isset($translations['Add New Province']) ? $translations['Add New Province'] : 'Add New Province'; ?></b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" id="provinceId" name="provinceId">
+                <div class="mb-3">
+                  <label for="provinceName" class="form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
+                  <input type="text" class="form-control" id="provinceName" name="provinceName" required>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translations['Close']) ? $translations['Close'] : 'Close'; ?></button>
+                <button type="submit" id="submitProvince" name="submitProvince" class="btn btn-success"><?php echo isset($translations['Add']) ? $translations['Add'] : 'Add'; ?></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <!-- End of Modal -->
+    <section class="section"> <!-- DATA TABLE - Provinces -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title"><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></h5>
+              <p><?php echo isset($translations['ePhytosanitary - Department of Agriculture, MAF']) ? $translations['ePhytosanitary - Department of Agriculture, MAF'] : 'ePhytosanitary - Department of Agriculture, MAF'; ?></p>
+              <table class="table datatable tabledata-fonts">
+                <thead>
+                  <tr>
+                    <th><b>N</b>o</th>
+                    <th><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></th>
+                    <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    ProvinceList($userid, $con); // List of Provinces
+                  ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> <!-- End Data Table provinces -->
+
+    <?php } ?>
+    <!-- ********* End of if part=provinces ********* -->
+    <?php
+    if(isset($_POST['submitProvince'])) {
+        $pid = $_POST['provinceId'];
+        $pname = $_POST['provinceName'];
+
+        if(empty($pid) || $pid === 'new') {
+            AddProvince($pname, $con);
+        } else {
+            UpdateProvince($pid, $pname, $con);
+        }
+    }
+    ?>
+
   <!-- ======= *************** Approvers ************************* ======= -->
     <?php
      if(isset($_GET['part']) && $_GET['part']==='approvers') {
@@ -2106,6 +2305,48 @@
         submitButton.text('Update');
       }
     });
+    // District modal handler
+    $('#addDistrictModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget);
+      var did = button.data('did');
+      var modal = $(this);
+      var districtNameInput = modal.find('#districtName');
+      var districtProvinceSelect = modal.find('#districtProvince');
+      var submitButton = modal.find('#submitDistrict');
+
+      modal.find('#districtId').val(did);
+      if (did === 'new') {
+        districtNameInput.val('');
+        districtProvinceSelect.val('');
+        modal.find('.modal-title').text('Add New District');
+        submitButton.text('Add');
+      } else {
+        districtNameInput.val(button.data('dname'));
+        districtProvinceSelect.val(button.data('pid'));
+        modal.find('.modal-title').text('Edit District');
+        submitButton.text('Update');
+      }
+    });
+    // Province modal handler
+    $('#addProvinceModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget);
+      var provid = button.data('provid');
+      var modal = $(this);
+      var provinceNameInput = modal.find('#provinceName');
+      var submitButton = modal.find('#submitProvince');
+
+      modal.find('#provinceId').val(provid);
+      if (provid === 'new' || typeof provid === 'undefined') {
+        provinceNameInput.val('');
+        modal.find('.modal-title').text('Add New Province');
+        submitButton.text('Add');
+        modal.find('#provinceId').val('new');
+      } else {
+        provinceNameInput.val(button.data('pname'));
+        modal.find('.modal-title').text('Edit Province');
+        submitButton.text('Update');
+      }
+    });
     // 3) process the form submission for adding/updating products
     $('#addProductModal').on('show.bs.modal', function (event) {
       var button = $(event.relatedTarget); // Button that triggered the modal
@@ -2357,7 +2598,31 @@
             }
           });
       } // End of if addCountryModal
-      
+
+      // Districts form - focus on district name when modal opens
+      var addDistrictModal = document.getElementById('addDistrictModal');
+      if (addDistrictModal) {
+          addDistrictModal.addEventListener('shown.bs.modal', function () {
+            var districtNameInput = document.getElementById('districtName');
+            if (districtNameInput) {
+                districtNameInput.focus();
+                districtNameInput.select();
+            }
+          });
+      } // End of if addDistrictModal
+
+          // Provinces form - focus on province name when modal opens
+          var addProvinceModal = document.getElementById('addProvinceModal');
+          if (addProvinceModal) {
+            addProvinceModal.addEventListener('shown.bs.modal', function () {
+            var provinceNameInput = document.getElementById('provinceName');
+            if (provinceNameInput) {
+              provinceNameInput.focus();
+              provinceNameInput.select();
+            }
+            });
+          } // End of if addProvinceModal
+
       // Product Group form
       var productGroupNameInput = document.getElementById('productGroupName');
       if (productGroupNameInput) {

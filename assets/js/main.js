@@ -284,8 +284,12 @@
   const datatables = select('.datatable', true)
   datatables.forEach(datatable => {
     const datatableOptions = {
-      perPageSelect: [5, 10, 15, ["All", -1]],
-      columns: [{
+      perPageSelect: [5, 10, 15, ["All", -1]]
+    }
+
+    const thCount = datatable.querySelectorAll('thead th').length
+    if (thCount > 4) {
+      datatableOptions.columns = [{
           select: 2,
           sortSequence: ["desc", "asc"]
         },

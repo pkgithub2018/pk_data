@@ -91,6 +91,9 @@ if (!empty($userid)) {
  }
  // Use group ID from user data
  $guid = $groupid;
+ 
+ // Permission check for entity menu
+ $entityPermit = UserPermitCheck($userid, 'FRM - ENTITY', $con);
 
 // Language handling for UI (mirror main.php)
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -169,7 +172,14 @@ if (!is_numeric($userid)) {
 
  // echo "<script>alert('P linkedin: " . $plinkedin . "');</script>"; // Debugging line
 
-  // GET IMAGE 
+  // GET IMAGE
+  
+  // Permission checks for menu items
+  $masterDataPermit = UserPermitCheck($userid, 'FRM-MASTER DATA', $con);
+  $userGroupPermit = UserPermitCheck($userid, 'FRM-USERGROUP', $con);
+  $groupPermitsPermit = UserPermitCheck($userid, 'FRM-USERS_PERMIT', $con);
+  $usersPermit = UserPermitCheck($userid, 'FRM-USERS', $con);
+  $modulesPermit = UserPermitCheck($userid, 'FRM-MODULES', $con);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -292,7 +302,7 @@ if (!is_numeric($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
+                <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
               </a>
             </li>
 
@@ -316,6 +326,7 @@ if (!is_numeric($userid)) {
         </a>
       </li><!-- End Dashboard Nav -->
 
+      <?php if ($entityPermit['pread']): ?>
         <li class="nav-item">
         <a class="nav-link collapsed" href="<?php echo htmlspecialchars('entity.php?entity=export&uid='.$userid.'&lang='.$lang); ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -328,6 +339,7 @@ if (!is_numeric($userid)) {
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
+      <?php endif; ?>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
@@ -347,7 +359,8 @@ if (!is_numeric($userid)) {
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
       </li><!-- End Certificate Nav --> 
-
+      
+      <?php if ($masterDataPermit['pread']) { ?>
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -358,7 +371,7 @@ if (!is_numeric($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+        <?php // if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -414,9 +427,10 @@ if (!is_numeric($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Provinces']) ? $translations['Provinces'] : 'Provinces'; ?></span>
             </a>
           </li>
-         <?php } // End of Admin group check ?> 
+         <?php // } // End of Admin group check ?> 
         </ul>
       </li><!-- End Master data -->
+      <?php } // End masterDataPermit check ?>
        <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
         <li class="nav-item">
@@ -438,27 +452,51 @@ if (!is_numeric($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-     <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+     
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
+      <?php endif; ?>
 
-       <li class="nav-item">
+      
+      <?php if ($groupPermitsPermit['pread']): ?>
+      <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
+      <?php endif; ?>
 
+      
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
       </li><!-- End Users Page Nav -->
-     <?php } // End of Admin group check ?>
+      <?php endif; ?>
+      
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?>
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
   
 
@@ -545,6 +583,11 @@ if (!is_numeric($userid)) {
                   <div class="row">
                     <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></div>
                     <div class="col-lg-9 col-md-8"><?php echo $position; ?></div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-lg-3 col-md-4 label"><?php echo isset($translations['User group']) ? $translations['User group'] : 'User group'; ?></div>
+                    <div class="col-lg-9 col-md-8"><?php echo $groupname; ?></div>
                   </div>
 
                   <div class="row">

@@ -59,6 +59,25 @@ $uprofile = Profiledata($userid, $con);
 // User group ID - get from user data instead of session
 $guid = $groupid;
 
+// Check permissions for Import and Export entity module using enhanced user-level permission check
+$entityPermissions = UserPermitCheck($userid, 'FRM - ENTITY', $con);
+$canReadEntity = $entityPermissions['pread'];
+$canAddEntity = $entityPermissions['padd'];
+$canUpdateEntity = $entityPermissions['pupdate'];
+$canDeleteEntity = $entityPermissions['pdelete'];
+
+// Permission checks for menu items
+$masterDataPermit = UserPermitCheck($userid, 'FRM - MASTER DATA', $con);
+$userGroupPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$groupPermitsPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$usersPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+
+// Set form control attributes based on permissions
+$formDisabled = ($canAddEntity || $canUpdateEntity) ? '' : 'disabled';
+$formReadonly = ($canAddEntity || $canUpdateEntity) ? '' : 'readonly';
+$showSubmitButton = ($canAddEntity || $canUpdateEntity);
+
 // Build main link preserving uid and lang
 $mainParams = ['uid' => isset($userid) ? $userid : '', 'lang' => isset($lang) ? $lang : 'en'];
 $mainHref = 'main.php?' . http_build_query($mainParams);
@@ -191,7 +210,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span>Logout</span>
               </a>
             </li>
 
@@ -248,6 +267,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
         </a>
       </li><!-- End Certificate Nav --> 
 
+       <?php if ($masterDataPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -258,7 +278,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-       <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+       <?php // if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -315,9 +335,10 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
-        <?php } // End of Admin group check ?>
+        <?php // } // End of Admin group check ?>
         </ul>
-      </li><!-- End Master Data Nav -->    
+      </li>
+      <?php endif; ?><!-- End Master Data Nav -->    
       
        <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
@@ -340,29 +361,49 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-   <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
-      </li><!-- End Users group -->
+      </li>
+      <?php endif; ?><!-- End Users group -->
 
+      <?php if ($groupPermitsPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
-      </li><!-- End Permission: User Group and Module -->
+      </li>
+      <?php endif; ?><!-- End Permission: User Group and Module -->
 
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i>
           <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
-      </li>  
-      <?php } // End of Admin group check ?>
+      </li>
+      <?php endif; ?>
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?>
       <!-- pk**: End of User Admin-->
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
 
   </aside><!-- End Sidebar-->
@@ -529,6 +570,15 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           <div class="card">
             <div class="card-body">
               <h5 class="card-title"><?php echo isset($translations['Entity Data Form']) ? $translations['Entity Data Form'] : 'Entity Data Form'; ?></h5>
+              
+              <?php if (!$canAddEntity && !$canUpdateEntity && $canReadEntity): ?>
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="bi bi-info-circle me-1"></i>
+                You have <strong>read-only</strong> access to this module. You cannot add or edit entity information.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              <?php endif; ?>
+              
                <!-- Entity/Company Form -->
               <form action="" method="POST">
                 <!-- Hidden inputs to preserve parameters -->
@@ -542,7 +592,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Business Type']) ? $translations['Business Type'] : 'Business Type'; ?></label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="business_type" aria-label="Default select example">
+                    <select class="form-select" name="business_type" aria-label="Default select example" <?php echo $formDisabled; ?>>
                       <option selected></option>
                       <option value="1" <?php echo (isset($bustype) && $bustype == '1') ? 'selected' : ''; ?>>Individual</option>
                       <option value="2" <?php echo (isset($bustype) && $bustype == '2') ? 'selected' : ''; ?>>Company</option>
@@ -550,7 +600,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   </div>
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="entity_type" aria-label="Default select example">
+                    <select class="form-select" name="entity_type" aria-label="Default select example" <?php echo $formDisabled; ?>>
                       <option selected></option>
                       <?php SelectEntitytype($enttype, $con); ?>
                     </select>
@@ -560,13 +610,13 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                 <div class="row mb-3">
                   <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Name']) ? $translations['Entity Name'] : 'Entity Name'; ?></label>
                   <div class="col-sm-10">
-                    <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
+                    <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
                 <div class="row mb-3">
                   <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                   <div class="col-sm-10">
-                    <textarea class="form-control" name="address" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
+                    <textarea class="form-control" name="address" style="height: 100px" <?php echo $formReadonly; ?>><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
                 </div>
 
@@ -574,13 +624,13 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   <!-- Zip Code -->
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Zip Code']) ? $translations['Zip Code'] : 'Zip Code'; ?></label>
                   <div class="col-sm-2">
-                    <input type="text" name="zipcode" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>">
+                    <input type="text" name="zipcode" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
 
                   <!-- Phone -->
                   <label class="col-sm-1 col-form-label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></label>
                   <div class="col-sm-7">
-                    <input type="text" name="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
+                    <input type="text" name="phone" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
 
@@ -655,7 +705,11 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10">
+                    <?php if ($showSubmitButton): ?>
                     <button type="submit" name="btnsubEntityExport" class="btn btn-primary" value="<?php echo isset($sbupdate) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate) ? (isset($translations['Update']) ? $translations['Update'] : 'Update') : (isset($translations['Submit']) ? $translations['Submit'] : 'Submit'); ?></button>
+                    <?php else: ?>
+                    <p class="text-muted"><i class="bi bi-lock me-1"></i>You don't have permission to submit or update entity data.</p>
+                    <?php endif; ?>
                   </div>
                 </div>
               </form><!-- End Export entity Form -->
@@ -810,6 +864,15 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           <div class="card">
             <div class="card-body">
               <h5 class="card-title"><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></h5>
+              
+              <?php if (!$canAddEntity && !$canUpdateEntity && $canReadEntity): ?>
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="bi bi-info-circle me-1"></i>
+                You have <strong>read-only</strong> access to this module. You cannot add or edit entity information.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              <?php endif; ?>
+              
               <!-- Import Entity/Company Form -->
               <form action="" method="POST">
                 <!-- Hidden inputs to preserve parameters -->
@@ -817,7 +880,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                  <div class="row mb-3">
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Business Type']) ? $translations['Business Type'] : 'Business Type'; ?></label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="businesstype_import" aria-label="Default select example">
+                    <select class="form-select" name="businesstype_import" aria-label="Default select example" <?php echo $formDisabled; ?>>
                       <option selected></option>
                       <option value="1" <?php echo (isset($bustype) && $bustype == '1') ? 'selected' : ''; ?>>Individual</option>
                       <option value="2" <?php echo (isset($bustype) && $bustype == '2') ? 'selected' : ''; ?>>Company</option>
@@ -825,7 +888,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   </div>
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Type']) ? $translations['Entity Type'] : 'Entity Type'; ?></label>
                   <div class="col-sm-4">
-                    <select class="form-select" name="entitytype_import" aria-label="Default select example">
+                    <select class="form-select" name="entitytype_import" aria-label="Default select example" <?php echo $formDisabled; ?>>
                       <option selected></option>
                       <?php SelectEntitytype($enttype, $con); ?>
                     </select>
@@ -835,13 +898,13 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                 <div class="row mb-3">
                   <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Entity Name']) ? $translations['Entity Name'] : 'Entity Name'; ?></label>
                   <div class="col-sm-10">
-                    <input type="text" name="name_import" id="name_import" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>">
+                    <input type="text" name="name_import" id="name_import" class="form-control" value="<?php echo isset($name) ? $name : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
                 <div class="row mb-3">
                   <label for="inputPassword" class="col-sm-2 col-form-label"><?php echo isset($translations['Address']) ? $translations['Address'] : 'Address'; ?></label>
                   <div class="col-sm-10">
-                    <textarea class="form-control" name="address_import" style="height: 100px"><?php echo isset($address) ? $address : ''; ?></textarea>
+                    <textarea class="form-control" name="address_import" style="height: 100px" <?php echo $formReadonly; ?>><?php echo isset($address) ? $address : ''; ?></textarea>
                   </div>
                 </div>
 
@@ -849,26 +912,26 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   <!-- Zip Code -->
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Zip Code']) ? $translations['Zip Code'] : 'Zip Code'; ?></label>
                   <div class="col-sm-2">
-                    <input type="text" name="zipcode_import" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>">
+                    <input type="text" name="zipcode_import" class="form-control" value="<?php echo isset($zip) ? $zip : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
 
                   <!-- Phone -->
                   <label class="col-sm-1 col-form-label"><?php echo isset($translations['Phone']) ? $translations['Phone'] : 'Phone'; ?></label>
                   <div class="col-sm-7">
-                    <input type="text" name="phone_import" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>">
+                    <input type="text" name="phone_import" class="form-control"  value="<?php echo isset($phone) ? $phone : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
 
                 <div class="row mb-3">
                   <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Email']) ? $translations['Email'] : 'Email'; ?></label>
                   <div class="col-sm-10">
-                    <input type="text" name="email_import" id="email_import" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>">
+                    <input type="text" name="email_import" id="email_import" class="form-control" value="<?php echo isset($email) ? $email : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
                 <div class="row mb-3">
                   <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Country']) ? $translations['Country'] : 'Country'; ?></label>
                   <div class="col-sm-10">
-                     <select class="form-select" name="country_import" aria-label="Default select example">
+                     <select class="form-select" name="country_import" aria-label="Default select example" <?php echo $formDisabled; ?>>
                       <option selected></option>
                       <?php SelectCountry($countryid, $con); ?>
                     </select>
@@ -877,25 +940,29 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Province']) ? $translations['Province'] : 'Province'; ?></label>
                   <div class="col-sm-4">
-                    <input type="text" name="province_import" id="province_import" class="form-control" value="<?php echo isset($province) ? $province : ''; ?>">
+                    <input type="text" name="province_import" id="province_import" class="form-control" value="<?php echo isset($province) ? $province : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                   <label class="col-sm-2 col-form-label"><?php echo isset($translations['Districts']) ? $translations['Districts'] : 'District/City'; ?></label>
                   <div class="col-sm-4">
-                    <input type="text" name="district_import" id="district_import" class="form-control" value="<?php echo isset($district) ? $district : ''; ?>">
+                    <input type="text" name="district_import" id="district_import" class="form-control" value="<?php echo isset($district) ? $district : ''; ?>" <?php echo $formReadonly; ?>>
                   </div> 
                 </div>
 
                 <div class="row mb-3">
                   <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Contact person']) ? $translations['Contact person'] : 'Contact Person'; ?></label>
                   <div class="col-sm-10">
-                    <input type="text" name="contactperson_import" id="contactperson_import" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>">
+                    <input type="text" name="contactperson_import" id="contactperson_import" class="form-control" value="<?php echo isset($contact_person) ? $contact_person : ''; ?>" <?php echo $formReadonly; ?>>
                   </div>
                 </div>
 
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10">
+                    <?php if ($showSubmitButton): ?>
                     <button type="submit" name="btnsubEntityImport" class="btn btn-primary" value="<?php echo isset($sbupdate_import) ? 'update' : 'submit'; ?>"><?php echo isset($sbupdate_import) ? 'Update' : 'Submit'; ?></button>
+                    <?php else: ?>
+                    <p class="text-muted"><i class="bi bi-lock me-1"></i>You don't have permission to submit or update entity data.</p>
+                    <?php endif; ?>
                   </div>
                 </div>
 

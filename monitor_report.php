@@ -99,6 +99,15 @@ if (!empty($userid)) {
  }
  // Use group ID from user data
  $guid = $groupid;
+ 
+ // Permission checks for menu items
+ $entityPermit = UserPermitCheck($userid, 'FRM - ENTITY', $con);
+ $masterDataPermit = UserPermitCheck($userid, 'FRM - MASTER DATA', $con);
+ $userGroupPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $groupPermitsPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $usersPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+ 
  $monitorMenu = isset($_GET['mn']) ? trim($_GET['mn']) : '';
 
  // Certificate search by certificate_no and guid
@@ -277,7 +286,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span>Logout</span>
               </a>
             </li>
           </ul><!-- End Profile Dropdown Items -->
@@ -295,6 +304,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Dashboard Nav --> 
 
+      <?php if ($entityPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -307,6 +317,7 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
+      <?php endif; ?>
 
     <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>"&lang=<?php echo $lang; ?>">
@@ -327,6 +338,7 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Certificate Nav --> 
 
+      <?php if ($masterDataPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -337,7 +349,7 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+        <?php // if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -398,9 +410,10 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
-         <?php } // End of Admin group check ?>
+         <?php // } // End of Admin group check ?>
         </ul>
-      </li><!-- End Master Data Nav -->
+      </li>
+      <?php endif; ?><!-- End Master Data Nav -->
 
       <!-- Monitoring and Reporting -->
        <li class="nav-heading">Monitoring and Reporting</li>
@@ -425,26 +438,48 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-    <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
-      </li><!-- End Users group -->
+      </li>
+      <?php endif; ?><!-- End Users group -->
+      <?php if ($groupPermitsPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
-      </li><!-- End Permission: User Group and Module -->
+      </li>
+      <?php endif; ?><!-- End Permission: User Group and Module -->
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
+      </li>
+      <?php endif; ?>
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?>
       </li>  
-      <?php } // End of Admin group check ?>
+      <?php // } // End of Admin group check ?>
       <!-- pk**: End of User Admin-->
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
   </aside><!-- End Sidebar-->
   <main id="main" class="main">
@@ -452,11 +487,11 @@ if (!empty($userid)) {
        // if(isset($_GET['part']) && $_GET['part'] == 'dashboard_monitor'){ 
      ?>
     <div class="pagetitle">
-      <h1> Monitor and Report</h1>
+      <h1> <?php echo isset($translations['Monitor and report']) ? $translations['Monitor and report'] : 'Monitor and report'; ?></h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="main.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>"><?php echo isset($translations['Home']) ? $translations['Home'] : 'Home'; ?></a></li>
-          <li class="breadcrumb-item active"><?php echo isset($translations['Monitor and Report']) ? $translations['Monitor and Report'] : 'Monitor and Report'; ?></li>
+          <li class="breadcrumb-item active"><?php echo isset($translations['Monitor and report']) ? $translations['Monitor and report'] : 'Monitor and report'; ?></li>
         </ol>
       </nav>
     </div><!-- End Page Title -->

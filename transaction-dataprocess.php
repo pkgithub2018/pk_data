@@ -75,11 +75,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'save_multiple_products') {
         // Insert new products
         $successCount = 0;
         foreach ($products as $index => $product) {
-            // Validate product data
-            if (!isset($product['productId']) || !isset($product['unitId'])) {
+            // Validate product data - check if fields exist and are not empty
+            if (empty($product['productId']) || empty($product['unitId'])) {
                 error_log("Product at index $index missing required fields: " . print_r($product, true));
                 continue;
             }
+            
+            // Convert empty strings to appropriate values for numeric fields
+            $netQuantity = (isset($product['netQuantity']) && $product['netQuantity'] !== '') 
+                ? floatval($product['netQuantity']) : 0;
+            $grossQuantity = (isset($product['grossQuantity']) && $product['grossQuantity'] !== '') 
+                ? floatval($product['grossQuantity']) : 0;
             
             $sqlInsert = "INSERT INTO tbmultiple_product 
                          (application_id, product_id, number_description, quantity_net, quantity_gross, unit_id) 
@@ -87,11 +93,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'save_multiple_products') {
             
             $result = pg_query_params($con, $sqlInsert, [
                 $appid,
-                $product['productId'],
+                intval($product['productId']),
                 $product['numberDescription'] ?? '',
-                $product['netQuantity'] ?? 0,
-                $product['grossQuantity'] ?? 0,
-                $product['unitId']
+                $netQuantity,
+                $grossQuantity,
+                intval($product['unitId'])
             ]);
             
             if ($result) {

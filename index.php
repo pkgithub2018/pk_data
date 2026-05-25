@@ -39,7 +39,12 @@
   */
     // IN CASE OF SUBMISSION THROUGH FORM
   if (!empty($email) && !empty($password)) {
-    $sql = "SELECT id, name, psw, position, email, group_id FROM tbusers WHERE email = '$email' AND enabled = 'yes'";
+    $sql = "SELECT u.id, u.name, u.psw, u.position, u.email, u.group_id
+            FROM tbusers u
+            INNER JOIN tbusergroup g ON g.id = u.group_id
+            WHERE u.email = '$email'
+              AND u.enabled = 'yes'
+              AND g.enabled = 'yes'";
     $result = pg_query($con, $sql) or die(pg_last_error());
 
     //$row = pg_fetch_array($result)
@@ -55,10 +60,10 @@
             echo "<script type='text/javascript'>window.location.href = 'main.php?uid=" . $userid . "';</script>";
             exit();
         } else {
-            $message = "Incorrect username or password.";
+            $message = "Incorrect username or password or no permission to access.";
         }
     } else {
-        $message = "Incorrect username or password.".$email."   ".$password;
+        $message = "Incorrect username or password or no permission to access.".$email."   ".$password;
     }
 }
   

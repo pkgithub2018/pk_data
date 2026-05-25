@@ -323,6 +323,84 @@ if (!empty($userid)) {
  }
  // Use group ID from user data
  $guid = $groupid;
+
+ // Get location group for the user
+ $location_group = UserLocationGroup($userid, $con); //PAS-LM, PAS-XA, etc
+ //echo "<script>console.log('User ID: " . addslashes($userid) . ", Group ID: " . addslashes($groupid) . ", Location Group: " . addslashes($location_group) . "');</script>";
+
+ // User permission check using enhanced UserPermitCheck (considers group_admin flag and user role)
+ $userPermit = UserPermitCheck($userid, basename($_SERVER['PHP_SELF']), $con);
+ $groupPermitMid = $userPermit['mid'];
+ $canRead = $userPermit['pread'];
+ $canAdd = $userPermit['padd'];
+ $canUpdate = $userPermit['pupdate'];
+ $canDelete = $userPermit['pdelete'];
+
+ // Get permissions for Main Dashboard
+ $mainDashboardPermit = UserPermitCheck($userid, 'PG-MAIN', $con);
+ // Also try 'Main dashboard' if PG-MAIN doesn't exist (fallback for different module naming)
+ if (!$mainDashboardPermit['exists']) {
+     $mainDashboardPermit = UserPermitCheck($userid, 'Main dashboard', $con);
+ }
+ 
+ // Get permissions for transaction.php parts - Application, Inspection, Certificate
+ // Since transaction.php handles different modules, we need to check their specific permissions
+ $appPermit = UserPermitCheck($userid, 'PG-APPLICATION', $con);     // Application
+ $inspectPermit = UserPermitCheck($userid, 'PG-INSPECTION', $con); // Inspection
+ $certPermit = UserPermitCheck($userid, 'PG-CERTIFICATE', $con);       // Certificate
+ 
+ // Get permissions for Entity (Export/Import)
+ $entityPermit = UserPermitCheck($userid, 'FRM - ENTITY', $con);
+ 
+ // Get permissions for Master Data
+ $masterDataPermit = UserPermitCheck($userid, 'FRM - MASTER DATA', $con);
+ 
+ // Get permissions for User Management sections
+ $userGroupPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $groupPermitsPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $usersPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+ $modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+ 
+ // Combine permissions for ApplicationList display
+ $transactionPermit = [
+     'exists' => ($appPermit['exists'] || $inspectPermit['exists'] || $certPermit['exists']),
+     'pread' => ($appPermit['pread'] || $inspectPermit['pread'] || $certPermit['pread']),
+     'padd' => ($appPermit['padd'] || $inspectPermit['padd'] || $certPermit['padd']),
+     'pupdate' => ($appPermit['pupdate'] || $inspectPermit['pupdate'] || $certPermit['pupdate']),
+     'pdelete' => ($appPermit['pdelete'] || $inspectPermit['pdelete'] || $certPermit['pdelete']),
+     'app_read' => $appPermit['pread'],
+     'app_update' => $appPermit['pupdate'],
+     'inspect_add' => $inspectPermit['padd'],
+     'inspect_update' => $inspectPermit['pupdate'],
+     'cert_add' => $certPermit['padd'],
+     'cert_update' => $certPermit['pupdate'],
+     'reason' => 'Transaction Module Composite Permissions'
+ ];
+ 
+ // Debug: Log permissions (comment out after verification)
+ echo "<script>console.log('===== PERMISSION DEBUG =====');</script>";
+ echo "<script>console.log('User ID: $userid, Group ID: $groupid');</script>";
+ echo "<script>console.log('PG-MAIN Dashboard - Exists: " . ($mainDashboardPermit['exists'] ? 'YES' : 'NO') . ", Read: " . ($mainDashboardPermit['pread'] ? 'YES' : 'NO') . ", Module Code: " . addslashes($mainDashboardPermit['module_code']) . ", Module Title: " . addslashes($mainDashboardPermit['module_title']) . ", Reason: " . addslashes($mainDashboardPermit['reason']) . "');</script>";
+ echo "<script>console.log('PG-APPLICATION - Exists: " . ($appPermit['exists'] ? 'YES' : 'NO') . ", Read: " . ($appPermit['pread'] ? 'YES' : 'NO') . ", Update: " . ($appPermit['pupdate'] ? 'YES' : 'NO') . ", Reason: " . addslashes($appPermit['reason']) . "');</script>";
+ echo "<script>console.log('PG-INSPECTION - Exists: " . ($inspectPermit['exists'] ? 'YES' : 'NO') . ", Add: " . ($inspectPermit['padd'] ? 'YES' : 'NO') . ", Update: " . ($inspectPermit['pupdate'] ? 'YES' : 'NO') . ", Reason: " . addslashes($inspectPermit['reason']) . "');</script>";
+ echo "<script>console.log('PG-CERTIFICATE - Exists: " . ($certPermit['exists'] ? 'YES' : 'NO') . ", Add: " . ($certPermit['padd'] ? 'YES' : 'NO') . ", Update: " . ($certPermit['pupdate'] ? 'YES' : 'NO') . ", Reason: " . addslashes($certPermit['reason']) . "');</script>";
+ echo "<script>console.log('===========================');</script>";
+
+ // Permission check for Main Dashboard
+ if (!$mainDashboardPermit['pread']) {
+   echo "<script>alert('Access Denied: You do not have permission to access the Main Dashboard.');</script>";
+   echo "<script>window.location.href = 'index.php';</script>";
+   exit();
+ }
+
+ // Only block access if a permit row exists and read is not granted
+ if ($userPermit['exists'] && !$canRead) {
+   echo "<script>alert('You do not have permission to access this page.');</script>";
+   echo "<script>window.location.href = 'index.php';</script>";
+   exit();
+ }
+
+ 
   // *************************** APPLICATION ***************************
  // CANCEL/DELETE Application
  if (isset($_GET['btn']) && $_GET['btn'] === 'cancelApp') {
@@ -727,7 +805,7 @@ if (!empty($userid)) {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
+                <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
               </a>
             </li>
           </ul><!-- End Profile Dropdown Items -->
@@ -738,14 +816,16 @@ if (!empty($userid)) {
   <!-- ======= Sidebar ======= -->
   <aside id="sidebar" class="sidebar">
     <ul class="sidebar-nav" id="sidebar-nav">
+      <?php if ($mainDashboardPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link " href="#">
           <i class="bi bi-grid"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Dashboard']) ? $translations['Dashboard'] : 'Dashboard'; ?></span>
         </a>
-      </li><!-- End Dashboard Nav --> 
+      </li><!-- End Dashboard Nav -->
+      <?php endif; ?>
 
-      
+      <?php if ($entityPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="<?php echo htmlspecialchars('entity.php?entity=export&uid='.$userid.'&lang='.$lang); ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -758,27 +838,36 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity/Company form Nav -->
+      <?php endif; ?>
 
+      <?php if ($appPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-file-earmark-text"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Application']) ? $translations['Application'] : 'Application'; ?></span>
         </a>
-      </li><!-- End Application Nav --> 
-       <li class="nav-item">
+      </li><!-- End Application Nav -->
+      <?php endif; ?>
+
+      <?php if ($inspectPermit['pread']): ?>
+      <li class="nav-item">
         <a class="nav-link collapsed" href="inspection.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-check"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Inspection']) ? $translations['Inspection'] : 'Inspection'; ?></span>
         </a>
-      </li><!-- End Inspection Nav --> 
-       <li class="nav-item">
+      </li><!-- End Inspection Nav -->
+      <?php endif; ?>
+
+      <?php if ($certPermit['pread']): ?>
+      <li class="nav-item">
         <a class="nav-link collapsed" href="certificate.php?uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-journal-album"></i>  <!-- set color: style="color: #28a745; font-size: 1.5em;" -->
           <span><?php echo isset($translations['Certificate']) ? $translations['Certificate'] : 'Certificate'; ?></span>
         </a>
-      </li><!-- End Certificate Nav --> 
-
+      </li><!-- End Certificate Nav -->
+      <?php endif; ?>
       
+      <?php if ($masterDataPermit['pread']) { ?>
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -789,7 +878,6 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -850,9 +938,9 @@ if (!empty($userid)) {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
-         <?php } // End of Admin group check ?>
         </ul>
       </li><!-- End Master Data Nav -->
+      <?php } ?>
 
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
@@ -875,26 +963,51 @@ if (!empty($userid)) {
         </a>
       </li><!-- End Profile Page Nav -->
 
-      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      <?php // User Administration Menu Items with Permission Checks ?>
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
       </li><!-- End Users group -->
-       <li class="nav-item">
+      <?php endif; ?>
+      
+      <?php if ($groupPermitsPermit['pread']): ?>
+      <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
       </li><!-- End Permission: User Group and Module -->
+      <?php endif; ?>
+      
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
-      </li>  
-      <?php } // End of Admin group check ?>
+      </li>
+      <?php endif; ?>
+      
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?>
+      <?php // End of User Administration Menu Items ?>
       <!-- pk**: End of User Admin-->
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
   </aside><!-- End Sidebar-->
   <main id="main" class="main">
@@ -910,7 +1023,7 @@ if (!empty($userid)) {
     
     <?php
     // Get chart data from the function
-    $chartData = ChartDocTracking($guid, $con);  // this function in supports.php
+    $chartData = ChartDocTracking($location_group, $con);  // this function in supports.php
     
     // Debug: Log the data
     error_log("Chart Data Result: " . print_r($chartData, true));
@@ -938,7 +1051,7 @@ if (!empty($userid)) {
     }
 
     // Monthly pest detected line-chart data (last 3 months)
-    $monthlyPestData = MonthlyPestDetectedChartData($guid, $con);
+    $monthlyPestData = MonthlyPestDetectedChartData($location_group, $con);
     $defaultLastThreeMonths = [];
     for ($i = 2; $i >= 0; $i--) {
       $defaultLastThreeMonths[] = date('M', strtotime("first day of -{$i} month"));
@@ -962,7 +1075,7 @@ if (!empty($userid)) {
     }
 
     // Monthly pest category bar-chart data (last 3 months)
-    $monthlyPestCategoryData = MonthlyPestCategoryChartData($guid, $con);
+    $monthlyPestCategoryData = MonthlyPestCategoryChartData($location_group, $con);
     if (!$monthlyPestCategoryData || !isset($monthlyPestCategoryData['months']) || !isset($monthlyPestCategoryData['series'])) {
       $monthlyPestCategoryData = [
         'success' => false,
@@ -1288,7 +1401,7 @@ if (!empty($userid)) {
                       </tr>
                     </thead>
                     <tbody>
-                     <?php ApplicationList($guid, $con, $lang, $userid); ?>
+                     <?php ApplicationList($location_group, $con, $lang, $userid, $transactionPermit); ?>
                     </tbody>
                   </table>
                   </div>

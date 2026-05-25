@@ -55,7 +55,8 @@ function Grouplist($con){
             $gid = $row['id'];
             $gname = $row['title'];
             $gdesc = $row['desc'];
-            $gstatus = $row['enabled'];
+          $gstatus = strtolower(trim((string)$row['enabled']));
+          $isChecked = ($gstatus === 'yes');
             // Add checkbox for $gstatus
             // handleCheckboxChange function in users-validate.js
           print "<tr>
@@ -64,7 +65,7 @@ function Grouplist($con){
                   <td>$gdesc</td>
                   <td>
                     <div class='form-check form-switch'>
-                      <input class='form-check-input' role='switch' type='checkbox' id='$gid' data-nrows='$nrows' " . ($gstatus === 'yes' ? 'checked' : '') . " onchange='handleCheckboxChange(this)'>
+                        <input class='form-check-input' role='switch' type='checkbox' id='$gid' data-nrows='$nrows' " . ($isChecked ? 'checked' : '') . " onchange='handleCheckboxChange(this)'>
                     </div>
                   </td>
                   <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addGroupModal' data-gid='$gid' data-gname='" . htmlspecialchars($gname, ENT_QUOTES) . "' data-gdesc='" . htmlspecialchars($gdesc, ENT_QUOTES) . "'>
@@ -77,11 +78,20 @@ function Grouplist($con){
 }
 
 /*
+    Normalize checkbox/status values to yes/no for enabled fields
+*/
+function NormalizeEnabledStatus($statusValue) {
+    $status = strtolower(trim((string)$statusValue));
+    return in_array($status, ['1', 'true', 'on', 'yes'], true) ? 'yes' : 'no';
+}
+
+/*
   Groupnew: Add new group into tbusergroup table
 */
-function Groupnew($gname,$gdesc,$con){
+function Groupnew($gname,$gdesc,$con,$gstatus='yes'){
     $gname = pg_escape_string($con, $gname);
     $gdesc = pg_escape_string($con, $gdesc);
+    $gstatus = pg_escape_string($con, NormalizeEnabledStatus($gstatus));
     // Check if the group name already exists
     $sqlgroup = "SELECT title FROM tbusergroup WHERE title='".$gname."'";
     $result = pg_query($con,$sqlgroup) or die(pg_last_error());
@@ -92,7 +102,7 @@ function Groupnew($gname,$gdesc,$con){
         return $exgroup;
     } else {
        $sqladdgroup = "INSERT INTO \"tbusergroup\" (\"title\", \"desc\", \"enabled\") 
-                VALUES ('" . $gname . "', '" . $gdesc . "', 'yes') RETURNING id"; // 'yes' is the default value for a new group
+                     VALUES ('" . $gname . "', '" . $gdesc . "', '" . $gstatus . "') RETURNING id";
         $result = pg_query($con, $sqladdgroup);
         if ($result) {
           // Get the last inserted ID
@@ -121,14 +131,19 @@ function Groupdelete($gid,$con){
   Groupupdate: Update group from tbusergroup table 
   VIA FUNCTION: handleCheckboxChange in users-validate.js and users_dataprocess.php
 */
- function Groupupdate($gid,$gname,$gdesc,$con){
+ function Groupupdate($gid,$gname,$gdesc,$con,$gstatus=null){
     $gid = pg_escape_string($con, $gid);
     $gname = pg_escape_string($con, $gname);
     $gdesc = pg_escape_string($con, $gdesc);
+    $enabledSql = "";
+    if ($gstatus !== null) {
+        $normalizedStatus = pg_escape_string($con, NormalizeEnabledStatus($gstatus));
+        $enabledSql = ", enabled='" . $normalizedStatus . "'";
+    }
     
     // Update the group information
     // \"desc\"='".$gdesc."' - \"desc\" is a reserved word in PostgreSQL
-    $sqlupdategroup = "UPDATE tbusergroup SET title='".$gname."', \"desc\"='".$gdesc."' WHERE id='".$gid."'";
+    $sqlupdategroup = "UPDATE tbusergroup SET title='".$gname."', \"desc\"='".$gdesc."'" . $enabledSql . " WHERE id='".$gid."'";
     $result = pg_query($con, $sqlupdategroup) or die(pg_last_error());
     if ($result) {
         //echo "<script>alert('Group updated successfully.');</script>";
@@ -151,6 +166,555 @@ function GrouppermitName($groupid,$con){ // userlogin is the email
         return false;
     }  
 }
+
+
+/*
+ GrouppermitCheck: Return module and granted permissions for a group from tbgrouppermits
+ $moduleRef can be module id, module code/title, or file name (e.g. main.php)
+*/
+function GrouppermitCheck($groupid, $moduleRef, $con) {
+    if (empty($groupid) || $moduleRef === null || $moduleRef === '') {
+        return [
+            'exists' => false,
+            'mid' => null,
+            'module_code' => null,
+            'module_title' => null,
+            'module_file' => null,
+            'pread' => false,
+            'padd' => false,
+            'pupdate' => false,
+            'pdelete' => false,
+            'granted' => false
+        ];
+    }
+
+    $groupid = pg_escape_string($con, (string)$groupid);
+    $moduleRaw = trim((string)$moduleRef);
+    $moduleFile = basename($moduleRaw);
+    $moduleCodeFromFile = pathinfo($moduleFile, PATHINFO_FILENAME);
+
+    if (is_numeric($moduleRaw)) {
+        $moduleWhere = "gp.mid='" . pg_escape_string($con, $moduleRaw) . "'";
+    } else {
+        $moduleEscaped = pg_escape_string($con, $moduleRaw);
+        $moduleFileEscaped = pg_escape_string($con, $moduleFile);
+        $moduleCodeEscaped = pg_escape_string($con, $moduleCodeFromFile);
+        $moduleWhere = "(m.code='$moduleEscaped' OR m.title='$moduleEscaped' OR m.code='$moduleFileEscaped' OR m.title='$moduleFileEscaped' OR m.code='$moduleCodeEscaped' OR m.title='$moduleCodeEscaped')";
+    }
+
+    $sqlpermit = "SELECT gp.mid, m.code AS module_code, m.title AS module_title, gp.pread, gp.padd, gp.pupdate, gp.pdelete
+                  FROM tbgrouppermits gp
+                  INNER JOIN tbmodules m ON m.id = gp.mid
+                  INNER JOIN tbusergroup g ON g.id = gp.gid
+                  WHERE gp.gid='$groupid' AND $moduleWhere
+                  AND m.enabled='yes' AND g.enabled='yes'
+                  LIMIT 1";
+
+    $result = pg_query($con, $sqlpermit) or die(pg_last_error($con));
+
+    if ($result && pg_num_rows($result) > 0) {
+        $row = pg_fetch_assoc($result);
+        $canRead = (strtolower(trim((string)$row['pread'])) === 'yes');
+        $canAdd = (strtolower(trim((string)$row['padd'])) === 'yes');
+        $canUpdate = (strtolower(trim((string)$row['pupdate'])) === 'yes');
+        $canDelete = (strtolower(trim((string)$row['pdelete'])) === 'yes');
+
+        return [
+            'exists' => true,
+            'mid' => $row['mid'],
+            'module_code' => $row['module_code'],
+            'module_title' => $row['module_title'],
+            'module_file' => $moduleFile,
+            'pread' => $canRead,
+            'padd' => $canAdd,
+            'pupdate' => $canUpdate,
+            'pdelete' => $canDelete,
+            'granted' => ($canRead || $canAdd || $canUpdate || $canDelete)
+        ];
+    }
+
+    return [
+        'exists' => false,
+        'mid' => null,
+        'module_code' => null,
+        'module_title' => null,
+        'module_file' => $moduleFile,
+        'pread' => false,
+        'padd' => false,
+        'pupdate' => false,
+        'pdelete' => false,
+        'granted' => false
+    ];
+}
+
+/*
+ UserPermitCheck: Enhanced permission check considering user's group, group_admin flag, and group title
+ This function implements the custom permission logic for 5 user groups:
+ 
+ 1. System Administrator (tbusergroup.title = 'admin'): Full access to all modules
+ 
+ 2. Group Admin (tbusers.group_admin = 'yes'):
+    - Read-only by default: PG-MAIN, FRM-ENTITY, FRM-DATA PROCESSING, PG-APPLICATION, PG-INSPECTION, PG-CERTIFICATE, FRM-MASTER DATA, APP-LAB (if LAB group)
+    - Database override: If explicit permissions are granted in tbgrouppermits, they will override the default read-only behavior
+    - Full access: PG-MR, FRM-USERPROFILE
+ 
+ 3. Data Officer (tbusers.group_admin = 'no'):
+    - Full access: PG-MAIN, FRM-ENTITY, FRM-DATA PROCESSING, PG-MR, PG-APPLICATION, PG-INSPECTION, PG-CERTIFICATE, FRM-USERPROFILE
+    - FRM-MASTER DATA: Respects database permissions if set; defaults to read-only if no permission record exists
+    - No access: APP-LAB
+ 
+ 4. Lab Officer (tbusergroup.title = 'LAB'):
+    - Read-only: FRM-ENTITY
+    - Full access: FRM-USERPROFILE, APP-LAB
+    - No access: rest of modules
+ 
+ 5. Viewer (tbusergroup.title = 'VIEWER'):
+    - No access: FRM-USERS_PERMIT
+    - Full access: FRM-USERPROFILE
+    - Read-only: rest of modules
+ 
+ Returns array with permission details including consideration of group_admin role
+*/
+function UserPermitCheck($userid, $moduleRef, $con) {
+    // Get user data
+    $userdata = Userdata($userid, $con);
+    if (!$userdata) {
+        return [
+            'exists' => false,
+            'pread' => false,
+            'padd' => false,
+            'pupdate' => false,
+            'pdelete' => false,
+            'granted' => false,
+            'reason' => 'User not found'
+        ];
+    }
+    
+    $groupid = $userdata['group_id'];
+    $groupadmin = strtolower(trim((string)$userdata['group_admin']));
+    $isGroupAdmin = ($groupadmin === 'yes');
+    
+    // Get group information
+    $groupSql = "SELECT title FROM tbusergroup WHERE id='$groupid'";
+    $groupResult = pg_query($con, $groupSql);
+    $groupTitle = '';
+    if ($groupResult && pg_num_rows($groupResult) > 0) {
+        $groupRow = pg_fetch_assoc($groupResult);
+        $groupTitle = strtolower(trim($groupRow['title']));
+    }
+    
+    // Get base permissions from tbgrouppermits
+    $basePermissions = GrouppermitCheck($groupid, $moduleRef, $con);
+    
+    // If no permission found, try with space-normalized module code (handle "FRM - MASTER DATA" vs "FRM-MASTER DATA")
+    if (!$basePermissions['exists']) {
+        $moduleRefWithSpaces = str_replace('-', ' - ', $moduleRef);
+        if ($moduleRefWithSpaces !== $moduleRef) {
+            $basePermissions = GrouppermitCheck($groupid, $moduleRefWithSpaces, $con);
+        }
+    }
+    
+    $moduleCode = strtoupper(trim((string)$basePermissions['module_code']));
+    
+    // If module code is empty, use the module reference parameter
+    if (empty($moduleCode)) {
+        $moduleCode = strtoupper(trim((string)$moduleRef));
+    }
+    
+    // Remove extra spaces from module code for consistent comparison
+    $moduleCode = preg_replace('/\s+/', ' ', $moduleCode);
+    
+    // Normalize module codes for comparison (handle variations like APP-ENTITY, APPLICATION, PG-APPLICATION)
+    $normalizedCode = $moduleCode;
+    if (strpos($moduleCode, 'APPLICATION') !== false || strpos($moduleCode, 'APP-ENTITY') !== false || $moduleCode === 'APP-ENTITY') {
+        $normalizedCode = 'PG-APPLICATION';
+    }
+    if (strpos($moduleCode, 'INSPECTION') !== false || strpos($moduleCode, 'APP-INSPECT') !== false || $moduleCode === 'APP-INSPECT') {
+        $normalizedCode = 'PG-INSPECTION';
+    }
+    if (strpos($moduleCode, 'CERTIFICATE') !== false || strpos($moduleCode, 'APP-CERT') !== false || $moduleCode === 'APP-CERT') {
+        $normalizedCode = 'PG-CERTIFICATE';
+    }
+    
+    // ==================== 1. SYSTEM ADMINISTRATOR ====================
+    // Full access to all modules
+    if ($groupTitle === 'admin') {
+        return [
+            'exists' => true,
+            'mid' => $basePermissions['mid'],
+            'module_code' => $basePermissions['module_code'],
+            'module_title' => $basePermissions['module_title'],
+            'pread' => true,
+            'padd' => true,
+            'pupdate' => true,
+            'pdelete' => true,
+            'granted' => true,
+            'reason' => 'System Administrator - Full Access'
+        ];
+    }
+    
+    // ==================== 4. LAB OFFICER ====================
+    // Respects database permissions first, then falls back to defaults
+    // Defaults: Read-only: FRM-ENTITY | Full: FRM-USERPROFILE, APP-LAB | No access: rest
+    if ($groupTitle === 'lab') {
+        // If database permissions exist, use them
+        if ($basePermissions['exists']) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => $basePermissions['pread'],
+                'padd' => $basePermissions['padd'],
+                'pupdate' => $basePermissions['pupdate'],
+                'pdelete' => $basePermissions['pdelete'],
+                'granted' => $basePermissions['granted'],
+                'reason' => 'Lab Officer - Database Permission'
+            ];
+        }
+        
+        // Fallback hardcoded defaults if no database permission exists
+        // Full access to user profile
+        if ($moduleCode === 'FRM-USERPROFILE') {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Lab Officer - Full Profile Access (Default)'
+            ];
+        }
+        
+        // Full access to APP-LAB
+        if ($moduleCode === 'APP-LAB') {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Lab Officer - Full Lab Access (Default)'
+            ];
+        }
+        
+        // Read-only for FRM-ENTITY
+        if ($moduleCode === 'FRM-ENTITY') {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => true,
+                'reason' => 'Lab Officer - Read-only Entity Access (Default)'
+            ];
+        }
+        
+        // No access to other modules (fallback default)
+        return [
+            'exists' => false,
+            'mid' => $basePermissions['mid'],
+            'module_code' => $basePermissions['module_code'],
+            'module_title' => $basePermissions['module_title'],
+            'pread' => false,
+            'padd' => false,
+            'pupdate' => false,
+            'pdelete' => false,
+            'granted' => false,
+            'reason' => 'Lab Officer - No Access (Default)'
+        ];
+    }
+    
+    // ==================== 5. VIEWER (GUEST) ====================
+    // No access: FRM-USERS_PERMIT | Full: FRM-USERPROFILE | Read-only: rest
+    if ($groupTitle === 'viewer') {
+        // No access to user permit management
+        if ($moduleCode === 'FRM-USERS_PERMIT' || $moduleCode === 'PG-PERMIT' || strpos($moduleCode, 'PERMIT') !== false) {
+            return [
+                'exists' => false,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => false,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => false,
+                'reason' => 'Viewer - No Access to User Permits'
+            ];
+        }
+        
+        // Full access to user profile
+        if ($moduleCode === 'FRM-USERPROFILE') {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Viewer - Full Profile Access'
+            ];
+        }
+        
+        // Read-only for all other modules
+        if ($basePermissions['exists']) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => true,
+                'reason' => 'Viewer - Read-only Access'
+            ];
+        }
+        
+        return [
+            'exists' => false,
+            'pread' => false,
+            'padd' => false,
+            'pupdate' => false,
+            'pdelete' => false,
+            'granted' => false,
+            'reason' => 'Viewer - Module Not Found'
+        ];
+    }
+    
+    // ==================== 2. GROUP ADMIN ====================
+    // Read-only: PG-MAIN, FRM-ENTITY, FRM-DATA PROCESSING, PG-APPLICATION, PG-INSPECTION, PG-CERTIFICATE, FRM-MASTER DATA, APP-LAB
+    // Full access: PG-MR, FRM-USERPROFILE
+    if ($isGroupAdmin) {
+        // Full access to user profile
+        if ($moduleCode === 'FRM-USERPROFILE') {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Group Admin - Full Profile Access'
+            ];
+        }
+        
+        // Full access to monitoring/reporting (PG-MR)
+        if ($moduleCode === 'PG-MR' || strpos($moduleCode, 'MONITOR') !== false || strpos($moduleCode, 'REPORT') !== false) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Group Admin - Full Monitoring Access'
+            ];
+        }
+        
+        // Read-only for specified modules by default, but respect database permissions if explicitly set
+        $readOnlyModules = [
+            'PG-MAIN', 'FRM-ENTITY', 'FRM-DATA PROCESSING', 'FRM-DATA', 
+            'PG-APPLICATION', 'PG-INSPECTION', 'PG-CERTIFICATE',
+            'FRM-MASTER DATA', 'FRM-MASTERDATA', 'FRM - MASTER DATA', 'APP-LAB',
+            'APP-ENTITY', 'APP-INSPECT', 'APP-CERT'  // Include alternative module codes
+        ];
+        
+        if (in_array($moduleCode, $readOnlyModules) || in_array($normalizedCode, $readOnlyModules) || strpos($moduleCode, 'MASTER') !== false) {
+            // If database permission exists, check if explicitly blocked
+            if ($basePermissions['exists'] && !$basePermissions['pread']) {
+                // Database explicitly denies read access
+                return [
+                    'exists' => true,
+                    'mid' => $basePermissions['mid'],
+                    'module_code' => $basePermissions['module_code'],
+                    'module_title' => $basePermissions['module_title'],
+                    'pread' => false,
+                    'padd' => false,
+                    'pupdate' => false,
+                    'pdelete' => false,
+                    'granted' => false,
+                    'reason' => 'Group Admin - Database Override (Access Denied)'
+                ];
+            }
+            
+            // If database permission exists with explicit grants, respect it (allow override)
+            if ($basePermissions['exists'] && ($basePermissions['padd'] || $basePermissions['pupdate'] || $basePermissions['pdelete'])) {
+                return [
+                    'exists' => true,
+                    'mid' => $basePermissions['mid'],
+                    'module_code' => $basePermissions['module_code'],
+                    'module_title' => $basePermissions['module_title'],
+                    'pread' => $basePermissions['pread'],
+                    'padd' => $basePermissions['padd'],
+                    'pupdate' => $basePermissions['pupdate'],
+                    'pdelete' => $basePermissions['pdelete'],
+                    'granted' => $basePermissions['granted'],
+                    'reason' => 'Group Admin - Database Override (Full Access Granted)'
+                ];
+            }
+            
+            // Default to read-only if no explicit database permissions (backward compatibility)
+            // This only applies when database record doesn't exist OR when pread is not explicitly set to 'no'
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'] ?: $moduleRef,
+                'module_title' => $basePermissions['module_title'] ?: 'Module',
+                'pread' => true,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => true,
+                'reason' => 'Group Admin - Default Read-only by Role'
+            ];
+        }
+        
+        // For any other module, check if base permission exists and grant read-only
+        if ($basePermissions['exists'] && $basePermissions['pread']) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => true,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => true,
+                'reason' => 'Group Admin - Default Read-only'
+            ];
+        }
+    } 
+    
+    // ==================== 3. DATA OFFICER ====================
+    // Full access: PG-MAIN, FRM-ENTITY, FRM-DATA PROCESSING, PG-MR, PG-APPLICATION, PG-INSPECTION, PG-CERTIFICATE, FRM-USERPROFILE
+    // Read-only: FRM-MASTER DATA
+    // No access: APP-LAB
+    else {
+        // No access to APP-LAB for data officers
+        if ($moduleCode === 'APP-LAB') {
+            return [
+                'exists' => false,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => false,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => false,
+                'reason' => 'Data Officer - No Lab Access'
+            ];
+        }
+        
+        // Master Data: Only use database permissions if they exist and grant access
+        if ($moduleCode === 'FRM-MASTER DATA' || $moduleCode === 'FRM - MASTER DATA' || $moduleCode === 'FRM-MASTERDATA' || strpos($moduleCode, 'MASTER') !== false) {
+            // If database permission exists, respect it
+            if ($basePermissions['exists']) {
+                return [
+                    'exists' => true,
+                    'mid' => $basePermissions['mid'],
+                    'module_code' => $basePermissions['module_code'],
+                    'module_title' => $basePermissions['module_title'],
+                    'pread' => $basePermissions['pread'],
+                    'padd' => $basePermissions['padd'],
+                    'pupdate' => $basePermissions['pupdate'],
+                    'pdelete' => $basePermissions['pdelete'],
+                    'granted' => $basePermissions['granted'],
+                    'reason' => 'Data Officer - Master Data (Database Permission)'
+                ];
+            }
+            // If no database permission exists, deny access
+            return [
+                'exists' => false,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'] ?: $moduleRef,
+                'module_title' => $basePermissions['module_title'] ?: 'Master Data',
+                'pread' => false,
+                'padd' => false,
+                'pupdate' => false,
+                'pdelete' => false,
+                'granted' => false,
+                'reason' => 'Data Officer - No Master Data Permission in Database'
+            ];
+        }
+        
+        // Full access to specified modules (grant regardless of tbgrouppermits record)
+        $fullAccessModules = [
+            'PG-MAIN', 'FRM-ENTITY', 'FRM-DATA PROCESSING', 'FRM-DATA',
+            'PG-MR', 'PG-APPLICATION', 'PG-INSPECTION', 'PG-CERTIFICATE', 'FRM-USERPROFILE',
+            'APP-ENTITY', 'APP-INSPECT', 'APP-CERT'  // Include alternative module codes
+        ];
+        
+        if (in_array($moduleCode, $fullAccessModules) || in_array($normalizedCode, $fullAccessModules)) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'] ?: $moduleRef,
+                'module_title' => $basePermissions['module_title'] ?: 'Module',
+                'pread' => true,
+                'padd' => true,
+                'pupdate' => true,
+                'pdelete' => true,
+                'granted' => true,
+                'reason' => 'Data Officer - Full Access by Role'
+            ];
+        }
+        
+        // For any other module, use base permissions from group
+        if ($basePermissions['exists']) {
+            return [
+                'exists' => true,
+                'mid' => $basePermissions['mid'],
+                'module_code' => $basePermissions['module_code'],
+                'module_title' => $basePermissions['module_title'],
+                'pread' => $basePermissions['pread'],
+                'padd' => $basePermissions['padd'],
+                'pupdate' => $basePermissions['pupdate'],
+                'pdelete' => $basePermissions['pdelete'],
+                'granted' => $basePermissions['granted'],
+                'reason' => 'Data Officer - Base Group Permissions'
+            ];
+        }
+    }
+    
+    // Default: no access
+    return [
+        'exists' => false,
+        'pread' => false,
+        'padd' => false,
+        'pupdate' => false,
+        'pdelete' => false,
+        'granted' => false,
+        'reason' => 'No permission assigned'
+    ];
+}
+
+
 /*
  Userpermit: Check if the user has permission to access a specific page
 */
@@ -208,27 +772,123 @@ function Addusers($name, $surname, $sex, $psw, $position, $unit, $phone, $email,
     if (pg_num_rows($result) > 0) {
         echo "<script>alert('Username already exists. Please choose a different username.');</script>";
         return "yes";
-    } else {
-        // Insert user, set last_login to NULL, group_admin to 'no' by default
-        $sqladduser = "INSERT INTO \"tbusers\" 
+    }
+    
+    // Check if this location_group already has a Group admin
+    if ($admingroup === 'yes') {
+        // First get the location_group from the selected location
+        $sqlGetLocationGroup = "SELECT location_group FROM tblocations WHERE id='$location'";
+        $resultLocationGroup = pg_query($con, $sqlGetLocationGroup) or die(pg_last_error($con));
+        
+        if (pg_num_rows($resultLocationGroup) > 0) {
+            $locationRow = pg_fetch_array($resultLocationGroup);
+            $locationGroup = $locationRow['location_group'];
+            
+            // Check if another user with group_admin='yes' exists in the same location_group
+            $sqlCheckAdmin = "SELECT u.id, u.name, l.location_group 
+                              FROM tbusers u 
+                              INNER JOIN tblocations l ON u.location_id = l.id 
+                              WHERE l.location_group='$locationGroup' AND u.group_admin='yes'";
+            $resultCheckAdmin = pg_query($con, $sqlCheckAdmin) or die(pg_last_error($con));
+            
+            if (pg_num_rows($resultCheckAdmin) > 0) {
+                $existingAdmin = pg_fetch_array($resultCheckAdmin);
+                $adminName = $existingAdmin['name'];
+                $groupName = Groupname($groupid, $con);
+                echo "
+                <style>
+                    @keyframes slideDown {
+                        from {
+                            transform: translateY(-50px);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateY(0);
+                            opacity: 1;
+                        }
+                    }
+                    .alert-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 9999;
+                    }
+                    .alert-box {
+                        background: white;
+                        padding: 30px;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                        text-align: center;
+                        max-width: 500px;
+                        animation: slideDown 0.3s ease-out;
+                    }
+                    .alert-icon {
+                        color: #f39c12;
+                        font-size: 60px;
+                        margin-bottom: 20px;
+                    }
+                    .alert-box h3 {
+                        color: #2c3e50;
+                        margin-bottom: 15px;
+                    }
+                    .alert-box p {
+                        color: #555;
+                        margin-bottom: 25px;
+                        line-height: 1.6;
+                    }
+                    .alert-ok-btn {
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        padding: 10px 30px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        transition: background 0.3s;
+                    }
+                    .alert-ok-btn:hover {
+                        background: #2980b9;
+                    }
+                </style>
+                <div class='alert-overlay'>
+                    <div class='alert-box'>
+                        <i class='bi bi-exclamation-triangle-fill alert-icon'></i>
+                        <h3>Group Admin Already Exists</h3>
+                        <p>The location group <strong>\"$locationGroup\"</strong> already has a Group admin (<strong>$adminName</strong>).<br><br>Each location group can only have one Group admin. Please set this user as a 'Member' or choose a different location.</p>
+                        <button class='alert-ok-btn' onclick=\"window.location.href='users.php?part=userslist" . ($userid ? "&uid=$userid" : "") . "'\">OK</button>
+                    </div>
+                </div>
+                ";
+                return "yes";
+            }
+        }
+    }
+    
+    // Insert user
+    $sqladduser = "INSERT INTO \"tbusers\" 
             (\"name\", \"surname\", \"sex\", \"psw\", \"position\", \"unit\", \"phone\", \"email\", \"last_login\", \"group_id\", \"group_admin\", \"location_id\", \"enabled\") 
             VALUES 
             ('$name', '$surname', '$sex', '$psw', '$position', '$unit', '$phone', '$email', '$lastlogin', '$groupid', '$admingroup', '$location', '$status') RETURNING id";
-        $result = pg_query($con, $sqladduser);
-        if ($result) {
-            $last_id = pg_fetch_result($result, 0, 'id');
-            //$message = "User added successfully. User ID: " . $last_id;
-            // ADD USER PROFILE with UID
-            InitializeProfile($last_id, $con); // Initialize user profile with default values
-            // Redirect to the user list page
-            $redirect_url = 'users.php?part=userslist';
-            if ($userid) {
-                $redirect_url .= '&uid=' . $userid;
-            }
-            echo "<script>window.location.href = '$redirect_url';</script>";
-        } else {
-            echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
+    $result = pg_query($con, $sqladduser);
+    if ($result) {
+        $last_id = pg_fetch_result($result, 0, 'id');
+        //$message = "User added successfully. User ID: " . $last_id;
+        // ADD USER PROFILE with UID
+        InitializeProfile($last_id, $con); // Initialize user profile with default values
+        // Redirect to the user list page
+        $redirect_url = 'users.php?part=userslist';
+        if ($userid) {
+            $redirect_url .= '&uid=' . $userid;
         }
+        echo "<script>window.location.href = '$redirect_url';</script>";
+    } else {
+        echo "<script>alert('Error: " . pg_last_error($con) . "');</script>";
     }
 }
 /*
@@ -262,7 +922,7 @@ function Deleteuser($uid,$con, $current_userid = null){
   Userlist: List all users from tbusers table
 */
 function Userlist($con, $currentUserid = '', $lang = ''){
-    $sqluserlist="SELECT * FROM tbusers ORDER BY id DESC"; // Order by ID in descending order
+    $sqluserlist="SELECT u.* FROM tbusers u LEFT JOIN tbusergroup ug ON u.group_id = ug.id ORDER BY ug.title ASC, u.id DESC"; // Order by group name ascending, then ID descending
     $result = pg_query($con,$sqluserlist) or die(pg_last_error());
     $i = 0;
     $uidValue = $currentUserid !== '' ? $currentUserid : (isset($_GET['uid']) ? $_GET['uid'] : '');
@@ -283,25 +943,36 @@ function Userlist($con, $currentUserid = '', $lang = ''){
             $lastlogin = $row['last_login']; 
             $usergroup = $row['group_id']; 
             $usergroup = Groupname($usergroup, $con); // Get group name from tbusergroup table
-            //$groupadmin = $row['group_admin'];
+            $groupadmin = $row['group_admin'];
+            $usertype = ($groupadmin === 'yes') ? 'Group admin' : 'Member';
             $location = $row['location_id'];
             $location = Locationname($location, $con); // Get location name from tblocations table
+            
+            // Get location_group from tblocations
+            $locationGroupQuery = "SELECT location_group FROM tblocations WHERE id='" . $row['location_id'] . "'";
+            $locationGroupResult = pg_query($con, $locationGroupQuery);
+            $locationgroup = '';
+            if ($locationGroupResult && pg_num_rows($locationGroupResult) > 0) {
+                $locGroupRow = pg_fetch_assoc($locationGroupResult);
+                $locationgroup = $locGroupRow['location_group'];
+            }
+            
             $status = $row['enabled'];
             print "<tr>
                     <td>$i</td>
                     <td>$name</td>
-                    <td>$phone</td>
                     <td>$email</td>
-                    <td>$lastlogin</td>  
                     <td>$usergroup</td>
+                    <td>$usertype</td> 
+                    <td>$locationgroup</td>
                     <td>$location</td>
                     <td>
                      <div class='form-check form-switch'>
                       <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleUserCheckboxChange(this)'>
                     </div>
                     </td>
-                                        <td><a href='users.php?frm=userupdate&uidup=$uid$uidParam$langParam' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                                        <td><a href='users.php?frm=userdelete&uidup=$uid$uidParam$langParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>  
+                    <td><a href='users.php?frm=userupdate&uidup=$uid$uidParam$langParam' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></a></td>
+        
                   </tr>";
        } // end of while loop     
     }
@@ -431,7 +1102,105 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
             $user['location_id'] !== $location ||
             $user['enabled']   !== $status
         ) {
-            // At least one field has changed, so update
+            // At least one field has changed
+            
+            // Check if this location_group already has a Group admin (excluding current user)
+            if ($admingroup === 'yes') {
+                // First get the location_group from the selected location
+                $sqlGetLocationGroup = "SELECT location_group FROM tblocations WHERE id='$location'";
+                $resultLocationGroup = pg_query($con, $sqlGetLocationGroup) or die(pg_last_error($con));
+                
+                if (pg_num_rows($resultLocationGroup) > 0) {
+                    $locationRow = pg_fetch_array($resultLocationGroup);
+                    $locationGroup = $locationRow['location_group'];
+                    
+                    // Check if another user with group_admin='yes' exists in the same location_group (excluding current user)
+                    $sqlCheckAdmin = "SELECT u.id, u.name, l.location_group 
+                                      FROM tbusers u 
+                                      INNER JOIN tblocations l ON u.location_id = l.id 
+                                      WHERE l.location_group='$locationGroup' AND u.group_admin='yes' AND u.id != '$uid'";
+                    $resultCheckAdmin = pg_query($con, $sqlCheckAdmin) or die(pg_last_error($con));
+                    
+                    if (pg_num_rows($resultCheckAdmin) > 0) {
+                        $existingAdmin = pg_fetch_array($resultCheckAdmin);
+                        $adminName = $existingAdmin['name'];
+                        $groupName = Groupname($groupid, $con);
+                        echo "
+                        <style>
+                            @keyframes slideDown {
+                                from {
+                                    transform: translateY(-50px);
+                                    opacity: 0;
+                                }
+                                to {
+                                    transform: translateY(0);
+                                    opacity: 1;
+                                }
+                            }
+                            .alert-overlay {
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                background: rgba(0, 0, 0, 0.5);
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                z-index: 9999;
+                            }
+                            .alert-box {
+                                background: white;
+                                padding: 30px;
+                                border-radius: 10px;
+                                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                                text-align: center;
+                                max-width: 500px;
+                                animation: slideDown 0.3s ease-out;
+                            }
+                            .alert-icon {
+                                color: #f39c12;
+                                font-size: 60px;
+                                margin-bottom: 20px;
+                            }
+                            .alert-box h3 {
+                                color: #2c3e50;
+                                margin-bottom: 15px;
+                            }
+                            .alert-box p {
+                                color: #555;
+                                margin-bottom: 25px;
+                                line-height: 1.6;
+                            }
+                            .alert-ok-btn {
+                                background: #3498db;
+                                color: white;
+                                border: none;
+                                padding: 10px 30px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-size: 16px;
+                                transition: background 0.3s;
+                            }
+                            .alert-ok-btn:hover {
+                                background: #2980b9;
+                            }
+                        </style>
+                        <div class='alert-overlay'>
+                            <div class='alert-box'>
+                                <i class='bi bi-exclamation-triangle-fill alert-icon'></i>
+                                <h3>Group Admin Already Exists</h3>
+                                <p>The location group <strong>\"$locationGroup\"</strong> already has a Group admin (<strong>$adminName</strong>).<br><br>Each location group can only have one Group admin. Please set this user as a 'Member' or choose a different location.</p>
+                                <button class='alert-ok-btn' onclick=\"window.location.href='users.php?part=userslist" . ($current_userid ? "&uid=$current_userid" : "") . "'\">OK</button>
+                            </div>
+                        </div>
+                        ";
+                        return;
+                    }
+                }
+            }
+            
+            // Proceed with update
             $sqlupdate = "UPDATE tbusers SET 
                 name='$name',
                 surname='$surname',
@@ -468,6 +1237,29 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
     } else {
         echo "<script>alert('User not found.');</script>";
     }
+  }
+
+  /*
+    UserLocationGroup: Get location_group for a user from tblocations via tbusers
+  */
+  function UserLocationGroup($userid, $con) {
+      // Escape the user ID
+      $userid = pg_escape_string($con, $userid);
+      
+      // Query to join tbusers and tblocations to get location_group
+      $sql = "SELECT tblocations.location_group 
+              FROM tbusers 
+              INNER JOIN tblocations ON tbusers.location_id = tblocations.id 
+              WHERE tbusers.id = '$userid'";
+      
+      $result = pg_query($con, $sql) or die(pg_last_error($con));
+      
+      if ($result && pg_num_rows($result) > 0) {
+          $row = pg_fetch_assoc($result);
+          return $row['location_group'];
+      } else {
+          return null; // Return null if no location group found
+      }
   }
 
   /*
@@ -730,7 +1522,10 @@ function Groupname($gid, $con) {
     GroupPermitList: List all group permissions from tbgrouppermits table
 */
 function GroupPermitList($con, $uid = '', $lang = '') {
-    $sqlpermit = "SELECT * FROM tbgrouppermits ORDER BY id ASC";
+    $sqlpermit = "SELECT gp.*, ug.title as group_name 
+                  FROM tbgrouppermits gp
+                  LEFT JOIN tbusergroup ug ON gp.gid = ug.id
+                  ORDER BY ug.title ASC, gp.id ASC";
     $result = pg_query($con, $sqlpermit) or die(pg_last_error());
     $i = 0;
     $uidValue = $uid !== '' ? $uid : (isset($_GET['uid']) ? $_GET['uid'] : '');
@@ -742,7 +1537,7 @@ function GroupPermitList($con, $uid = '', $lang = '') {
             $i++;
             $id = $row['id'];
             $gid = $row['gid'];
-            $gname = Groupname($gid, $con); // Get group name from tbusergroup table 
+            $gname = isset($row['group_name']) ? $row['group_name'] : Groupname($gid, $con); // Get group name from query or fallback to function 
             $mid = $row['mid'];
             $mod = ModuleName($mid, $con); // Get module name from tbmodules table
             
@@ -771,9 +1566,9 @@ function GroupPermitList($con, $uid = '', $lang = '') {
                       </div>
                     </td>
                     <td>
-                                            <a href='users.php?part=upermits&id=$id&epermit=edit$uidParam$langParam' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a>
+                     <a href='users.php?part=upermits&id=$id&epermit=edit$uidParam$langParam' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></a>
                     </td>
-                                        <td><a href='users.php?part=upermits&id=$id&dpermit=del$uidParam$langParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                     <td><a href='users.php?part=upermits&id=$id&dpermit=del$uidParam$langParam' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                   </tr>";
         } // end of while loop     
     }
@@ -790,12 +1585,38 @@ function AddGroupPermit($groupid, $moduleid, $pread, $padd, $pupdate, $pdelete, 
     $pupdate = pg_escape_string($con, $pupdate);
     $pdelete = pg_escape_string($con, $pdelete);
 
-    // Check if the permission already exists
+    // Check if the permission already exists - one group can only have one permission entry per module
     $sqlcheck = "SELECT * FROM tbgrouppermits WHERE gid='$groupid' AND mid='$moduleid'";
     $result = pg_query($con, $sqlcheck) or die(pg_last_error($con));
     
     if (pg_num_rows($result) > 0) {
-        echo "<script>alert('Permission already exists for this group and module.');</script>";
+        // Display styled warning message
+        echo '
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 500px; text-align: center; animation: slideDown 0.3s ease-out;">
+                <div style="color: #f39c12; font-size: 60px; margin-bottom: 20px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <h4 style="color: #333; margin-bottom: 15px; font-weight: 600;">Permission Already Exists</h4>
+                <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 25px;">
+                    This group already has permissions assigned to this module.<br>
+                    <strong>Each group can only have one permission entry per module.</strong>
+                </p>
+                <button onclick="window.location.href=\'users.php?part=upermits\'" 
+                        style="background: #3498db; color: white; border: none; padding: 12px 40px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: 500; transition: background 0.3s;"
+                        onmouseover="this.style.background=\'#2980b9\'" 
+                        onmouseout="this.style.background=\'#3498db\'">
+                    OK
+                </button>
+            </div>
+        </div>
+        <style>
+            @keyframes slideDown {
+                from { transform: translateY(-50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        </style>
+        ';
         return "yes"; // Indicate that the permission already exists
     } else {
         // Insert new permission
@@ -814,6 +1635,41 @@ function AddGroupPermit($groupid, $moduleid, $pread, $padd, $pupdate, $pdelete, 
   UpdateGroupPermit: Update permit in tbgrouppermit
 */
 function UpdateGroupPermit($pid, $gid, $mid, $pread, $padd, $pupdate, $pdelete, $con){
+  // Check if changing to a group-module combination that already exists (excluding current record)
+  $checkSql = "SELECT id FROM tbgrouppermits WHERE gid='$gid' AND mid='$mid' AND id != '$pid'";
+  $checkResult = pg_query($con, $checkSql) or die(pg_last_error($con));
+  
+  if (pg_num_rows($checkResult) > 0) {
+      // Display styled warning message
+      echo '
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+          <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 500px; text-align: center; animation: slideDown 0.3s ease-out;">
+              <div style="color: #f39c12; font-size: 60px; margin-bottom: 20px;">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+              </div>
+              <h4 style="color: #333; margin-bottom: 15px; font-weight: 600;">Permission Already Exists</h4>
+              <p style="color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 25px;">
+                  This group already has permissions assigned to this module.<br>
+                  <strong>Each group can only have one permission entry per module.</strong>
+              </p>
+              <button onclick="window.location.href=\'users.php?part=upermits\'" 
+                      style="background: #3498db; color: white; border: none; padding: 12px 40px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: 500; transition: background 0.3s;"
+                      onmouseover="this.style.background=\'#2980b9\'" 
+                      onmouseout="this.style.background=\'#3498db\'">
+                  OK
+              </button>
+          </div>
+      </div>
+      <style>
+          @keyframes slideDown {
+              from { transform: translateY(-50px); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+          }
+      </style>
+      ';
+      return;
+  }
+  
   $sqlup = "SELECT * FROM tbgrouppermits WHERE id='$pid'";
   $result = pg_query($con, $sqlup) or die(pg_last_error($con));
 
@@ -909,8 +1765,8 @@ function Locationlist($con) {
                        <input class='form-check-input' role='switch' type='checkbox' id='$locid' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleLocationCheckboxChange(this)'>
                      </div>
                     </td>
-                    <td><a href='masterdata.php?loc=edit&id=$locid' class='btn btn-primary btn-sm'><i class='bi bi-pencil-square table-icon'></i></a></td>
-                    <td><a href='masterdata.php?loc=del&id=$locid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    <td><a href='masterdata.php?loc=edit&id=$locid' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></a></td>
+                    <td><a href='masterdata.php?loc=del&id=$locid' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                   </tr>";
         } // end of while loop     
        
@@ -920,7 +1776,7 @@ function Locationlist($con) {
 /*
  Addlocation: Add locations into tblocations table
 */
-function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
+function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $locationgroup, $con) {
     // Escape all inputs
     $locid = pg_escape_string($con, $locid);
     $nameeng = pg_escape_string($con, $nameeng);
@@ -928,6 +1784,7 @@ function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
     $loctype = pg_escape_string($con, $loctype);
     $pid = pg_escape_string($con, $pid);
     $did = pg_escape_string($con, $did);
+    $locationgroup = pg_escape_string($con, $locationgroup);
 
     // Check if the location name already exists
     $sqllocation = "SELECT lid, name_eng, name_lao FROM tblocations 
@@ -940,8 +1797,8 @@ function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
         return "yes"; // Indicate that the location already exists
     } else {
         // Insert new location
-        $sqladdlocation = "INSERT INTO \"tblocations\" (\"lid\",\"name_eng\", \"name_lao\", \"location_type\", \"pid\", \"did\", \"enabled\") 
-                           VALUES ('".$locid."','".$nameeng."', '".$namelao."', '$loctype', '".$pid."', '".$did."','yes') RETURNING id";
+        $sqladdlocation = "INSERT INTO \"tblocations\" (\"lid\",\"name_eng\", \"name_lao\", \"location_type\", \"pid\", \"did\", \"location_group\", \"enabled\") 
+                           VALUES ('".$locid."','".$nameeng."', '".$namelao."', '$loctype', '".$pid."', '".$did."', '".$locationgroup."','yes') RETURNING id";
         
         $result = pg_query($con, $sqladdlocation) or die(pg_last_error($con));
         if ($result) {
@@ -957,7 +1814,7 @@ function Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con) {
 /*
  Locationupdate: Update locations from tblocations table
 */
-function Locationupdate($id, $locid, $nameeng, $namelao, $loctype,$pid, $did, $con) {
+function Locationupdate($id, $locid, $nameeng, $namelao, $loctype,$pid, $did, $locationgroup, $con) {
    // NOT UPDATE FOR LOCATION ID
    $sql = "UPDATE tblocations SET 
             lid='$locid',
@@ -965,7 +1822,8 @@ function Locationupdate($id, $locid, $nameeng, $namelao, $loctype,$pid, $did, $c
             name_lao='$namelao', 
             location_type='$loctype',
             pid='$pid', 
-            did='$did'
+            did='$did',
+            location_group='$locationgroup'
             WHERE id = '$id'";
      $result = pg_query($con, $sql) or die(pg_last_error($con));
     if ($result) {
@@ -1113,11 +1971,11 @@ function Countrylist($con) {
                      </div>
                     </td>
                     <td>
-                    <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addCountryModal' data-cid='$cid' data-cname='" . htmlspecialchars($cname, ENT_QUOTES) . "' data-alcode='" . htmlspecialchars($alcode, ENT_QUOTES) . "' data-numcode='" . htmlspecialchars($numcode, ENT_QUOTES) . "' data-currency='" . htmlspecialchars($currency, ENT_QUOTES) . "' data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i>
+                                        <button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addCountryModal' data-cid='$cid' data-cname='" . htmlspecialchars($cname, ENT_QUOTES) . "' data-alcode='" . htmlspecialchars($alcode, ENT_QUOTES) . "' data-numcode='" . htmlspecialchars($numcode, ENT_QUOTES) . "' data-currency='" . htmlspecialchars($currency, ENT_QUOTES) . "' data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i>
                     </button>
                    </td>
-                    <td><a href='masterdata.php?part=countries&cid=$cid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=countries&cid=$cid&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                   </tr>";
         } // end of while loop     
     }
@@ -1228,14 +2086,14 @@ function DistrictList($userid, $con) {
                     <td>" . htmlspecialchars($pname, ENT_QUOTES) . "</td>
                     <td>" . htmlspecialchars($dname, ENT_QUOTES) . "</td>
                     <td>
-                      <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addDistrictModal'
+                                            <button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addDistrictModal'
                         data-did='$did'
                         data-dname='" . htmlspecialchars($dname, ENT_QUOTES) . "'
                         data-pid='$pid'>
-                        <i class='bi bi-pencil-square table-icon'></i>
+                                                <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i>
                       </button>
                     </td>
-                    <td><a href='masterdata.php?part=districts&did=$did&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=districts&did=$did&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                   </tr>";
         }
     }
@@ -1307,10 +2165,10 @@ function ProvinceList($userid, $con) {
                     <td>$i</td>
                                         <td>" . htmlspecialchars($pname, ENT_QUOTES) . "</td>
                                         <td>
-                                            <button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProvinceModal'
+                                            <button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addProvinceModal'
                                                 data-provid='$pid'
                                                 data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "'>
-                                                <i class='bi bi-pencil-square table-icon'></i>
+                                                <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i>
                                             </button>
                                         </td>
                   </tr>";
@@ -1387,14 +2245,14 @@ function PestList($con) {
                     <td>$name</td>
                     <td>$scientific_name</td>
                     <td>$category</td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addPestModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addPestModal' 
                          data-pestid='$id' 
                          data-pname='" . htmlspecialchars($name, ENT_QUOTES) . "' 
                          data-scientificname='" . htmlspecialchars($scientific_name, ENT_QUOTES) . "'
                          data-category='" . htmlspecialchars($category, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=pest&pestid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                                        <td><a href='masterdata.php?part=pest&pestid=$id&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>   
                     </tr>"; 
         } // end of while loop
     }
@@ -1626,7 +2484,7 @@ function ProductList($userid, $con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleProductCheckboxChange(this)'>
                       </div>        
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addProductModal' 
                          data-pid='$id' 
                          data-pname='" . htmlspecialchars($pname, ENT_QUOTES) . "' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "'
@@ -1634,9 +2492,9 @@ function ProductList($userid, $con) {
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "' 
                          data-hscode='" . htmlspecialchars($hscode, ENT_QUOTES) . "'
                          data-productgroup='" . htmlspecialchars($producgroup, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=product&uid=$userid&pid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>   
+                                        <td><a href='masterdata.php?part=product&uid=$userid&pid=$id&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>   
                     </tr>"; 
         } // end of while loop
     }
@@ -1766,14 +2624,14 @@ function ProductgroupList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$gid' " . ($gstatus === 'yes' ? 'checked' : '') . " onchange='handleProductGroupCheckboxChange(this)'>
                       </div>    
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductGroupModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addProductGroupModal' 
                          data-pgroupid='$gid' 
                          data-gname='" . htmlspecialchars($gname, ENT_QUOTES) . "' 
                          data-gdesc='" . htmlspecialchars($gdesc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>   
                     </td>
                     <td>
-                     <a href='masterdata.php?part=productgroup&gid=$gid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a>
+                                         <a href='masterdata.php?part=productgroup&gid=$gid&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a>
                     </td>
                     </tr>";
         }
@@ -1878,15 +2736,15 @@ function ProductunitList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$uid' " . ($ustatus === 'yes' ? 'checked' : '') . " onchange='handleProductUnitCheckboxChange(this)'>
                       </div>    
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addProductUnitModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addProductUnitModal' 
                          data-punitid='$uid' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-symb='" . htmlspecialchars($symb, ENT_QUOTES) . "'
                          data-title='" . htmlspecialchars($title, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>   
                     </td>
                     <td>
-                     <a href='masterdata.php?part=productunit&uid=$uid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a>    
+                                         <a href='masterdata.php?part=productunit&uid=$uid&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a>    
                     </td>
                   </tr>";   
         } // end of while loop
@@ -2000,14 +2858,14 @@ function Conveyancelist($uid, $con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleConveyanceCheckboxChange(this)'>
                       </div>    
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addConveyenceModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addConveyenceModal' 
                          data-cid='$id' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-cvtype='" . htmlspecialchars($conveyance, ENT_QUOTES) . "'
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>   
                     </td>
-                    <td><a href='masterdata.php?part=conveyance&cid=$id&del=yes$uidParam' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=conveyance&cid=$id&del=yes$uidParam' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2112,14 +2970,14 @@ function InspectionMethodList($userid, $con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleInspectionMethodCheckboxChange(this)'>
                       </div>
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addInspectionMethodModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addInspectionMethodModal' 
                          data-imid='$id' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-name='" . htmlspecialchars($method, ENT_QUOTES) . "'
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>   
                     </td>
-                    <td><a href='masterdata.php?part=inspectionmethod&mid=$id&del=yes&uid=$userid' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=inspectionmethod&mid=$id&del=yes&uid=$userid' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2289,14 +3147,14 @@ function TreatmentMethodList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleTreatmentMethodCheckboxChange(this)'>
                       </div>
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addTreatmentMethodModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addTreatmentMethodModal' 
                          data-tmid='$id' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-name='" . htmlspecialchars($method, ENT_QUOTES) . "'
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>   
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>   
                     </td>
-                    <td><a href='masterdata.php?part=treatmentmethod&tmid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=treatmentmethod&tmid=$id&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2420,14 +3278,14 @@ function EntityTypeList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleEntityTypeCheckboxChange(this)'>
                       </div>
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addEntityTypeModal' 
+                                        <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addEntityTypeModal' 
                          data-etid='$id' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-name='" . htmlspecialchars($type, ENT_QUOTES) . "'
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>
+                                            <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=entitytype&etid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                                        <td><a href='masterdata.php?part=entitytype&etid=$id&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2812,7 +3670,7 @@ function EntityImportInfo($id, $con) {
 /*
  ModuleList($con): Show list of modules from tbmodules table
 */
-function ModuleList($con) {
+function ModuleList($con, $deleteBaseUrl = 'masterdata.php?part=modules') {
     $sqlmodule = "SELECT * FROM tbmodules ORDER BY id ASC";
     $result = pg_query($con, $sqlmodule) or die(pg_last_error());
     $i = 0;
@@ -2834,14 +3692,14 @@ function ModuleList($con) {
                         <input class='form-check-input' role='switch' type='checkbox' id='$id' " . ($status === 'yes' ? 'checked' : '') . " onchange='handleModuleCheckboxChange(this)'>
                       </div>
                     </td>
-                    <td><button type='button' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addModuleModal' 
+                    <td><button type='button' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addModuleModal' 
                          data-mid='$id' 
                          data-code='" . htmlspecialchars($code, ENT_QUOTES) . "' 
                          data-name='" . htmlspecialchars($name, ENT_QUOTES) . "'
                          data-desc='" . htmlspecialchars($desc, ENT_QUOTES) . "'>
-                      <i class='bi bi-pencil-square table-icon'></i></button>
+                      <i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button>
                     </td>
-                    <td><a href='masterdata.php?part=modules&mid=$id&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                    <td><a href='{$deleteBaseUrl}&mid=$id&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                     </tr>";
         } // end of while loop
     }
@@ -2849,7 +3707,7 @@ function ModuleList($con) {
 /*
  AddModule: Add new module into tbmodules table 
 */
-function AddModule($code, $name, $desc, $con) {
+function AddModule($code, $name, $desc, $con, $redirectUrl = 'masterdata.php?part=modules') {
     // Escape all inputs
     $code = pg_escape_string($con, $code);
     $name = pg_escape_string($con, $name);
@@ -2867,7 +3725,7 @@ function AddModule($code, $name, $desc, $con) {
                           VALUES ('".$code."', '".$name."', '".$desc."', 'yes') RETURNING id";
         $result = pg_query($con, $sqladdmodule) or die(pg_last_error($con));
         if ($result) {
-            echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+            echo "<script>window.location.href = " . json_encode($redirectUrl) . ";</script>";
         } else {
             echo "<script>alert('Error adding module: " . pg_last_error($con) . "');</script>";
         }
@@ -2876,18 +3734,29 @@ function AddModule($code, $name, $desc, $con) {
 /*
  UpdateModule: Update module from tbmodules table 
 */
-function UpdateModule($mid, $code, $name, $desc, $con) {
+function UpdateModule($mid, $code, $name, $desc, $con, $redirectUrl = 'masterdata.php?part=modules', $enabled = null) {
+    if ($mid === null || $mid === '' || !is_numeric($mid)) {
+        echo "<script>alert('Invalid module ID.');</script>";
+        echo "<script>window.location.href = " . json_encode($redirectUrl) . ";</script>";
+        return false;
+    }
+
     // Escape all inputs
-    $mid = pg_escape_string($con, $mid); // Get module ID from POST data
+    $mid = (int)$mid;
     $code = pg_escape_string($con, $code);
     $name = pg_escape_string($con, $name);
     $desc = pg_escape_string($con, $desc);
+    $enabledSql = '';
+    if ($enabled !== null) {
+        $enabledValue = (strtolower(trim((string)$enabled)) === 'yes') ? 'yes' : 'no';
+        $enabledSql = ", enabled='" . pg_escape_string($con, $enabledValue) . "'";
+    }
 
     // Update the module information
-    $sqlupdatemodule = "UPDATE tbmodules SET code='$code', title='$name', \"desc\"='$desc' WHERE id='$mid'";
+    $sqlupdatemodule = "UPDATE tbmodules SET code='$code', title='$name', \"desc\"='$desc'" . $enabledSql . " WHERE id='$mid'";
     $result = pg_query($con, $sqlupdatemodule) or die(pg_last_error($con));
     if ($result) {
-        echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+        echo "<script>window.location.href = " . json_encode($redirectUrl) . ";</script>";
     } else {
         echo "<script>alert('Error updating module: " . pg_last_error($con) . "');</script>";
     }
@@ -2896,14 +3765,14 @@ function UpdateModule($mid, $code, $name, $desc, $con) {
 /*
  DeleteModule: Delete module from tbmodules table 
 */
-function DeleteModule($mid, $con) {
+function DeleteModule($mid, $con, $redirectUrl = 'masterdata.php?part=modules') {
     $sqlmodule = "DELETE FROM tbmodules WHERE id='$mid'";
     $result = pg_query($con, $sqlmodule) or die(pg_last_error($con));
     if ($result) {
         // Redirect back to the table
         echo "<script>alert('Module deleted successfully.');</script>";
         // Redirect back to the table
-        echo "<script>window.location.href = 'masterdata.php?part=modules';</script>";
+        echo "<script>window.location.href = " . json_encode($redirectUrl) . ";</script>";
     } else {
         echo "<script>alert('Error deleting module: " . pg_last_error($con) . "');</script>";
     }
@@ -3332,16 +4201,28 @@ function MultipleProductdataTable($appid, $productid, $guid) {
 /*
  ApplicationList: Show list of applications and their status from tbapplication
 */
-function ApplicationList($guid, $con, $lang, $userid = null) {
-    // Validate guid parameter - must be numeric and not empty
-    if (empty($guid) || !is_numeric($guid)) {
-        echo "<script>alert('Invalid group ID provided.');</script>";
+function ApplicationList($location_group, $con, $lang, $userid = null, $groupPermit = []) {
+    // Note: $groupPermit parameter is accepted for compatibility with calling code
+    // but permissions are now checked in the data forms (transaction.php) instead
+    
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        // Debug: show that location_group is empty or NULL
+        echo "<tr><td colspan='7' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
         return;
     }
 
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
     $lang_param = "&lang=$lang";
 
-    $sql = "SELECT * FROM tbapplication WHERE guid = '$guid' ORDER BY id DESC";
+    $sql = "SELECT tbapplication.* 
+            FROM tbapplication 
+            INNER JOIN tbusers ON tbapplication.uid = tbusers.id 
+            INNER JOIN tblocations ON tbusers.location_id = tblocations.id 
+            WHERE tblocations.location_group = '$location_group' 
+            ORDER BY tbapplication.id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
@@ -3365,36 +4246,69 @@ function ApplicationList($guid, $con, $lang, $userid = null) {
                     $certificate_status = "Add";
                 }
             }
-             // Certificate status - to be implemented later
-            if ($certificate_status == "Add" || $certificate_status == "View/Edit") {
-                $uid_param = $userid ? "&uid=$userid" : "";
-                
-                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status$uid_param$lang_param'>$certificate_status</a>";
-            } else {
-                $certificate_link = "<span class='text-muted'>Not ready</span>";
-            }
+            $edit_icon = "<i class='bi bi-pencil-square' style='font-size: 0.9rem;'></i>";
+            $add_icon = "<i class='bi bi-plus-square' style='font-size: 0.9rem;'></i>";
+            $not_ready_icon = "<i class='bi bi-dash-circle' style='font-size: 0.9rem;'></i>";
+            $ongoing_icon = "<i class='bi bi-hourglass-split' style='font-size: 0.9rem;'></i>";
+            $printed_icon = "<i class='bi bi-printer' style='font-size: 0.9rem;'></i>";
+            $printed_updated_icon = "<i class='bi bi-printer-fill' style='font-size: 0.9rem;'></i>";
+            $inspection_label = ($inspection_status === "View/Edit") ? $edit_icon : (($inspection_status === "Add") ? $add_icon : $inspection_status);
+            $inspection_class = ($inspection_status === "View/Edit") ? "text-primary" : (($inspection_status === "Add") ? "text-success" : "");
+
             // Check if the certificate is printed
             $certificate_printed = CertificateStatus($id, $con);
             $certificate_final = $certificate_printed['current_status'] ?? 'Ongoing';
+
+            if ($certificate_final === 'Printed') {
+                $certificate_final_label = $printed_icon;
+                $certificate_final_class = 'text-info';
+            } elseif ($certificate_final === 'Printed/Updated') {
+                $certificate_final_label = $printed_updated_icon;
+                $certificate_final_class = 'text-primary';
+            } else {
+                $certificate_final_label = htmlspecialchars($certificate_final, ENT_QUOTES);
+                $certificate_final_class = '';
+            }
             
             // Create link for certificate status if not Ongoing
             if ($certificate_final !== 'Ongoing') {
-                $certificate_final_display = "<a href='#' onclick='viewCertificateStatus($id); return false;' style='cursor: pointer;'><span>$certificate_final</span></a>";
+                $certificate_final_display = "<a href='#' onclick='viewCertificateStatus($id); return false;' class='$certificate_final_class' style='cursor: pointer;' title='$certificate_final'><span>$certificate_final_label</span></a>";
             } else {
-                $certificate_final_display = "<span>$certificate_final</span>";
+                $certificate_final_display = "<span class='text-warning' title='Ongoing'>$ongoing_icon</span>";
             }
 
             $uid_param = $userid ? "&uid=$userid" : "";
+
+            // Application edit link
+            $app_edit_link = "<a href='transaction.php?part=application&appid_edit=$id$uid_param$lang_param' class='text-primary' title='View/Edit'><i class='bi bi-pencil-square' style='font-size: 0.9rem;'></i></a>";
+
+            // Inspection link
+            $inspection_link = "<a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param$lang_param' class='$inspection_class' title='$inspection_status'>$inspection_label</a>";
+            
+            // Certificate link
+            if ($certificate_status == "Add" || $certificate_status == "View/Edit") {
+                $uid_param_cert = $userid ? "&uid=$userid" : "";
+
+                $certificate_label = ($certificate_status === "View/Edit") ? $edit_icon : (($certificate_status === "Add") ? $add_icon : $certificate_status);
+                $certificate_class = ($certificate_status === "View/Edit") ? "text-primary" : (($certificate_status === "Add") ? "text-success" : "");
+                $certificate_link = "<a href='transaction.php?part=certificate&appid=$id&certify=$certificate_status$uid_param$lang_param' class='$certificate_class' title='$certificate_status'>$certificate_label</a>";
+            } else {
+                $certificate_link = "<span class='text-muted' title='Not ready'>$not_ready_icon</span>";
+            }
+
             print "<tr>
                     <td>$appno</td>
                     <td>$exporter</td>
                     <td>$appdate</td>
-                    <td><a href='transaction.php?part=application&appid_edit=$id$uid_param$lang_param'>View/Edit</a></td>
-                    <td><span><a href='transaction.php?part=inspection&appid=$id&inspect=$inspection_status$uid_param$lang_param'>$inspection_status</a></span></td>
-                    <td>$certificate_link</td>
-                    <td>$certificate_final_display</td>
+                    <td style='text-align: center;'>$app_edit_link</td>
+                    <td style='text-align: center;'><span>$inspection_link</span></td>
+                    <td style='text-align: center;'>$certificate_link</td>
+                    <td style='text-align: center;'>$certificate_final_display</td>
                    </tr>";
         }
+    } else {
+        // No applications found for this location group
+        echo "<tr><td colspan='7' class='text-center text-muted'>No applications found for this location group.</td></tr>";
     }
 }
 
@@ -4365,9 +5279,9 @@ function GetAllCertificateSources($application_id, $con) {
                     <td>".$arole."</td>
                     <td>".$aposition."</td>
                     <td>".$aworkplace."</td>
-                    <td><button type='button' name='$aid' id='$aid' class='btn btn-primary btn-sm' data-bs-toggle='modal' data-bs-target='#addApproverModal' 
-  data-id='$aid' data-name='$aname' data-surname='$asurname' data-role='$arole' data-position='$aposition' data-workplace='$aworkplace'><i class='bi bi-pencil-square table-icon'></i></button></td>
-                    <td><a href='masterdata.php?part=approvers&aid=$aid&del=yes' class='btn btn-danger btn-sm'><i class='bi bi-trash table-icon'></i></a></td>
+                          <td><button type='button' name='$aid' id='$aid' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addApproverModal' 
+  data-id='$aid' data-name='$aname' data-surname='$asurname' data-role='$arole' data-position='$aposition' data-workplace='$aworkplace'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button></td>
+                          <td><a href='masterdata.php?part=approvers&aid=$aid&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                  </tr>";
         }
     }
@@ -4429,29 +5343,56 @@ function ApproverInfo($id, $con) {
 /*
   ChartDocTracking: Get document tracking data for chart
 */
-function ChartDocTracking($guid, $con) {
+function ChartDocTracking($location_group, $con) {
     
-    // Get ALL data (not just current month) - uncomment the queries below for all-time data
-    $sqlApplication = "SELECT COUNT(*) AS total_applications FROM tbapplication WHERE guid = '" . pg_escape_string($con, $guid) . "'";
-    $sqlInspection = "SELECT COUNT(*) AS total_inspections FROM tbinspection i INNER JOIN tbapplication a ON i.application_id = a.id WHERE a.guid = '" . pg_escape_string($con, $guid) . "'";
-    $sqlCertificate = "SELECT COUNT(*) AS total_certificates FROM tbcertificate WHERE gid = '" . pg_escape_string($con, $guid) . "'";
+    // Get ALL data filtered by location_group
+    $sqlApplication = "SELECT COUNT(*) AS total_applications 
+                       FROM tbapplication a 
+                       INNER JOIN tbusers u ON a.uid = u.id 
+                       INNER JOIN tblocations l ON u.location_id = l.id 
+                       WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
+    
+    $sqlInspection = "SELECT COUNT(*) AS total_inspections 
+                      FROM tbinspection i 
+                      INNER JOIN tbapplication a ON i.application_id = a.id 
+                      INNER JOIN tbusers u ON a.uid = u.id 
+                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
+    
+    $sqlCertificate = "SELECT COUNT(*) AS total_certificates 
+                       FROM tbcertificate c 
+                       INNER JOIN tbapplication a ON c.application_id = a.id 
+                       INNER JOIN tbusers u ON a.uid = u.id 
+                       INNER JOIN tblocations l ON u.location_id = l.id 
+                       WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
     
     // For current month only, use these queries instead:
     /*
     $sqlApplication = "SELECT COUNT(*) AS total_applications 
-                      FROM tbapplication 
-                      WHERE EXTRACT(MONTH FROM application_date) = EXTRACT(MONTH FROM CURRENT_DATE)
-                      AND EXTRACT(YEAR FROM application_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
+                      FROM tbapplication a 
+                      INNER JOIN tbusers u ON a.uid = u.id 
+                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
+                      AND EXTRACT(MONTH FROM a.application_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                      AND EXTRACT(YEAR FROM a.application_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
 
     $sqlInspection = "SELECT COUNT(*) AS total_inspections 
-                     FROM tbinspection 
-                     WHERE EXTRACT(MONTH FROM inspection_date) = EXTRACT(MONTH FROM CURRENT_DATE)
-                     AND EXTRACT(YEAR FROM inspection_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
+                     FROM tbinspection i 
+                     INNER JOIN tbapplication a ON i.application_id = a.id 
+                     INNER JOIN tbusers u ON a.uid = u.id 
+                     INNER JOIN tblocations l ON u.location_id = l.id 
+                     WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
+                     AND EXTRACT(MONTH FROM i.inspection_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                     AND EXTRACT(YEAR FROM i.inspection_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
     
     $sqlCertificate = "SELECT COUNT(*) AS total_certificates 
-                      FROM tbcertificate 
-                      WHERE EXTRACT(MONTH FROM date_issued) = EXTRACT(MONTH FROM CURRENT_DATE)
-                      AND EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)";
+                      FROM tbcertificate c 
+                      INNER JOIN tbapplication a ON c.application_id = a.id 
+                      INNER JOIN tbusers u ON a.uid = u.id 
+                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
+                      AND EXTRACT(MONTH FROM c.date_issued) = EXTRACT(MONTH FROM CURRENT_DATE)
+                      AND EXTRACT(YEAR FROM c.date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)";
     */
 
     // Execute queries and fetch results
@@ -4483,10 +5424,10 @@ function ChartDocTracking($guid, $con) {
     
     // If all counts are zero, get total counts for debugging
     if ($applicationCount == 0 && $inspectionCount == 0 && $certificateCount == 0) {
-        $totalApp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbapplication WHERE guid = '" . pg_escape_string($con, $guid) . "'"))['total'] ?? 0;
-        $totalInsp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbinspection"))['total'] ?? 0;
-        $totalCert = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbcertificate WHERE gid = '" . pg_escape_string($con, $guid) . "'"))['total'] ?? 0;
-        error_log("ChartDocTracking - No data this month. Total records - App: $totalApp, Insp: $totalInsp, Cert: $totalCert");
+        $totalApp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbapplication a INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        $totalInsp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbinspection i INNER JOIN tbapplication a ON i.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        $totalCert = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbcertificate c INNER JOIN tbapplication a ON c.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        error_log("ChartDocTracking - No data for location_group: $location_group. Total records - App: $totalApp, Insp: $totalInsp, Cert: $totalCert");
     }
 
     // Free result memory
@@ -4555,8 +5496,8 @@ function CertificateStatusInfo($appid, $con) {
     MonthlyPestDetectedChartData: Get monthly pest detection counts for last 3 months
     Returns month labels and line-series data grouped by pest scientific name
 */
-function MonthlyPestDetectedChartData($guid, $con) {
-    if (empty($guid) || !is_numeric($guid)) {
+function MonthlyPestDetectedChartData($location_group, $con) {
+    if (empty($location_group)) {
         return null;
     }
 
@@ -4574,16 +5515,18 @@ function MonthlyPestDetectedChartData($guid, $con) {
                 COUNT(tpd.pestid)::int AS pest_count
             FROM tbinspection i
             INNER JOIN tbapplication a ON a.id = i.application_id
+            INNER JOIN tbusers u ON a.uid = u.id
+            INNER JOIN tblocations l ON u.location_id = l.id
             INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
             LEFT JOIN tbpest p ON p.id = tpd.pestid
             WHERE i.inspection_date IS NOT NULL
-              AND a.uid = $1
+              AND l.location_group = $1
               AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
               AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
             GROUP BY month_key, pest_name
             ORDER BY pest_name, month_key";
 
-    $result = pg_query_params($con, $sql, array($guid));
+    $result = pg_query_params($con, $sql, array($location_group));
     if (!$result) {
         error_log("MonthlyPestDetectedChartData Query Error: " . pg_last_error($con));
         return [
@@ -4632,8 +5575,8 @@ function MonthlyPestDetectedChartData($guid, $con) {
     MonthlyPestCategoryChartData: Get monthly pest detection counts by category for last 3 months
     Returns month labels and bar-series data grouped by pest category
 */
-function MonthlyPestCategoryChartData($guid, $con) {
-        if (empty($guid) || !is_numeric($guid)) {
+function MonthlyPestCategoryChartData($location_group, $con) {
+        if (empty($location_group)) {
                 return null;
         }
 
@@ -4651,16 +5594,18 @@ function MonthlyPestCategoryChartData($guid, $con) {
                                 COUNT(tpd.pestid)::int AS pest_count
                         FROM tbinspection i
                         INNER JOIN tbapplication a ON a.id = i.application_id
+                        INNER JOIN tbusers u ON a.uid = u.id
+                        INNER JOIN tblocations l ON u.location_id = l.id
                         INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
                         LEFT JOIN tbpest p ON p.id = tpd.pestid
                         WHERE i.inspection_date IS NOT NULL
-                            AND a.uid = $1
+                            AND l.location_group = $1
                             AND i.inspection_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
                             AND i.inspection_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
                         GROUP BY month_key, pest_category
                         ORDER BY pest_category, month_key";
 
-        $result = pg_query_params($con, $sql, array($guid));
+        $result = pg_query_params($con, $sql, array($location_group));
     if (!$result) {
         error_log("MonthlyPestCategoryChartData Query Error: " . pg_last_error($con));
         return [

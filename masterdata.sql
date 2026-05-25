@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS "public"."tbprofile" (
     "imgfilepath" TEXT /* Image file path */
 );
 
-CREATE TABLE IF NOT EXISTS "public"."tbgrouppermits" (
+CREATE TABLE "tbgrouppermits" (
     "id" SERIAL PRIMARY KEY,
     "gid" INTEGER NOT NULL,  /* Group id - foreign key will be added later*/
     "mid" INTEGER NOT NULL,  /* module id - foreign key */

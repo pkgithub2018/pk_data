@@ -612,6 +612,56 @@ if (!$uprofile) {
 if ($uprofile && isset($uprofile['imgfilepath']) && !empty($uprofile['imgfilepath']) && $uprofile['imgfilepath'] !== 'default_imgfilepath') {
    $uimage = $uprofile['imgfilepath'];
 }
+
+// ==================== PERMISSION CHECKS ====================
+// Check permissions for each module type
+$appPermit = UserPermitCheck($userid, 'PG-APPLICATION', $con);     // Application
+$inspectPermit = UserPermitCheck($userid, 'PG-INSPECTION', $con); // Inspection
+$certPermit = UserPermitCheck($userid, 'PG-CERTIFICATE', $con);       // Certificate
+
+// Permission checks for menu items
+$entityPermit = UserPermitCheck($userid, 'FRM - ENTITY', $con);
+$masterDataPermit = UserPermitCheck($userid, 'FRM - MASTER DATA', $con);
+$userGroupPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$groupPermitsPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$usersPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+$modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+
+// Extract individual permissions for Application forms
+$canAppRead = $appPermit['pread'];
+$canAppAdd = $appPermit['padd'];
+$canAppUpdate = $appPermit['pupdate'];
+$canAppDelete = $appPermit['pdelete'];
+
+// Extract individual permissions for Inspection forms
+$canInspectRead = $inspectPermit['pread'];
+$canInspectAdd = $inspectPermit['padd'];
+$canInspectUpdate = $inspectPermit['pupdate'];
+$canInspectDelete = $inspectPermit['pdelete'];
+
+// Extract individual permissions for Certificate forms
+$canCertRead = $certPermit['pread'];
+$canCertAdd = $certPermit['padd'];
+$canCertUpdate = $certPermit['pupdate'];
+$canCertDelete = $certPermit['pdelete'];
+
+// Combine permissions for ApplicationList display
+$transactionPermit = [
+    'exists' => ($appPermit['exists'] || $inspectPermit['exists'] || $certPermit['exists']),
+    'pread' => ($appPermit['pread'] || $inspectPermit['pread'] || $certPermit['pread']),
+    'padd' => ($appPermit['padd'] || $inspectPermit['padd'] || $certPermit['padd']),
+    'pupdate' => ($appPermit['pupdate'] || $inspectPermit['pupdate'] || $certPermit['pupdate']),
+    'pdelete' => ($appPermit['pdelete'] || $inspectPermit['pdelete'] || $certPermit['pdelete']),
+    'app_read' => $appPermit['pread'],
+    'app_update' => $appPermit['pupdate'],
+    'inspect_add' => $inspectPermit['padd'],
+    'inspect_update' => $inspectPermit['pupdate'],
+    'cert_add' => $certPermit['padd'],
+    'cert_update' => $certPermit['pupdate'],
+    'reason' => 'Transaction Module Composite Permissions'
+];
+// ==================== END PERMISSION CHECKS ====================
+
 // AJAX endpoint for importer name search
 if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
     // Debug: Log the request
@@ -908,7 +958,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span>Logout</span>
               </a>
             </li>
 
@@ -930,6 +980,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         </a>
       </li><!-- End Dashboard Nav -->
 
+      <?php if ($entityPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link" href="entity.php?entity=export&uid=<?php echo $userid; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -943,6 +994,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
+      <?php endif; ?>
 
        <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
@@ -964,6 +1016,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
         </a>
       </li><!-- End Certificate Nav --> 
 
+       <?php if ($masterDataPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#tables-nav" data-bs-toggle="collapse" href="#">
           <i class="bi bi-layout-text-window-reverse"></i><span><?php echo isset($translations['Master data']) ? $translations['Master data'] : 'Master data'; ?></span><i class="bi bi-chevron-down ms-auto"></i>
@@ -974,7 +1027,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-        <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+        <?php //if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -1030,9 +1083,10 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment Method']) ? $translations['Treatment Method'] : 'Treatment Method'; ?></span>
             </a>
           </li>
-        <?php } // End of Admin group check ?>
+        <?php // } // End of Admin group check ?>
         </ul>
-      </li><!-- End Master Data Nav -->
+      </li>
+      <?php endif; ?><!-- End Master Data Nav -->
       
       <!-- Monitoring and Reporting -->
        <li class="nav-heading"><?php echo isset($translations['MONITORING AND REPORTING']) ? $translations['MONITORING AND REPORTING'] : 'MONITORING AND REPORTING'; ?></li>
@@ -1055,29 +1109,50 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-    <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
-      </li><!-- End Users group -->
+      </li>
+      <?php endif; ?><!-- End Users group -->
 
+      <?php if ($groupPermitsPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
-      </li><!-- End Permission: User Group and Module -->
+      </li>
+      <?php endif; ?><!-- End Permission: User Group and Module -->
 
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i>
           <span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
-      </li>  
+      </li>
+      <?php endif; ?>
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?>
       <!-- pk**: End of User Admin-->
-    <?php } // End of Admin group check ?>
+    <?php // } // End of Admin group check ?>
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
 
   </aside><!-- End Sidebar-->
@@ -1150,6 +1225,26 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
    <?php
    // EXPORT ENTITY/COMPANY-FORM  *******************
      if (isset($_GET['part']) && $_GET['part'] === 'application') {
+          // ==================== APPLICATION PERMISSION CHECK ====================
+          $isEditMode = isset($_GET['appid_edit']);
+          $requiredPermission = $isEditMode ? $canAppUpdate : $canAppAdd;
+          
+          // Check if user has NO permission at all (not even read)
+          if (!$requiredPermission && !$canAppRead && $appPermit['exists']) {
+              $permType = $isEditMode ? 'view/update' : 'add';
+              echo "<script>alert('You do not have permission to $permType applications.');</script>";
+              echo "<script>window.location.href = 'main.php?uid=$userid&lang=$lang';</script>";
+              exit();
+          }
+          
+          // Set form state based on permissions
+          // If user has read permission but not add/update, make form read-only
+          $appFormReadOnly = (!$requiredPermission && $canAppRead) ? 'readonly' : '';
+          $appFormDisabled = (!$requiredPermission && $canAppRead) ? 'disabled' : '';
+          $appSubmitDisabled = (!$requiredPermission && $canAppRead) ? 'disabled' : '';
+          $appFormViewOnlyMode = (!$requiredPermission && $canAppRead) ? true : false;
+          // ==================== END PERMISSION CHECK ====================
+          
           // Initialize variables with default values
           $reg_no = '';
           $phone = '';
@@ -1589,7 +1684,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
                   <div class="col-sm-10 d-flex gap-2">
-                    <button type="submit" name="btnsubApplication_save" class="btn btn-primary" value="<?php echo isset($btnSubmit) ? 'update' : 'submit'; ?>">
+                    <button type="submit" name="btnsubApplication_save" class="btn btn-primary" value="<?php echo isset($btnSubmit) ? 'update' : 'submit'; ?>" <?php echo isset($appSubmitDisabled) ? $appSubmitDisabled : ''; ?>>
                       <?php echo isset($btnSubmit) ? 'Update' : 'Submit'; ?>
                     </button>
                     <!--
@@ -1637,6 +1732,50 @@ if (isset($_POST['action']) && $_POST['action'] == 'search_importer') {
                   <!-- End Modal form for Importer -->
 
               </form><!-- End Form for commodity -->
+              
+              <?php if (isset($appFormViewOnlyMode) && $appFormViewOnlyMode): ?>
+              <!-- JavaScript to make form read-only for users with view-only permission -->
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  // Disable all form inputs, textareas, and selects
+                  const form = document.querySelector('form[action*="main.php"]');
+                  if (form) {
+                    const inputs = form.querySelectorAll('input:not([type="hidden"]):not([readonly]), textarea, select');
+                    inputs.forEach(function(element) {
+                      element.disabled = true;
+                      element.style.backgroundColor = '#e9ecef';
+                      element.style.cursor = 'not-allowed';
+                    });
+                    
+                    // Disable all buttons except Cancel
+                    const buttons = form.querySelectorAll('button[type="submit"], button[type="button"]:not([data-bs-dismiss])');
+                    buttons.forEach(function(button) {
+                      if (!button.textContent.includes('Cancel') && !button.classList.contains('btn-secondary')) {
+                        button.disabled = true;
+                        button.style.cursor = 'not-allowed';
+                      }
+                    });
+                    
+                    // Disable modal trigger buttons (search icons, add buttons)
+                    const modalTriggers = form.querySelectorAll('[data-bs-toggle="modal"]');
+                    modalTriggers.forEach(function(trigger) {
+                      trigger.style.pointerEvents = 'none';
+                      trigger.style.opacity = '0.5';
+                      trigger.style.cursor = 'not-allowed';
+                    });
+                    
+                    // Add visual indicator
+                    const cardTitle = document.querySelector('.card-title');
+                    if (cardTitle) {
+                      const viewOnlyBadge = document.createElement('span');
+                      viewOnlyBadge.className = 'badge bg-info ms-2';
+                      viewOnlyBadge.textContent = 'View Only';
+                      cardTitle.appendChild(viewOnlyBadge);
+                    }
+                  }
+                });
+              </script>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -2412,6 +2551,26 @@ function selectExporter(info) {
      <!-- ***************INSPECTION *************** -->
      <?php
       if (isset($_GET['part']) && $_GET['part'] === 'inspection') { // Open form -Get link from main.php - dashboard
+        // ==================== INSPECTION PERMISSION CHECK ====================
+        $isInspectionEdit = isset($_GET['inspect']) && $_GET['inspect'] === 'View/Edit';
+        $requiredInspectPermission = $isInspectionEdit ? $canInspectUpdate : $canInspectAdd;
+        
+        // Check if user has NO permission at all (not even read)
+        if (!$requiredInspectPermission && !$canInspectRead && $inspectPermit['exists']) {
+            $permType = $isInspectionEdit ? 'view/update' : 'add';
+            echo "<script>alert('You do not have permission to $permType inspections.');</script>";
+            echo "<script>window.location.href = 'main.php?uid=$userid&lang=$lang';</script>";
+            exit();
+        }
+        
+        // Set form state based on permissions
+        // If user has read permission but not add/update, make form read-only
+        $inspectFormReadOnly = (!$requiredInspectPermission && $canInspectRead) ? 'readonly' : '';
+        $inspectFormDisabled = (!$requiredInspectPermission && $canInspectRead) ? 'disabled' : '';
+        $inspectSubmitDisabled = (!$requiredInspectPermission && $canInspectRead) ? 'disabled' : '';
+        $inspectFormViewOnlyMode = (!$requiredInspectPermission && $canInspectRead) ? true : false;
+        // ==================== END PERMISSION CHECK ====================
+        
         // Code for inspection part
         $appid_inspection = 0;
 
@@ -2764,7 +2923,7 @@ function selectExporter(info) {
 
           <div class="row mb-3">
             <div class="col-sm-10 offset-sm-2 d-flex gap-2">
-              <button type="submit" name="btnSubmitInspection" value="<?php echo $btnSubmit === 'update' ? 'update' : 'submit'; ?>" class="btn btn-success">
+              <button type="submit" name="btnSubmitInspection" value="<?php echo $btnSubmit === 'update' ? 'update' : 'submit'; ?>" class="btn btn-success" <?php echo isset($inspectSubmitDisabled) ? $inspectSubmitDisabled : ''; ?>>
                 <i class="bi bi-save"></i><?php echo $btnSubmit === 'update' ? ' Update' : ' Submit'; ?>
               </button>
               <a href="<?php echo htmlspecialchars($mainHref); ?>" class="btn btn-secondary">
@@ -2773,6 +2932,50 @@ function selectExporter(info) {
             </div>
           </div>
       </form> <!-- End Form for Inspection -->
+      
+      <?php if (isset($inspectFormViewOnlyMode) && $inspectFormViewOnlyMode): ?>
+      <!-- JavaScript to make form read-only for users with view-only permission -->
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          // Disable all form inputs, textareas, and selects in inspection form
+          const forms = document.querySelectorAll('form');
+          forms.forEach(function(form) {
+            const inputs = form.querySelectorAll('input:not([type="hidden"]):not([readonly]), textarea, select');
+            inputs.forEach(function(element) {
+              element.disabled = true;
+              element.style.backgroundColor = '#e9ecef';
+              element.style.cursor = 'not-allowed';
+            });
+            
+            // Disable all buttons except Cancel
+            const buttons = form.querySelectorAll('button[type="submit"], button[type="button"]:not([data-bs-dismiss])');
+            buttons.forEach(function(button) {
+              if (!button.textContent.includes('Cancel') && !button.classList.contains('btn-secondary')) {
+                button.disabled = true;
+                button.style.cursor = 'not-allowed';
+              }
+            });
+          });
+          
+          // Disable modal trigger buttons
+          const modalTriggers = document.querySelectorAll('[data-bs-toggle="modal"]');
+          modalTriggers.forEach(function(trigger) {
+            trigger.style.pointerEvents = 'none';
+            trigger.style.opacity = '0.5';
+            trigger.style.cursor = 'not-allowed';
+          });
+          
+          // Add visual indicator
+          const cardTitle = document.querySelector('.card-title');
+          if (cardTitle && !cardTitle.querySelector('.badge')) {
+            const viewOnlyBadge = document.createElement('span');
+            viewOnlyBadge.className = 'badge bg-info ms-2';
+            viewOnlyBadge.textContent = 'View Only';
+            cardTitle.appendChild(viewOnlyBadge);
+          }
+        });
+      </script>
+      <?php endif; ?>
      </div>
     </div>
 
@@ -2967,6 +3170,25 @@ function selectExporter(info) {
  <!-- ***************CERTIFICATE *************** -->
  <?php
    if (isset($_GET['part']) && $_GET['part'] === 'certificate') { // Open form -Get link from main.php - dashboard
+        // ==================== CERTIFICATE PERMISSION CHECK ====================
+        $isCertificateEdit = isset($_GET['certify']) && $_GET['certify'] === 'View/Edit';
+        $requiredCertPermission = $isCertificateEdit ? $canCertUpdate : $canCertAdd;
+        
+        // Check if user has NO permission at all (not even read)
+        if (!$requiredCertPermission && !$canCertRead && $certPermit['exists']) {
+            $permType = $isCertificateEdit ? 'view/update' : 'add';
+            echo "<script>alert('You do not have permission to $permType certificates.');</script>";
+            echo "<script>window.location.href = 'main.php?uid=$userid&lang=$lang';</script>";
+            exit();
+        }
+        
+        // Set form state based on permissions
+        // If user has read permission but not add/update, make form read-only
+        $certFormReadOnly = (!$requiredCertPermission && $canCertRead) ? 'readonly' : '';
+        $certFormDisabled = (!$requiredCertPermission && $canCertRead) ? 'disabled' : '';
+        $certSubmitDisabled = (!$requiredCertPermission && $canCertRead) ? 'disabled' : '';
+        $certFormViewOnlyMode = (!$requiredCertPermission && $canCertRead) ? true : false;
+        // ==================== END PERMISSION CHECK ====================
         
             $appid_certificate = isset($_GET['appid']) ? (int)$_GET['appid'] : 0; // Application ID
             
@@ -3198,7 +3420,7 @@ function selectExporter(info) {
             </div>
             <div class="row mb-3">
               <div class="col-sm-10 offset-sm-2 d-flex gap-2">
-                <button type="submit" name="btnSubmitCertificate" class="btn btn-primary" value="<?php echo $btnSubmitCertificate === 'update' ? 'update' : 'submit'; ?>">
+                <button type="submit" name="btnSubmitCertificate" class="btn btn-primary" value="<?php echo $btnSubmitCertificate === 'update' ? 'update' : 'submit'; ?>" <?php echo isset($certSubmitDisabled) ? $certSubmitDisabled : ''; ?>>
                   <i class="bi bi-save"></i> <?php echo $btnSubmitCertificate === 'update' ? ' Update' : ' Submit'; ?>
                 </button>
                 <?php if ($btnSubmitCertificate === 'update'): ?>
@@ -3219,6 +3441,56 @@ function selectExporter(info) {
               </div>
             </div>
           </form>
+          
+          <?php if (isset($certFormViewOnlyMode) && $certFormViewOnlyMode): ?>
+          <!-- JavaScript to make form read-only for users with view-only permission -->
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              // Disable all form inputs, textareas, and selects in certificate form
+              const forms = document.querySelectorAll('form');
+              forms.forEach(function(form) {
+                const inputs = form.querySelectorAll('input:not([type="hidden"]):not([readonly]), textarea, select');
+                inputs.forEach(function(element) {
+                  element.disabled = true;
+                  element.style.backgroundColor = '#e9ecef';
+                  element.style.cursor = 'not-allowed';
+                });
+                
+                // Disable all buttons except Cancel and View buttons
+                const buttons = form.querySelectorAll('button[type="submit"], button[type="button"]:not([data-bs-dismiss])');
+                buttons.forEach(function(button) {
+                  const btnText = button.textContent.toLowerCase();
+                  // Allow Cancel and View buttons
+                  if (!btnText.includes('cancel') && !btnText.includes('view') && !button.classList.contains('btn-secondary')) {
+                    button.disabled = true;
+                    button.style.cursor = 'not-allowed';
+                  }
+                });
+              });
+              
+              // Disable modal trigger buttons (except view-only modals)
+              const modalTriggers = document.querySelectorAll('[data-bs-toggle="modal"]');
+              modalTriggers.forEach(function(trigger) {
+                const targetModal = trigger.getAttribute('data-bs-target');
+                // Allow viewing supporting documents but not editing
+                if (targetModal !== '#spdocModal') {
+                  trigger.style.pointerEvents = 'none';
+                  trigger.style.opacity = '0.5';
+                  trigger.style.cursor = 'not-allowed';
+                }
+              });
+              
+              // Add visual indicator
+              const cardTitle = document.querySelector('.card-title');
+              if (cardTitle && !cardTitle.querySelector('.badge')) {
+                const viewOnlyBadge = document.createElement('span');
+                viewOnlyBadge.className = 'badge bg-info ms-2';
+                viewOnlyBadge.textContent = 'View Only';
+                cardTitle.appendChild(viewOnlyBadge);
+              }
+            });
+          </script>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -3399,6 +3671,51 @@ function selectExporter(info) {
         location.reload(); // Optional: reload to restore JS and events
       }
    </script>
+   
+   <?php if ((isset($appFormViewOnlyMode) && $appFormViewOnlyMode) || 
+             (isset($inspectFormViewOnlyMode) && $inspectFormViewOnlyMode) || 
+             (isset($certFormViewOnlyMode) && $certFormViewOnlyMode)): ?>
+   <!-- Global script to disable all modals in view-only mode -->
+   <script>
+     document.addEventListener('DOMContentLoaded', function() {
+       // Disable all modal forms when they're opened
+       const modals = document.querySelectorAll('.modal');
+       modals.forEach(function(modal) {
+         modal.addEventListener('shown.bs.modal', function() {
+           // Disable all inputs, textareas, selects in the modal
+           const inputs = modal.querySelectorAll('input:not([type="hidden"]), textarea, select');
+           inputs.forEach(function(element) {
+             if (!element.disabled) {
+               element.disabled = true;
+               element.style.backgroundColor = '#e9ecef';
+               element.style.cursor = 'not-allowed';
+             }
+           });
+           
+           // Disable all buttons except close/cancel buttons
+           const buttons = modal.querySelectorAll('button');
+           buttons.forEach(function(button) {
+             const btnText = button.textContent.toLowerCase();
+             if (!btnText.includes('close') && !btnText.includes('cancel') && !button.classList.contains('btn-close') && !button.hasAttribute('data-bs-dismiss')) {
+               button.disabled = true;
+               button.style.cursor = 'not-allowed';
+             }
+           });
+           
+           // Add view-only indicator to modal title
+           const modalTitle = modal.querySelector('.modal-title');
+           if (modalTitle && !modalTitle.querySelector('.badge')) {
+             const viewOnlyBadge = document.createElement('span');
+             viewOnlyBadge.className = 'badge bg-info ms-2';
+             viewOnlyBadge.textContent = 'View Only';
+             viewOnlyBadge.style.fontSize = '0.7em';
+             modalTitle.appendChild(viewOnlyBadge);
+           }
+         });
+       });
+     });
+   </script>
+   <?php endif; ?>
   </main><!-- End #main -->
 
   <!-- ======= Footer ======= -->

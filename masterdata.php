@@ -47,6 +47,105 @@
     $uimage = $uprofile['imgfilepath'];
     }
 
+    // User permission check for Master Data module
+    $masterDataPermit = UserPermitCheck($userid, 'FRM - MASTER DATA', $con);
+    
+    // Permission checks for menu items
+    // Permission checks for menu items
+    $entityPermit = UserPermitCheck($userid, 'FRM - ENTITY', $con);
+    $userGroupPermit = UserPermitCheck($userid, 'FRM - USERS_PERMIT', $con);
+    $groupPermitsPermit = UserPermitCheck($userid, 'FRM-USERS_PERMIT', $con);
+    $usersPermit = UserPermitCheck($userid, 'FRM-USERS', $con);
+    $modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+    
+    // Check if user has at least read permission
+    if (!$masterDataPermit['pread']) {
+        echo "<script>alert('You do not have permission to access Master Data.');</script>";
+        echo "<script>window.location.href = 'main.php?uid=" . urlencode($userid) . "&lang=" . urlencode($lang) . "';</script>";
+        exit();
+    }
+    
+    // Set permission variables for form controls
+    $canRead = $masterDataPermit['pread'];
+    $canAdd = $masterDataPermit['padd'];
+    $canUpdate = $masterDataPermit['pupdate'];
+    $canDelete = $masterDataPermit['pdelete'];
+    
+    // Determine if form should be in view-only mode (no add and no update)
+    $viewOnlyMode = ($canRead && !$canUpdate && !$canAdd);
+    
+    // Determine if update is disabled (can add but not update, or read-only)
+    $updateDisabled = !$canUpdate;
+
+    // Server-side POST protection
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Check for add operations
+        if (isset($_POST['btnsublocation']) || isset($_POST['submitCountry']) || 
+            isset($_POST['submitDistrict']) || isset($_POST['submitPest']) || 
+            isset($_POST['submitProduct']) || isset($_POST['submitProductGroup']) || 
+            isset($_POST['submitProductUnit']) || isset($_POST['submitProvince']) || 
+            isset($_POST['submitApprover']) || isset($_POST['submitConveyance']) || 
+            isset($_POST['submitInspectionMethod']) || isset($_POST['submitTreatmentMethod']) || 
+            isset($_POST['submitEntityType']) || isset($_POST['submitModule'])) {
+            
+            // Determine if this is an add or update operation
+            $isAddOperation = false;
+            $isUpdateOperation = false;
+            $isDeleteOperation = false;
+            
+            // Check for delete operations
+            if (isset($_GET['action']) && $_GET['action'] === 'delete') {
+                $isDeleteOperation = true;
+            }
+            
+            // Check for add operations (typically have 'new' or empty id)
+            $idFields = ['loc', 'cid', 'did', 'pestid', 'pid', 'pgroupid', 'punitid', 'provid', 'id', 'conveyanceId', 'imid', 'tmid', 'etid', 'mid'];
+            foreach ($idFields as $field) {
+                // Check both GET and POST parameters
+                $idValue = isset($_GET[$field]) ? $_GET[$field] : (isset($_POST[$field]) ? $_POST[$field] : null);
+                if ($idValue !== null && ($idValue === 'new' || empty($idValue) || $idValue === '')) {
+                    $isAddOperation = true;
+                    break;
+                }
+            }
+            
+            // Additional check: if we have a POST with an ID that's not 'new' or empty, it's an update
+            if (!$isAddOperation) {
+                foreach ($idFields as $field) {
+                    $idValue = isset($_POST[$field]) ? $_POST[$field] : (isset($_GET[$field]) ? $_GET[$field] : null);
+                    if ($idValue !== null && $idValue !== 'new' && $idValue !== '') {
+                        $isUpdateOperation = true;
+                        break;
+                    }
+                }
+            }
+            
+            // If not add or delete, assume update
+            if (!$isAddOperation && !$isDeleteOperation) {
+                $isUpdateOperation = true;
+            }
+            
+            // Check permissions
+            if ($isAddOperation && !$canAdd) {
+                echo "<script>alert('You do not have permission to add data.');</script>";
+                echo "<script>window.location.href = 'masterdata.php?part=" . (isset($_GET['part']) ? urlencode($_GET['part']) : 'locations') . "&uid=" . urlencode($userid) . "&lang=" . urlencode($lang) . "';</script>";
+                exit();
+            }
+            
+            if ($isUpdateOperation && !$canUpdate) {
+                echo "<script>alert('You do not have permission to update data.');</script>";
+                echo "<script>window.location.href = 'masterdata.php?part=" . (isset($_GET['part']) ? urlencode($_GET['part']) : 'locations') . "&uid=" . urlencode($userid) . "&lang=" . urlencode($lang) . "';</script>";
+                exit();
+            }
+            
+            if ($isDeleteOperation && !$canDelete) {
+                echo "<script>alert('You do not have permission to delete data.');</script>";
+                echo "<script>window.location.href = 'masterdata.php?part=" . (isset($_GET['part']) ? urlencode($_GET['part']) : 'locations') . "&uid=" . urlencode($userid) . "&lang=" . urlencode($lang) . "';</script>";
+                exit();
+            }
+        }
+    }
+
     // Language selection
     $lang = isset($_GET['lang']) ? $_GET['lang'] : 'en'; // default language
 
@@ -203,7 +302,7 @@
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?lang=<?php echo $lang; ?>">
                 <i class="bi bi-box-arrow-right"></i>
-                <span><?php echo isset($translations['Sign Out']) ? $translations['Sign Out'] : 'Sign Out'; ?></span>
+                <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
               </a>
             </li>
 
@@ -227,6 +326,7 @@
         </a>
       </li><!-- End Dashboard Nav -->
 
+      <?php if ($entityPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link active" href="entity.php?entity=export&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" >
           <i class="bi bi-box-arrow-up-right"></i>
@@ -240,6 +340,7 @@
           <span><?php echo isset($translations['Import entity']) ? $translations['Import entity'] : 'Import entity'; ?></span>
         </a>
       </li><!-- End Import Entity Nav -->
+      <?php endif; ?>
 
       <li class="nav-item">
         <a class="nav-link collapsed" href="application.php?part=dashboard&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
@@ -274,7 +375,7 @@
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Approvers']) ? $translations['Approvers'] : 'Approvers'; ?></span>
             </a>
           </li>
-         <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+         <?php //if($groupname == "admin"){ ?><!-- Admin group check -->
           <li>
             <a href="masterdata.php?part=conveyance&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="<?php echo (isset($_GET['part']) && $_GET['part'] === 'conveyance') ? 'active' : ''; ?>">
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Conveyance']) ? $translations['Conveyance'] : 'Conveyance'; ?></span>
@@ -331,7 +432,7 @@
               <i class="bi bi-circle"></i><span><?php echo isset($translations['Treatment method']) ? $translations['Treatment method'] : 'Treatment method'; ?></span>
             </a>
           </li>
-         <?php } ?><!-- End of Admin group check -->
+         <?php //} ?><!-- End of Admin group check -->
         </ul>
       </li><!-- End Tables Nav -->
 
@@ -357,27 +458,47 @@
         </a>
       </li><!-- End Profile -->
 
-      <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+      <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-people"></i>
           <span><?php echo isset($translations['Users group']) ? $translations['Users group'] : 'Users group'; ?></span>
         </a>
-      </li><!-- End Users group -->
+      </li>
+      <?php endif; ?><!-- End Users group -->
       
+      <?php if ($groupPermitsPermit['pread']): ?>
        <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=upermits&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-shield-lock"></i>
           <span><?php echo isset($translations['Group permits']) ? $translations['Group permits'] : 'Group permits'; ?></span>
         </a>
-      </li><!-- End User Group permit -->
+      </li>
+      <?php endif; ?><!-- End User Group permit -->
 
+      <?php if ($usersPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link active" href="users.php?part=userslist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
           <i class="bi bi-person-plus"></i><span><?php echo isset($translations['Users']) ? $translations['Users'] : 'Users'; ?></span>
         </a>
-      </li>  <!-- End Users Nav -->
-    <?php } ?><!-- End of Admin group check -->
+      </li>
+      <?php endif; ?><!-- End Users Nav -->
+      <?php if ($modulesPermit['pread']): ?>
+      <li class="nav-item"> <!--*********** Module *****************-->
+        <a class="nav-link collapsed" href="users.php?part=modulelist&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
+          <i class="bi bi-grid-3x3-gap"></i><span><?php echo isset($translations['Modules']) ? $translations['Modules'] : 'Modules'; ?></span>
+        </a>
+      </li>
+      <?php endif; ?><!-- End of Admin group check -->
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span><?php echo isset($translations['Logout']) ? $translations['Logout'] : 'Logout'; ?></span>
+        </a>
+      </li><!-- End Logout -->
+
     </ul>
 
   </aside><!-- End Sidebar-->
@@ -408,11 +529,13 @@
         </button>
       </div>
      -->
+      <?php if ($canAdd): ?>
       <div>
           <a href="masterdata.php?loc=new&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
             <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New Location']) ? $translations['Add New Location'] : 'Add New Location'; ?>
           </a>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     
     <section class="section"> <!-- DATA TABLE - Locations -->
@@ -469,13 +592,14 @@
           $loctype = $_POST['locationtype'];
           $pid = $_POST['province'];
           $did = $_POST['district'];
+          $locationgroup = $_POST['locationgroup'];
        if($_POST['btnsublocation'] === 'update') {
            // Update existing location
-          Locationupdate($id,$locid, $nameeng, $namelao, $loctype,$pid, $did, $con); // Function to update location
+          Locationupdate($id,$locid, $nameeng, $namelao, $loctype,$pid, $did, $locationgroup, $con); // Function to update location
        } else if ($_POST['btnsublocation'] === 'submit') {
            // Add new location
            //echo "<script>alert('Add new location: " . $locid . "');</script>"; // Debugging line
-          Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $con); // Function to add new location
+          Addlocation($locid, $nameeng, $namelao, $loctype, $pid, $did, $locationgroup, $con); // Function to add new location
        }
        
    } // End of if btnsublocation
@@ -497,6 +621,7 @@
                 $loctype = $locv['location_type'];
                 $pid = $locv['pid'];
                 $did = $locv['did'];
+                $locationgroup = $locv['location_group'];
                
             } else { // For new location
                // Initialize variables for new location
@@ -580,6 +705,12 @@
                     </select>
                   </div>
                 </div>
+                <div class="row mb-3">
+                  <label for="inputText" class="col-sm-2 col-form-label"><?php echo isset($translations['Location Group']) ? $translations['Location Group'] : 'Location Group'; ?></label>
+                  <div class="col-sm-10">
+                    <input type="text" name="locationgroup" id="locationgroup" class="form-control" value="<?php echo isset($locationgroup) ? $locationgroup : ''; ?>">
+                  </div>
+                </div>
               
                 <div class="row mb-3">
                   <label class="col-sm-2 col-form-label">&nbsp;</label> 
@@ -627,11 +758,13 @@
       </nav>
       </div>
       
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCountryModal" data-cid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Country']) ? $translations['Add New Country'] : 'Add New Country'; ?>
         </button>
-      </div> 
+      </div>
+      <?php endif; ?> 
     </div><!-- End Page Title -->
     <!-- == Modal form - Countries == -->
       <div class="modal fade" id="addCountryModal" tabindex="-1" aria-labelledby="addCountryModalLabel" aria-hidden="true">
@@ -765,11 +898,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDistrictModal" data-did="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New District']) ? $translations['Add New District'] : 'Add New District'; ?>
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Districts == -->
       <div class="modal fade" id="addDistrictModal" tabindex="-1" aria-labelledby="addDistrictModalLabel" aria-hidden="true">
@@ -876,11 +1011,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPestModal" data-pestid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Pest']) ? $translations['Add New Pest'] : 'Add New Pest'; ?>
         </button>
-      </div> 
+      </div>
+      <?php endif; ?> 
     </div><!-- End Page Title -->
      <!-- == Modal form - Pest == -->
       <div class="modal fade" id="addPestModal" tabindex="-1" aria-labelledby="addPestModalLabel" aria-hidden="true">
@@ -992,11 +1129,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal" data-pid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product']) ? $translations['Add New Product'] : 'Add New Product'; ?>
         </button>
-      </div> 
+      </div>
+      <?php endif; ?> 
     </div><!-- End Page Title -->
      <!-- == Modal form - Product == -->
       <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
@@ -1145,11 +1284,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductGroupModal" data-pgroupid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product Group']) ? $translations['Add New Product Group'] : 'Add New Product Group'; ?>
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Product Group == -->
       <div class="modal fade" id="addProductGroupModal" tabindex="-1" aria-labelledby="addProductGroupModalLabel" aria-hidden="true">
@@ -1262,12 +1403,14 @@
           <li class="breadcrumb-item active"><?php echo isset($translations['Product Unit']) ? $translations['Product Unit'] : 'Product Unit'; ?></li>
         </ol>
       </nav>
-      </div>  
+      </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductUnitModal" data-punitid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Product Unit']) ? $translations['Add New Product Unit'] : 'Add New Product Unit'; ?>
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Product Unit == -->
       <div class="modal fade" id="addProductUnitModal" tabindex="-1" aria-labelledby="addProductUnitModalLabel" aria-hidden="true">
@@ -1386,11 +1529,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProvinceModal" data-provid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Province']) ? $translations['Add New Province'] : 'Add New Province'; ?>
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Provinces == -->
       <div class="modal fade" id="addProvinceModal" tabindex="-1" aria-labelledby="addProvinceModalLabel" aria-hidden="true">
@@ -1474,11 +1619,13 @@
         </ol>
       </nav>
     </div>
+    <?php if ($canAdd): ?>
     <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addApproverModal" data-id="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?>
         </button>
       </div>
+    <?php endif; ?>
   </div>
   <!-- End Page Title -->
   <!-- == Modal form - Approver == -->
@@ -1628,11 +1775,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addConveyenceModal" data-cid="new">
           <i class="bi bi-plus-circle"></i><?php echo isset($translations['Add New Conveyance']) ? $translations['Add New Conveyance'] : 'Add New Conveyance'; ?>
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Conveyance == -->
       <div class="modal fade" id="addConveyenceModal" tabindex="-1" aria-labelledby="addConveyenceModalLabel" aria-hidden="true">
@@ -1759,11 +1908,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addInspectionMethodModal" data-imid="new">
           <i class="bi bi-plus-circle"></i>Add New Inspection Method
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Inspection Method == -->
       <div class="modal fade" id="addInspectionMethodModal" tabindex="-1" aria-labelledby="addInspectionMethodModalLabel" aria-hidden="true">
@@ -1887,11 +2038,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addTreatmentMethodModal" data-tmid="new">
           <i class="bi bi-plus-circle"></i>Add New Treatment Method
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Treatment Method == -->
       <div class="modal fade" id="addTreatmentMethodModal" tabindex="-1" aria-labelledby="addTreatmentMethodModalLabel" aria-hidden="true">
@@ -2013,11 +2166,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addEntityTypeModal" data-etid="new">
           <i class="bi bi-plus-circle"></i>Add New Entity Type
         </button>
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Entity Type == -->
       <div class="modal fade" id="addEntityTypeModal" tabindex="-1" aria-labelledby="addEntityTypeModalLabel" aria-hidden="true">
@@ -2135,11 +2290,13 @@
         </ol>
       </nav>
       </div>
+      <?php if ($canAdd): ?>
       <div>
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addModuleModal" data-mid="new">
           <i class="bi bi-plus-circle"></i>Add New Module
         </button> 
       </div>
+      <?php endif; ?>
     </div><!-- End Page Title -->
     <!-- == Modal form - Module == -->
       <div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModuleModalLabel" aria-hidden="true">
@@ -2153,6 +2310,7 @@
               <div class="modal-body">
                 <!-- Hidden input for mid -->
                 <input type="hidden" id="moduleId" name="moduleId">
+                <input type="hidden" id="moduleEnabled" name="moduleEnabled" value="yes">
                 <div class="mb-3">
                   <label for="moduleCode" class="form-label">Code</label>
                   <input type="text" class="form-control" id="moduleCode" name="moduleCode" required>
@@ -2216,20 +2374,19 @@
     <?php
       if(isset($_POST['submitModule'])) {  // ADD/UPDATE Module
         // Process the form submission for adding/updating module
-        $mid = $_POST['moduleId']; // Hidden input for ID
+        $mid = isset($_POST['moduleId']) ? trim((string)$_POST['moduleId']) : ''; // Hidden input for ID
         $mCode = $_POST['moduleCode'];
         $mName = $_POST['moduleName'];
         $mDescription = $_POST['moduleDescription'];
+        $mEnabled = isset($_POST['moduleEnabled']) ? $_POST['moduleEnabled'] : 'yes';
         
         if($mid === 'new') {
             // Add new module
             AddModule($mCode, $mName, $mDescription, $con); // Function to add new module
-            
+        } elseif ($mid !== '' && ctype_digit($mid)) {
+          UpdateModule($mid, $mCode, $mName, $mDescription, $con, 'masterdata.php?part=modules', $mEnabled); // Function to update module
         } else {
-            // Update existing module
-            echo "<script>alert('Module with ID: " . $mid . " updated.');</script>"; // Debugging line
-            UpdateModule($mid, $mCode, $mName, $mDescription, $con); // Function to update module
-           
+          echo "<script>alert('Invalid module ID.');</script>";
         }
       } // End of if submitModule
     // DELETE module
@@ -2567,6 +2724,7 @@
       var moduleCodeInput = modal.find('#moduleCode');
       var moduleNameInput = modal.find('#moduleName');
       var moduleDescriptionInput = modal.find('#moduleDescription');
+      var moduleEnabledInput = modal.find('#moduleEnabled');
       var submitButton = modal.find('#submitModule');
 
       modal.find('#moduleId').val(mid); // Set the hidden input value
@@ -2574,12 +2732,16 @@
         moduleCodeInput.val(''); // Clear inputs
         moduleNameInput.val('');
         moduleDescriptionInput.val('');
+        moduleEnabledInput.val('yes');
         modal.find('.modal-title').text('Add New Module');
         submitButton.text('Submit');
       } else {
+        var statusCheckbox = document.getElementById(mid);
+        var enabledValue = (statusCheckbox && statusCheckbox.checked) ? 'yes' : 'no';
         moduleCodeInput.val(button.data('code')); // Set the module code
         moduleNameInput.val(button.data('name')); // Set the module name
         moduleDescriptionInput.val(button.data('desc')); // Set the description
+        moduleEnabledInput.val(enabledValue);
         modal.find('.modal-title').text('Edit Module');
         submitButton.text('Update');
       }
@@ -2773,6 +2935,157 @@
       }
     });
   </script>
+
+  <?php if ($viewOnlyMode): ?>
+  <!-- Read-Only Mode: Disable all form elements when user has only read permission -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Master Data - View Only Mode Active');
+      
+      // Disable all input, textarea, and select elements
+      const formElements = document.querySelectorAll('input:not([type="search"]), textarea, select');
+      formElements.forEach(function(element) {
+        element.disabled = true;
+        element.style.backgroundColor = '#f0f0f0';
+        element.style.cursor = 'not-allowed';
+      });
+      
+      // Disable all submit buttons except search
+      const submitButtons = document.querySelectorAll('button[type="submit"]:not([title="Search"])');
+      submitButtons.forEach(function(button) {
+        button.disabled = true;
+        button.style.display = 'none';
+      });
+      
+      // Disable all add buttons (including modal triggers)
+      const addButtons = document.querySelectorAll('button[data-bs-toggle="modal"], .btn-success, .btn-primary');
+      addButtons.forEach(function(button) {
+        if (!button.closest('.search-form')) {
+          button.disabled = true;
+          button.style.display = 'none';
+        }
+      });
+      
+      // Disable edit and delete action buttons in tables
+      const actionButtons = document.querySelectorAll('a.btn-primary, a.btn-danger, button.btn-danger');
+      actionButtons.forEach(function(button) {
+        button.style.pointerEvents = 'none';
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+      });
+      
+      // Add "View Only" badge to page titles
+      const pageTitles = document.querySelectorAll('.card-title, .pagetitle h1');
+      pageTitles.forEach(function(title) {
+        if (!title.querySelector('.view-only-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'badge bg-secondary view-only-badge';
+          badge.style.marginLeft = '10px';
+          badge.style.fontSize = '0.7em';
+          badge.textContent = 'View Only';
+          title.appendChild(badge);
+        }
+      });
+      
+      // Prevent modal form submissions
+      document.querySelectorAll('.modal form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          alert('You do not have permission to modify data. Read-only access.');
+          return false;
+        });
+      });
+      
+      // Disable form submissions
+      document.querySelectorAll('form').forEach(function(form) {
+        // Skip search forms
+        if (form.classList.contains('search-form')) {
+          return;
+        }
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          alert('You do not have permission to modify data. Read-only access.');
+          return false;
+        });
+      });
+      
+      console.log('Master Data - All forms disabled for view-only mode');
+    });
+  </script>
+  <?php endif; ?>
+  
+  <?php if ($updateDisabled && !$viewOnlyMode): ?>
+  <!-- Update Disabled Mode: Hide/disable edit buttons when user can add but not update -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Master Data - Update Disabled Mode: Hiding edit buttons');
+      
+      // Hide all edit buttons in tables (btn-primary with pencil icon)
+      const editButtons = document.querySelectorAll('button.btn-primary[data-bs-toggle="modal"], a.btn-primary');
+      editButtons.forEach(function(button) {
+        // Check if this is an edit button (has pencil icon or is in action column)
+        const hasPencilIcon = button.querySelector('.bi-pencil-square') || button.querySelector('.bi-pencil');
+        if (hasPencilIcon) {
+          button.style.display = 'none';
+          button.disabled = true;
+        }
+      });
+      
+      // Intercept modal open events to prevent editing
+      document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(trigger) {
+        const hasPencilIcon = trigger.querySelector('.bi-pencil-square') || trigger.querySelector('.bi-pencil');
+        if (hasPencilIcon) {
+          trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('You do not have permission to edit data. You can only add new records.');
+            return false;
+          });
+        }
+      });
+      
+      // Prevent any modal from opening for editing existing records
+      const modals = document.querySelectorAll('.modal');
+      modals.forEach(function(modal) {
+        modal.addEventListener('show.bs.modal', function(e) {
+          const button = e.relatedTarget;
+          if (button) {
+            // Check if modal is being opened to edit (not add new)
+            const isEdit = button.getAttribute('data-punitid') !== 'new' || 
+                          button.getAttribute('data-cid') !== 'new' ||
+                          button.getAttribute('data-did') !== 'new' ||
+                          button.getAttribute('data-pestid') !== 'new' ||
+                          button.getAttribute('data-pid') !== 'new' ||
+                          button.getAttribute('data-pgroupid') !== 'new' ||
+                          button.getAttribute('data-provid') !== 'new' ||
+                          button.getAttribute('data-id') !== 'new' ||
+                          button.getAttribute('data-imid') !== 'new' ||
+                          button.getAttribute('data-tmid') !== 'new' ||
+                          button.getAttribute('data-etid') !== 'new' ||
+                          button.getAttribute('data-mid') !== 'new';
+            
+            if (isEdit) {
+              e.preventDefault();
+              alert('You do not have permission to edit existing records. You can only add new records.');
+              return false;
+            }
+          }
+        });
+      });
+      
+      <?php if (!$canDelete): ?>
+      // Also hide delete buttons if delete permission is not granted
+      const deleteButtons = document.querySelectorAll('a.btn-danger, button.btn-danger');
+      deleteButtons.forEach(function(button) {
+        button.style.display = 'none';
+        button.disabled = true;
+      });
+      <?php endif; ?>
+      
+      console.log('Master Data - Edit buttons hidden (add-only mode active)');
+    });
+  </script>
+  <?php endif; ?>
   
 </body>
 

@@ -15,6 +15,14 @@
     exit();
   }
   
+  // Permission check for Modules module (FRM - MODULE)
+  $modulesPermit = UserPermitCheck($userid, 'FRM - MODULE', $con);
+  if (!$modulesPermit['pread']) {
+    echo "<script>alert('Access Denied: You do not have permission to access the Modules module.');</script>";
+    echo "<script>window.location.href = 'main.php';</script>";
+    exit();
+  }
+  
   $loginuser = isset($_SESSION["username"]) ? $_SESSION["username"] : ''; // use email or username
   $uname = isset($_SESSION['uname']) ? $_SESSION['uname'] : ''; // Name of user
   //echo "<script>alert('Username: " . $uname . "'+'".$userid."');</script>"; // Debugging line
@@ -159,7 +167,7 @@
             <li>
               <a class="dropdown-item d-flex align-items-center" href="index.php?logout=true">
                 <i class="bi bi-box-arrow-right"></i>
-                <span>Sign Out</span>
+                <span>Logout</span>
               </a>
             </li>
 
@@ -303,6 +311,14 @@
           <i class="bi bi-person-plus"></i><span>Users</span>
         </a>
       </li>  <!-- End Users Nav -->
+
+      <!-- Logout -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="logout.php">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Logout</span>
+        </a>
+      </li><!-- End Logout -->
 
     </ul>
 

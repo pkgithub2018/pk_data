@@ -1661,14 +1661,20 @@
                 </div>
                 <div class="mb-3">
                   <label for="approverWorkplace" class="form-label"><?php echo isset($translations['Workplace']) ? $translations['Workplace'] : 'Workplace'; ?></label>
-                  <!--
-                  <select class="form-select" name="approverWorkplace" id="approverWorkplace" aria-label="Default select example">
-                     <option value="">*** Please select one ***</option>
-                      <?php //SelectLocations($locid, $con); ?>
-                    </select>
-                  -->
                   <input type="text" class="form-control" id="approverWorkplace" name="approverWorkplace" required>
                 </div>
+                <div class="mb-3">
+                  <label for="approverLocation" class="form-label"><?php echo isset($translations['Location']) ? $translations['Location'] : 'Location'; ?></label>
+                  <select class="form-select" name="approverLocation" id="approverLocation" aria-label="Select location" required>
+                     <option value="">*** Please select one ***</option>
+                      <?php 
+                      // Initialize $locid for dropdown (will be set by JavaScript when editing)
+                      $locid = null;
+                      SelectLocation($locid, $con); 
+                      ?>
+                    </select>
+                </div>
+
               </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo isset($translations['Close']) ? $translations['Close'] : 'Close'; ?></button>
@@ -1697,6 +1703,7 @@
                    <th><?php echo isset($translations['Roles']) ? $translations['Roles'] : 'Roles'; ?></th>
                    <th><?php echo isset($translations['Position']) ? $translations['Position'] : 'Position'; ?></th>
                    <th><?php echo isset($translations['Workplace']) ? $translations['Workplace'] : 'Workplace'; ?></th>
+                   <th><?php echo isset($translations['Location']) ? $translations['Location'] : 'Location'; ?></th>
                    <th><?php echo isset($translations['Edit']) ? $translations['Edit'] : 'Edit'; ?></th>
                    <th><?php echo isset($translations['Delete']) ? $translations['Delete'] : 'Delete'; ?></th>
                  </tr>
@@ -1733,10 +1740,11 @@
         $arole = $_POST['approverRole'];
         $aposition = $_POST['approverPosition'];
         $aworkplace = $_POST['approverWorkplace'];
+        $alocation_id = $_POST['approverLocation'];
         
         if($aid === 'new' || empty($aid)) {
             // Add new approver
-            $result = AddApprover($aname, $asurname, $arole, $aposition, $aworkplace, $userid, $guid, $con); // Function to add new approver
+            $result = AddApprover($aname, $asurname, $arole, $aposition, $aworkplace, $alocation_id, $userid, $guid, $con); // Function to add new approver
 
             if ($result) {
                // echo "<script>alert('New approver added successfully!');</script>"; // Success message
@@ -1744,7 +1752,7 @@
             } 
         } else {
             // Update existing approver
-            UpdateApprover($aid, $aname, $asurname, $arole, $aposition, $aworkplace, $con); // Function to update approver
+            UpdateApprover($aid, $aname, $asurname, $arole, $aposition, $aworkplace, $alocation_id, $con); // Function to update approver
            // echo "<script>alert('Approver with ID: " . $aid . " updated.');</script>"; // Debugging line
             echo "<script>window.location.href='masterdata.php?part=approvers&uid=" . $userid . "';</script>"; // Redirect to refresh the page
         }
@@ -2914,6 +2922,7 @@
       // Check if we're editing an existing approver or adding a new one
       if (id && id !== 'new') {
         // Editing existing approver - populate form fields
+        var locationId = button.data('location');
         modal.find('.modal-title').text('Edit Approver');
         modal.find('#approverId').val(id);
         modal.find('#approverName').val(name);
@@ -2921,6 +2930,7 @@
         modal.find('#approverRole').val(role);
         modal.find('#approverPosition').val(position);
         modal.find('#approverWorkplace').val(workplace);
+        modal.find('#approverLocation').val(locationId);
         modal.find('#submitApprover').text('Update');
       } else {
         // Adding new approver - clear form fields
@@ -2931,6 +2941,7 @@
         modal.find('#approverRole').val('');
         modal.find('#approverPosition').val('');
         modal.find('#approverWorkplace').val('');
+        modal.find('#approverLocation').val('');
         modal.find('#submitApprover').text('Submit');
       }
     });

@@ -59,6 +59,9 @@ $uprofile = Profiledata($userid, $con);
 // User group ID - get from user data instead of session
 $guid = $groupid;
 
+// Get location_group from tblocations based on user's location_id
+$location_group = UserLocationGroup($userid, $con); //PAS-LM, PAS-XA, etc
+
 // Check permissions for Import and Export entity module using enhanced user-level permission check
 $entityPermissions = UserPermitCheck($userid, 'FRM - ENTITY', $con);
 $canReadEntity = $entityPermissions['pread'];
@@ -425,11 +428,13 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           </ol>
           </nav>
         </div>
+        <?php if ($canAddEntity): ?>
         <div>
           <a href="entity.php?frm=newEntity_export&uid=<?php echo $userid; ?>" class="btn btn-success btn-sm" role="button">
             <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?> 
           </a>
         </div>
+        <?php endif; ?>
       </div><!-- End Page Title - Users list -->
       <div class="row">
         <div class="col-lg-12">
@@ -458,7 +463,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   </tr>
                 </thead>
                 <tbody>
-                  <?php EntityExportList($con, $guid, $userid); ?>
+                  <?php EntityExportList($con, $location_group, $userid); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -745,11 +750,13 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
           </ol>
           </nav>
         </div>
+        <?php if ($canAddEntity): ?>
         <div>
           <a href="entity.php?frm=newEntity_import&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>" class="btn btn-success btn-sm" role="button">
             <i class="bi bi-plus-circle"></i> <?php echo isset($translations['Add New']) ? $translations['Add New'] : 'Add New'; ?>
           </a>
         </div>
+        <?php endif; ?>
       </div><!-- End Page Title - Import entity list -->
        <div class="row">
         <div class="col-lg-12">
@@ -777,7 +784,7 @@ $mainHref = 'main.php?' . http_build_query($mainParams);
                   </tr>
                 </thead>
                 <tbody>
-                  <?php EntityImportList($con, $userid); ?>
+                  <?php EntityImportList($con, $location_group, $userid); ?>
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->

@@ -127,6 +127,9 @@ if (!empty($userid)) {
  
  // Use group ID from user data
  $guid = $groupid;
+ 
+ // Get location_group from tblocations based on user's location_id
+ $location_group = UserLocationGroup($userid, $con); //PAS-LM, PAS-XA, etc
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
@@ -403,7 +406,7 @@ if (!empty($userid)) {
           <span><?php echo isset($translations['Profile']) ? $translations['Profile'] : 'Profile'; ?></span>
         </a>
       </li><!-- End Profile Page Nav -->
-    <?php if($groupname == "admin"){ ?><!-- Admin group check -->
+    <?php //if($groupname == "admin"){ ?><!-- Admin group check -->
       <?php if ($userGroupPermit['pread']): ?>
       <li class="nav-item">
         <a class="nav-link collapsed" href="users.php?part=ugroup&uid=<?php echo $userid; ?>&lang=<?php echo $lang; ?>">
@@ -435,7 +438,7 @@ if (!empty($userid)) {
       </li>  
       <?php endif; ?>
       <!-- pk**: End of User Admin-->
-    <?php } // End of Admin group check ?>
+    <?php //} // End of Admin group check ?>
 
       <!-- Logout -->
       <li class="nav-item">
@@ -486,7 +489,7 @@ if (!empty($userid)) {
                       </tr>
                     </thead>
                     <tbody>
-                     <?php InspectionList_items($guid, $con, $userid); ?>
+                     <?php InspectionList_items($location_group, $con, $userid); ?>
                     </tbody>
                   </table>
                 </div>

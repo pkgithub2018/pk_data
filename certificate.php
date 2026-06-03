@@ -132,6 +132,9 @@ if (!empty($userid)) {
  
  // Use group ID from user data
  $guid = $groupid;
+ 
+ // Get location_group from tblocations based on user's location_id
+ $location_group = UserLocationGroup($userid, $con); //PAS-LM, PAS-XA, etc
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo (isset($_SESSION['lang']) && $_SESSION['lang'] == 'la') ? 'lo' : 'en'; ?>">
@@ -658,7 +661,7 @@ if (!empty($userid)) {
                       </tr>
                     </thead>
                     <tbody>
-                     <?php CertificateList($guid, $con, $userid); ?>
+                     <?php CertificateList($location_group, $con, $userid); ?>
                     </tbody>
                   </table>
                 </div>

@@ -1249,7 +1249,7 @@ function UpdateuserSubmit($uid, $name, $surname, $sex, $psw, $position, $unit, $
       // Query to join tbusers and tblocations to get location_group
       $sql = "SELECT tblocations.location_group 
               FROM tbusers 
-              INNER JOIN tblocations ON tbusers.location_id = tblocations.id 
+              INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text 
               WHERE tbusers.id = '$userid'";
       
       $result = pg_query($con, $sql) or die(pg_last_error($con));
@@ -3353,14 +3353,24 @@ function DeleteEntityType($etid, $con) {
 /*
  EntityExportList($con): Show list of entities from tbentity table
 */
-function EntityExportList($con, $guid, $userid) {   
-    // Additional validation to ensure guid is valid
-    if (empty($guid) || !is_numeric($guid)) {
-        echo "<script>alert('Invalid group ID. Please log in again.');</script>";
+function EntityExportList($con, $location_group, $userid) {   
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        echo "<tr><td colspan='9' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
         return;
     }
 
-    $sqle = "SELECT * FROM tbentity_export WHERE created_guid='$guid' ORDER BY id DESC";
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
+    // Query with location_group filtering
+    // Link: tbentity_export.created_guid -> tbusers.group_id -> tbusers.location_id -> tblocations.location_group
+    $sqle = "SELECT DISTINCT tbentity_export.* 
+             FROM tbentity_export 
+             INNER JOIN tbusers ON tbentity_export.created_guid::text = tbusers.group_id::text 
+             INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text 
+             WHERE tblocations.location_group = '$location_group' 
+             ORDER BY tbentity_export.id DESC";
     $result = pg_query($con, $sqle) or die(pg_last_error());
     $i = 0;
     if (pg_num_rows($result) > 0) {
@@ -3557,10 +3567,24 @@ function EntityExportInfo($id, $con) {
 /*
  EntityImportList($con): Show list of entities from tbentity_import table
 */
-function EntityImportList($con, $userid = null) {
-   // $guid = $_SESSION['groupid']; // already defined in entity.php
+function EntityImportList($con, $location_group, $userid = null) {
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        echo "<tr><td colspan='8' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
+        return;
+    }
 
-    $sqle = "SELECT * FROM tbentity_import ORDER BY id DESC";
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
+    // Query with location_group filtering
+    // Link: tbentity_import.created_guid -> tbusers.group_id -> tbusers.location_id -> tblocations.location_group
+    $sqle = "SELECT DISTINCT tbentity_import.* 
+             FROM tbentity_import 
+             INNER JOIN tbusers ON tbentity_import.created_guid::text = tbusers.group_id::text 
+             INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text 
+             WHERE tblocations.location_group = '$location_group' 
+             ORDER BY tbentity_import.id DESC";
     $result = pg_query($con, $sqle) or die(pg_last_error());
     $i = 0;
     if (pg_num_rows($result) > 0) {
@@ -3810,23 +3834,41 @@ function ApplicationNo($exporter_id, $uid, $con) {
         // date("y") will return the last two digits of the current year
         list ($name, $surname, $sex, $psw, $position, $unit, $phone, $email, $groupid, $admingroup, $loct_id, $status) = Updateuser_values($uid,$con);
         $rowl= Locationvariables($loct_id, $con);
-        $loct_code = $rowl['lid']; // Get location code from Locationvariables function
-        $loct_type = $rowl['location_type']; 
-        $pid = $rowl['pid'];
+        
+        // Handle case where location data might be missing
+        if (!$rowl) {
+            error_log("Warning: No location found for user $uid (location_id: $loct_id). Using default application number format.");
+            $loct_code = '';
+            $loct_type = "1"; // Default to DOA type
+            $pid = '00';
+        } else {
+            $loct_code = $rowl['lid'] ?? ''; // Get location code from Locationvariables function
+            $loct_type = $rowl['location_type'] ?? "1"; // Default to DOA if not set
+            $pid = $rowl['pid'] ?? '00'; // Default to 00 if province not set
+        }
         
       //  echo "<script>alert('Location Code: $loct_code, Location Type: $loct_type, Province ID: $pid');</script>";
        
         if(strlen($pid) === 1) {
             $pid = '0'.$pid; // Ensure province code is always two digits
         }
-         // 1- DOA and 2 - PAFO
+        
+        // Initialize province_code with default value
+        $province_code = '00'; // Default to DOA format
+        
+        // 1- DOA and 2 - PAFO and 3 - PASS-BORDER
         if ($loct_type === "1") {  // 1 - DOA
             $province_code = '00'; // if DOA's user, use 00 for province code
         } else if( $loct_type === "2") {  // 2 - PAFO
-            $province_code = $pid; // NOT CORRECT -if PAFO's user, use 01 for province code
+            $province_code = $pid ? $pid : '00'; // if PAFO's user, use province ID
         } else if ($loct_type === "3") { // 3 - PASS-BORDER
             $province_code = $pid."/".$loct_code; // if PASS-BORDER's user
-        } 
+        } else {
+            // Handle unexpected location types - default to province ID or '00'
+            $province_code = $pid ? $pid : '00';
+            error_log("Warning: Unexpected location_type '$loct_type' for user $uid. Using default province code: $province_code");
+        }
+        
         // Generate FULL APPLICATION NUMBER - $appno
         // $id - Application ID (id - auto_increment) itself
         $appno = str_pad($id, 6, "0", STR_PAD_LEFT)."/".date("y")."/".$province_code; // Get only 6 digits,
@@ -4220,7 +4262,7 @@ function ApplicationList($location_group, $con, $lang, $userid = null, $groupPer
     $sql = "SELECT tbapplication.* 
             FROM tbapplication 
             INNER JOIN tbusers ON tbapplication.uid = tbusers.id 
-            INNER JOIN tblocations ON tbusers.location_id = tblocations.id 
+            INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text 
             WHERE tblocations.location_group = '$location_group' 
             ORDER BY tbapplication.id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
@@ -4371,15 +4413,23 @@ function ApplicationAttachmentList($app_id, $con) {
 /*
     ApplicationList_items: Show list of applications with multiple items
 */
-function ApplicationList_items($guid, $con, $userid = null) {
-    // Validate guid parameter - must be numeric and not empty
-    if (empty($guid) || !is_numeric($guid)) {
-        echo "<script>alert('Invalid group ID provided.');</script>";
+function ApplicationList_items($location_group, $con, $userid = null) {
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        // Debug: show that location_group is empty or NULL
+        echo "<tr><td colspan='6' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
         return;
     }
 
-    $sql = "SELECT id, application_no, application_date, company_id, country_import, commodity_id, quantity_net, quantity_gross, unit_id, importerid 
-            FROM tbapplication WHERE guid = '$guid' ORDER BY application_date DESC";
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
+    $sql = "SELECT tbapplication.* 
+            FROM tbapplication 
+            INNER JOIN tbusers ON tbapplication.uid = tbusers.id 
+            INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text 
+            WHERE tblocations.location_group = '$location_group' 
+            ORDER BY tbapplication.application_date DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
@@ -4500,20 +4550,26 @@ function InspectionInfo($app_id, $con) {
 /*
  InspectionList_items: Show list of inspections with their status from tbinspection
 */
-function InspectionList_items($guid, $con, $userid = null) {
-    // Validate guid parameter - must be numeric and not empty
-    if (empty($guid) || !is_numeric($guid)) {
-        echo "<script>alert('Invalid group ID provided.');</script>";
+function InspectionList_items($location_group, $con, $userid = null) {
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        echo "<tr><td colspan='7' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
         return;
     }
 
-    // Query tbinspection joined with tbapplication to filter by guid
-    $sql = "SELECT id, application_id, inspection_date, sample_collected_by, inspected_by, lot_number, 
-                   (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS application_date,
-                   (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) AS company_id
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
+    // Query tbinspection joined with tbapplication, tbusers, and tblocations to filter by location_group
+    $sql = "SELECT tbinspection.id, tbinspection.application_id, tbinspection.inspection_date, 
+                   tbinspection.sample_collected_by, tbinspection.inspected_by, tbinspection.lot_number,
+                   tbapplication.application_date, tbapplication.company_id
             FROM tbinspection
-            WHERE (SELECT guid FROM tbapplication WHERE tbapplication.id = tbinspection.application_id) = '$guid' 
-            ORDER BY inspection_date DESC";
+            INNER JOIN tbapplication ON tbinspection.application_id = tbapplication.id
+            INNER JOIN tbusers ON tbapplication.uid = tbusers.id
+            INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text
+            WHERE tblocations.location_group = '$location_group'
+            ORDER BY tbinspection.inspection_date DESC";
     
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     
@@ -4766,17 +4822,52 @@ function CertificateImporterInfo($importer_id, $con) {
   CertificateApprovedBy: SELECT -Get list of approvers from tbapprovers table
 */
 function CertificateApprovedBy($con, $groupId, $selectedId = null) {
-    $sql = "SELECT id, name, surname, gid FROM tbapprovers WHERE enabled = 'yes' AND gid = '$groupId' ORDER BY name ASC";
+    // Get approvers based on location_group from tblocations
+    // Logic: Find approvers whose location_id belongs to locations with the same location_group as the current user
+    
+    // Step 1: Find location_group(s) for users in this user group
+    $location_groups_sql = "SELECT DISTINCT l.location_group
+                            FROM tblocations l
+                            INNER JOIN tbusers u ON u.location_id::text = l.id::text
+                            WHERE u.group_id = '" . pg_escape_string($con, $groupId) . "'
+                            AND u.enabled = 'yes'
+                            AND l.location_group IS NOT NULL
+                            AND l.location_group != ''";
+    $lg_result = pg_query($con, $location_groups_sql);
+    $location_groups = [];
+    if ($lg_result && pg_num_rows($lg_result) > 0) {
+        while ($lg_row = pg_fetch_assoc($lg_result)) {
+            $location_groups[] = $lg_row['location_group'];
+        }
+    }
+    
+    // If no location_groups found, show message
+    if (empty($location_groups)) {
+        echo "<option value=\"\" disabled>No location group assigned to your location</option>";
+        return;
+    }
+    
+    // Step 2: Find approvers whose location_id is in locations with matching location_group
+    $sql = "SELECT DISTINCT a.id, a.name, a.surname, a.position, a.gid, a.location_id
+            FROM tbapprovers a
+            WHERE a.enabled = 'yes' 
+            AND a.location_id::text IN (
+                SELECT l.id::text
+                FROM tblocations l
+                WHERE l.location_group = ANY(ARRAY['" . implode("','", array_map(function($lg) use ($con) { return pg_escape_string($con, $lg); }, $location_groups)) . "'])
+            )
+            ORDER BY a.name ASC";
     $result = pg_query($con, $sql);
     if ($result && pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
             $selected = ($selectedId !== null && $selectedId == $row['id']) ? 'selected' : '';
             $fullName = trim($row['name'] . ' ' . $row['surname']);
-            echo "<option value=\"{$row['id']}\" $selected>$fullName</option>";
+            $position = htmlspecialchars($row['position'] ?? '', ENT_QUOTES);
+            echo "<option value=\"{$row['id']}\" data-position=\"$position\" $selected>$fullName</option>";
         }
     } else {
         // Debug: Show if no approvers found
-        echo "<option value=\"\" disabled>No approvers available</option>";
+        echo "<option value=\"\" disabled>No approvers in location_group: " . implode(',', $location_groups) . "</option>";
     }
 }
 
@@ -4797,17 +4888,27 @@ function CertificateStatus($appid, $con) {
 /*
  CertificateList: Show list of certificates and their status from tbcertificate
 */
- function CertificateList($guid, $con, $userid){
-    // Validate guid parameter - must be numeric and not empty
-    if (empty($guid) || !is_numeric($guid)) {
-        echo "<script>alert('Invalid group ID provided.');</script>";
+ function CertificateList($location_group, $con, $userid){
+    // Validate location_group parameter - must not be empty
+    if (empty($location_group)) {
+        echo "<tr><td colspan='8' class='text-center text-warning'>No location group found for this user. Please contact administrator to set location group.</td></tr>";
         return;
     }
 
-    $sql = "SELECT id, application_id, certificate_no, carbonpaper_id, consignment_value, datetime_created, date_issued, 
-            (SELECT application_date FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) AS application_date,
-            (SELECT company_id FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) AS company_id 
-            FROM tbcertificate WHERE (SELECT guid FROM tbapplication WHERE tbapplication.id = tbcertificate.application_id) = '$guid'  ORDER BY id DESC";
+    // Escape the location_group for security
+    $location_group = pg_escape_string($con, $location_group);
+
+    // Query tbcertificate joined with tbapplication, tbusers, and tblocations to filter by location_group
+    $sql = "SELECT tbcertificate.id, tbcertificate.application_id, tbcertificate.certificate_no, 
+                   tbcertificate.carbonpaper_id, tbcertificate.consignment_value, 
+                   tbcertificate.datetime_created, tbcertificate.date_issued,
+                   tbapplication.application_date, tbapplication.company_id
+            FROM tbcertificate
+            INNER JOIN tbapplication ON tbcertificate.application_id = tbapplication.id
+            INNER JOIN tbusers ON tbapplication.uid = tbusers.id
+            INNER JOIN tblocations ON tbusers.location_id::text = tblocations.id::text
+            WHERE tblocations.location_group = '$location_group'
+            ORDER BY tbcertificate.id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     if (pg_num_rows($result) > 0) {
         while ($row = pg_fetch_assoc($result)) {
@@ -5260,7 +5361,9 @@ function GetAllCertificateSources($application_id, $con) {
  Approverslist: Get list of approvers from tbapprovers table
 */
  function Approverslist($gid, $con) {
-    $sql = "SELECT * FROM tbapprovers WHERE enabled='yes' AND gid = '" . pg_escape_string($con, $gid) . "' ORDER BY id DESC";
+    $sql = "SELECT * FROM tbapprovers 
+            WHERE enabled='yes' AND gid = '" . pg_escape_string($con, $gid) . "' 
+            ORDER BY id DESC";
     $result = pg_query($con, $sql) or die(pg_last_error($con));
     $i = 0;
     if (pg_num_rows($result) > 0) {
@@ -5271,7 +5374,10 @@ function GetAllCertificateSources($application_id, $con) {
             $asurname = htmlspecialchars($row['surname'], ENT_QUOTES);
             $arole = htmlspecialchars($row['roles'], ENT_QUOTES);
             $aposition = htmlspecialchars($row['position'], ENT_QUOTES);
-            $aworkplace = htmlspecialchars($row['workplace'], ENT_QUOTES);
+            $aworkplace = htmlspecialchars($row['workplace'] ?? '', ENT_QUOTES);
+            $alocation_id = htmlspecialchars($row['location_id'] ?? '', ENT_QUOTES);
+            // Get location name using Locationname function
+            $alocation = !empty($alocation_id) ? htmlspecialchars(Locationname($alocation_id, $con) ?? 'N/A', ENT_QUOTES) : 'N/A';
            
             print "<tr>
                     <td align='center'>".$i."</td>
@@ -5279,8 +5385,9 @@ function GetAllCertificateSources($application_id, $con) {
                     <td>".$arole."</td>
                     <td>".$aposition."</td>
                     <td>".$aworkplace."</td>
+                    <td>".$alocation."</td>
                           <td><button type='button' name='$aid' id='$aid' class='btn btn-primary btn-sm py-0 px-1' style='font-size:0.75rem;' data-bs-toggle='modal' data-bs-target='#addApproverModal' 
-  data-id='$aid' data-name='$aname' data-surname='$asurname' data-role='$arole' data-position='$aposition' data-workplace='$aworkplace'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button></td>
+  data-id='$aid' data-name='$aname' data-surname='$asurname' data-role='$arole' data-position='$aposition' data-workplace='$aworkplace' data-location='$alocation_id'><i class='bi bi-pencil-square table-icon' style='font-size:0.75rem;'></i></button></td>
                           <td><a href='masterdata.php?part=approvers&aid=$aid&del=yes' class='btn btn-danger btn-sm py-0 px-1' style='font-size:0.75rem;'><i class='bi bi-trash table-icon' style='font-size:0.75rem;'></i></a></td>
                  </tr>";
         }
@@ -5290,14 +5397,15 @@ function GetAllCertificateSources($application_id, $con) {
 /*
   AddApprovers: Add new approver into tbapprovers table
 */
-function AddApprover($name, $surname, $roles, $position, $workplace,$uid,$gid, $con) {
-    $sql = "INSERT INTO tbapprovers (name, surname, roles, position, workplace, uid, gid, enabled) 
+function AddApprover($name, $surname, $roles, $position, $workplace, $location_id, $uid, $gid, $con) {
+    $sql = "INSERT INTO tbapprovers (name, surname, roles, position, workplace, location_id, uid, gid, enabled) 
             VALUES (
                 '" . pg_escape_string($con, $name) . "',
                 '" . pg_escape_string($con, $surname) . "',
                 '" . pg_escape_string($con, $roles) . "',
                 '" . pg_escape_string($con, $position) . "',
                 '" . pg_escape_string($con, $workplace) . "',
+                '" . pg_escape_string($con, $location_id) . "',
                 '" . pg_escape_string($con, $uid) . "',
                 '" . pg_escape_string($con, $gid) . "',
                 'yes'
@@ -5310,13 +5418,14 @@ function AddApprover($name, $surname, $roles, $position, $workplace,$uid,$gid, $
 /*
   UpdateApprover: Update existing approver in tbapprovers table
 */
-function UpdateApprover($id, $name, $surname, $roles, $position, $workplace, $con) {
+function UpdateApprover($id, $name, $surname, $roles, $position, $workplace, $location_id, $con) {
     $sql = "UPDATE tbapprovers SET 
                 name = '" . pg_escape_string($con, $name) . "',
                 surname = '" . pg_escape_string($con, $surname) . "',
                 roles = '" . pg_escape_string($con, $roles) . "',
                 position = '" . pg_escape_string($con, $position) . "',
-                workplace = '" . pg_escape_string($con, $workplace) . "'
+                workplace = '" . pg_escape_string($con, $workplace) . "',
+                location_id = '" . pg_escape_string($con, $location_id) . "'
             WHERE id = '" . pg_escape_string($con, $id) . "'";
     $result = pg_query($con, $sql);
     return $result;
@@ -5349,21 +5458,21 @@ function ChartDocTracking($location_group, $con) {
     $sqlApplication = "SELECT COUNT(*) AS total_applications 
                        FROM tbapplication a 
                        INNER JOIN tbusers u ON a.uid = u.id 
-                       INNER JOIN tblocations l ON u.location_id = l.id 
+                       INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                        WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
     
     $sqlInspection = "SELECT COUNT(*) AS total_inspections 
                       FROM tbinspection i 
                       INNER JOIN tbapplication a ON i.application_id = a.id 
                       INNER JOIN tbusers u ON a.uid = u.id 
-                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                       WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
     
     $sqlCertificate = "SELECT COUNT(*) AS total_certificates 
                        FROM tbcertificate c 
                        INNER JOIN tbapplication a ON c.application_id = a.id 
                        INNER JOIN tbusers u ON a.uid = u.id 
-                       INNER JOIN tblocations l ON u.location_id = l.id 
+                       INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                        WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'";
     
     // For current month only, use these queries instead:
@@ -5371,7 +5480,7 @@ function ChartDocTracking($location_group, $con) {
     $sqlApplication = "SELECT COUNT(*) AS total_applications 
                       FROM tbapplication a 
                       INNER JOIN tbusers u ON a.uid = u.id 
-                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                       WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
                       AND EXTRACT(MONTH FROM a.application_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                       AND EXTRACT(YEAR FROM a.application_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
@@ -5380,7 +5489,7 @@ function ChartDocTracking($location_group, $con) {
                      FROM tbinspection i 
                      INNER JOIN tbapplication a ON i.application_id = a.id 
                      INNER JOIN tbusers u ON a.uid = u.id 
-                     INNER JOIN tblocations l ON u.location_id = l.id 
+                     INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                      WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
                      AND EXTRACT(MONTH FROM i.inspection_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                      AND EXTRACT(YEAR FROM i.inspection_date) = EXTRACT(YEAR FROM CURRENT_DATE)";
@@ -5389,7 +5498,7 @@ function ChartDocTracking($location_group, $con) {
                       FROM tbcertificate c 
                       INNER JOIN tbapplication a ON c.application_id = a.id 
                       INNER JOIN tbusers u ON a.uid = u.id 
-                      INNER JOIN tblocations l ON u.location_id = l.id 
+                      INNER JOIN tblocations l ON u.location_id::text = l.id::text 
                       WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'
                       AND EXTRACT(MONTH FROM c.date_issued) = EXTRACT(MONTH FROM CURRENT_DATE)
                       AND EXTRACT(YEAR FROM c.date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)";
@@ -5424,9 +5533,9 @@ function ChartDocTracking($location_group, $con) {
     
     // If all counts are zero, get total counts for debugging
     if ($applicationCount == 0 && $inspectionCount == 0 && $certificateCount == 0) {
-        $totalApp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbapplication a INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
-        $totalInsp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbinspection i INNER JOIN tbapplication a ON i.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
-        $totalCert = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbcertificate c INNER JOIN tbapplication a ON c.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id = l.id WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        $totalApp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbapplication a INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id::text = l.id::text WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        $totalInsp = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbinspection i INNER JOIN tbapplication a ON i.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id::text = l.id::text WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
+        $totalCert = pg_fetch_assoc(pg_query($con, "SELECT COUNT(*) as total FROM tbcertificate c INNER JOIN tbapplication a ON c.application_id = a.id INNER JOIN tbusers u ON a.uid = u.id INNER JOIN tblocations l ON u.location_id::text = l.id::text WHERE l.location_group = '" . pg_escape_string($con, $location_group) . "'"))['total'] ?? 0;
         error_log("ChartDocTracking - No data for location_group: $location_group. Total records - App: $totalApp, Insp: $totalInsp, Cert: $totalCert");
     }
 
@@ -5516,7 +5625,7 @@ function MonthlyPestDetectedChartData($location_group, $con) {
             FROM tbinspection i
             INNER JOIN tbapplication a ON a.id = i.application_id
             INNER JOIN tbusers u ON a.uid = u.id
-            INNER JOIN tblocations l ON u.location_id = l.id
+            INNER JOIN tblocations l ON u.location_id::text = l.id::text
             INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
             LEFT JOIN tbpest p ON p.id = tpd.pestid
             WHERE i.inspection_date IS NOT NULL
@@ -5536,6 +5645,25 @@ function MonthlyPestDetectedChartData($location_group, $con) {
             'series' => [],
             'year' => (int)date('Y')
         ];
+    }
+
+    // Debug: Log row count
+    $rowCount = pg_num_rows($result);
+    error_log("MonthlyPestDetectedChartData: Found $rowCount pest records for location_group: $location_group");
+    
+    // Debug: Check if there are any pest_detected records at all for this location_group
+    if ($rowCount === 0) {
+        $debug_sql = "SELECT COUNT(*) as total FROM tbpest_detected tpd 
+                      INNER JOIN tbapplication a ON tpd.application_id = a.id 
+                      INNER JOIN tbusers u ON a.uid = u.id 
+                      INNER JOIN tblocations l ON u.location_id::text = l.id::text 
+                      WHERE l.location_group = $1";
+        $debug_result = pg_query_params($con, $debug_sql, array($location_group));
+        if ($debug_result) {
+            $debug_row = pg_fetch_assoc($debug_result);
+            error_log("MonthlyPestDetectedChartData: Total pest_detected records for location_group: " . $debug_row['total']);
+            pg_free_result($debug_result);
+        }
     }
 
     $seriesMap = [];
@@ -5595,7 +5723,7 @@ function MonthlyPestCategoryChartData($location_group, $con) {
                         FROM tbinspection i
                         INNER JOIN tbapplication a ON a.id = i.application_id
                         INNER JOIN tbusers u ON a.uid = u.id
-                        INNER JOIN tblocations l ON u.location_id = l.id
+                        INNER JOIN tblocations l ON u.location_id::text = l.id::text
                         INNER JOIN tbpest_detected tpd ON tpd.application_id = i.application_id
                         LEFT JOIN tbpest p ON p.id = tpd.pestid
                         WHERE i.inspection_date IS NOT NULL
@@ -5615,6 +5743,25 @@ function MonthlyPestCategoryChartData($location_group, $con) {
             'series' => [],
             'year' => (int)date('Y')
         ];
+    }
+
+    // Debug: Log row count
+    $rowCount = pg_num_rows($result);
+    error_log("MonthlyPestCategoryChartData: Found $rowCount pest category records for location_group: $location_group");
+    
+    // Debug: Check if there are any pest_detected records at all for this location_group
+    if ($rowCount === 0) {
+        $debug_sql = "SELECT COUNT(*) as total FROM tbpest_detected tpd 
+                      INNER JOIN tbapplication a ON tpd.application_id = a.id 
+                      INNER JOIN tbusers u ON a.uid = u.id 
+                      INNER JOIN tblocations l ON u.location_id::text = l.id::text 
+                      WHERE l.location_group = $1";
+        $debug_result = pg_query_params($con, $debug_sql, array($location_group));
+        if ($debug_result) {
+            $debug_row = pg_fetch_assoc($debug_result);
+            error_log("MonthlyPestCategoryChartData: Total pest_detected records for location_group: " . $debug_row['total']);
+            pg_free_result($debug_result);
+        }
     }
 
     $seriesMap = [];

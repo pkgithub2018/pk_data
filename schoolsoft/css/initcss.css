@@ -1,0 +1,750 @@
+@charset "utf-8";
+/* CSS Document */
+body{
+  width:100%; 
+  height:auto;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.header {
+  width: 100%;
+  height: 55px; 
+  display: flex;                /* Enable flexbox */
+  align-items: center;          /* Vertically center children */
+  justify-content: flex-end; /* Align items to the right */
+  vertical-align: middle;
+  overflow: hidden;
+  background-color: #b2b200;
+  padding: 10px 10px; 
+  border-bottom-width: 0.1em; 
+  border-bottom: solid;
+  border-bottom-color: #ccc;
+  position: fixed; /* To freeze page heading */
+  z-index: 2; /* Make header stays over other div */
+}
+
+.header a {
+  float: left;
+  color: black;
+  text-align: center;
+  padding: 10px;
+  text-decoration: none;
+  font-size: 17px; 
+  line-height: 20px; /* Height of block */
+  border-radius: 4px;
+}
+
+.header a.logo {
+  font-size: 20px;
+ /* font-weight: bold; */
+}
+
+.header a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.header a.active {
+  background-color: #d7d370;
+  color: black;
+}
+.header-right {
+  float: right; 
+  margin-right: 20px; 
+  padding: 5px;
+}
+.header-left{
+	float: left;
+}
+.activealink{
+		background-color: #d7d370;
+	}
+/* Footer */
+.footer{
+	width: 100%; 
+	height: 30%; 
+	background-color: #2E8B57; 
+	color: white;
+	float:right;
+	font-size: 15px;
+	margin: 20px 0px 0px 0px;
+}
+.footer i, a{
+ font-size: 20px;
+ color: white;
+}
+.footer a{
+ font-size: 16px;
+ color: white;	
+}
+.footer-content{
+  margin-left: 75px; 
+  margin-top: 15px; 
+  float: left
+}
+/* cdiv - curriculum */
+.cdiv{
+  width: 25%; 
+  height: 600px; 
+  background-color: white;
+  border: solid 1px #D3D3D3; 
+  box-shadow: 1px 2px #F0F0F0; 
+  float: left; 
+  margin-left: 30px; 
+  margin-top: 10px; 
+  position: relative	
+}
+.cdiv-content{
+	width:70%; 
+	vertical-align: top; 
+	margin-top: 20px;
+	margin-left: 15px;
+	font-size: 20px; 
+	font-weight: bold;
+	color: white;
+	background-color: #008bd2;
+}
+/* custome form elements */
+.csfelment input[type=text], input[type=date], input[type=submit], select {
+  width: 80%; 
+  height: 45px;
+  /* padding: 8px 20px; */
+  margin: 8px 0; 
+  font-size: 12pt;
+ /* display: none; */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.csfelment input[type=submit]{
+  font-weight: bold;
+  color: white;
+  background-color: #008bd2;
+  height: 45px;
+}
+.csfelment table, th,td{
+	padding: 0px 0px 0px 0px;
+}
+/* Login  */
+.inlog{
+  width: 60%; 
+  height: 450px; 
+  background-color: white; 
+  border-radius: 25px;
+}
+.inlog input[type=text], input[type=password]{
+  width: 300px; 
+  height: 15px;
+  margin-top: 5px;
+  padding: 15px; 
+  font-size: 12pt; 
+  border: solid #C0C0C0 1px;
+}
+.inlog input[type=submit]{
+  width: 330px; 
+  height: 50px;
+  padding: 5px; 
+  margin-top: 20px;
+}
+/* Modal form */
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 85px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 35%;
+  height: 50%; 
+  border-radius: 11px;
+}
+/* Modal Heading */
+.modal-heading{
+  padding: 5px 0; 
+  height:35px; 
+  text-align: justify; 
+  vertical-align: middle;
+  background: #018749;  /* **** #1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+.modal-table {
+  margin: 10px 0px 0px 35px;
+  border-spacing: 5px; 
+}
+/* Modal form for user template file upload */
+.modalfup {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 85px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.modalfup-content {
+  background-color: #fefefe; 
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 55%;
+  height: 25%;
+  border-radius: 11px;
+}
+.modalfup-heading{
+  padding: 5px 0; 
+  height:35px; 
+  text-align: justify; 
+  vertical-align: middle;
+  background: #018749;  /* **** #1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+.modalfup-form input[type=submit]{
+  width: 100px;
+  height: 35px;
+  margin-top: 5px;
+  padding: 5px; 
+  font-size: 12pt; 
+  border: solid #C0C0C0 1px; 
+  border-radius: 5px;
+}
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cominpt input[type=text], input[type=submit]{ 
+  width: 250px;
+  height: 30px;
+  margin-top: 5px;
+  padding: 5px; 
+  font-size: 12pt; 
+  border: solid #C0C0C0 1px; 
+  border-radius: 5px;
+}
+.cusbtn{
+  height: 40px; 
+  padding: 5px;
+  font-size: 12pt;
+  border: solid #C0C0C0 1px; 
+  border-radius: 5px;
+}
+.msheading{
+  color:#FFF; 
+  font-size:20px; 
+  font-weight: bold;
+}
+/* Custom table */
+.custb {
+ /* font-family: Arial, Helvetica, sans-serif; */
+  border-collapse: collapse;
+  width: 100%; 
+  font-size: 10pt;
+}
+
+.custb td, .custb th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.custb tr:nth-child(even){background-color: #f2f2f2;}
+
+.custb tr:hover {background-color: #ddd;}
+
+.custb th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: center;
+  background-color: #04AA6D;
+  color: white;
+}
+.custb a:link{ 
+  font-size: 11pt;
+  color: blue;
+}
+/* Search box */
+dposition{
+	width:100%; 
+	display:inline-block; 
+	float:left; 
+	margin:70px 0px 50px 0px} /*  margin-buttom: 50px - To make space */
+.sbox{margin:5px 0px 40px 0px}
+.sbox input[type=text], input[type=date], select{ 
+	height:40px; 
+	border-radius:5px; 
+	box-sizing:border-box;
+	border: 1px solid #ccc; 
+	font-size:15px}
+.sbox input[type=text]{
+	width:45%;
+	}
+.sbox input[type=date]{
+	width:15%;
+	}
+.sban select{
+	width:20%;
+   }	
+/* User registration form */
+.usform{
+  width: 100%; 
+  display: inline-block; 
+  z-index: -1
+}
+.usform input[type=text], input[type=date], select{
+  height: 40px;
+  /* padding: 8px 20px; */
+  margin: 8px 0;
+  font-size: 12pt;
+ /* display: none; */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.usform input[type=submit],input[type=reset],input[type=button] {
+  font-weight: bold;
+  font-size: 12pt;
+  color: white;
+  background-color: #008bd2; 
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: 45px;	
+}
+.usform-lside{
+  width:60%; 
+  height: 850px; 
+  float: left; 
+  position: relative; 
+  margin-left: 20px; 
+  margin-bottom: 20px; 
+  background-color: #F5F5F5; /* #FFD700 */
+ }
+.usform-content{
+  width: 93%; 
+  height: 550px; 
+  background-color: white; 
+  position: relative; 
+  padding: 10px; 
+  margin-top: 20px; 
+  box-shadow: 1px 1px grey; 
+  border-radius: 5px; 
+  font-size: 12pt;
+}
+.usform-content input[type=text],select, textarea {
+  font-size: 12pt;
+}
+.usform-tb{
+  border-collapse: collapse;
+  border-spacing: 0 1px; 
+  margin-left: 10px;
+}
+.usform-fset{
+  border: 1px solid #ccc; 
+  border-radius: 4px;
+}
+.usbtn{
+  width: 95%; height: 90px; 
+  margin-bottom: 10px; 
+  margin-left: 20px; 
+  float: left; 
+  display: inline-block; 
+  text-align: left; 
+  background-color: white; 
+  border-radius: 5px;	
+}
+.usbtn-fdownup{
+  float: left; 
+  padding: 1px; 
+  margin: 10px 5px 2px 15px;	
+}
+/* Table for list of user */
+table.tbus {
+ border-collapse: collapse;
+  width: 100%;
+    color: #333;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    text-align: left;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    margin: auto;
+    margin-top: 5px;
+    margin-bottom: 50px; 
+	border: solid #E5E5E5 1px;
+}
+table.tbus th{
+  background-color: #3b8132; /* #ff9800  */
+  color: #fff; 
+  font-weight: bold;
+  padding: 7px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-top: 1px solid #fff;
+  border-bottom: 1px solid #ccc; 
+  align-content: center;
+}
+table.tbus tr:nth-child(even) td {
+  background-color: #f2f2f2;
+}
+
+table.tbus tr:hover td {
+  background-color: #acd8a7; /* #ffedcc */
+}
+/* Table - sub-section */
+table.tbusub {
+ border-collapse: collapse;
+ /* width: 100%; */
+    color: #333;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    text-align: left;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    margin: auto;
+    margin-top: 5px;
+    margin-bottom: 50px; 
+	border: solid #E5E5E5 1px;
+}
+table.tbusub th{
+  background-color: #EBEBEB; /* #3b8132 #ff9800  */
+  color: black; 
+  font-weight: bold;
+  padding: 7px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-top: 1px solid #fff;
+  border-bottom: 1px solid #ccc; 
+  align-content: center;
+}
+table.tbusub tr:nth-child(even) td {
+  background-color: white; /* #f2f2f2 */
+}
+
+table.tbusub tr:hover td {
+  background-color: #acd8a7; /* #ffedcc */
+}
+/*
+  System admin - pupils and students
+*/
+.adpstud{
+  width: 100%; 
+  display: inline-block;
+  margin: 15px 0px 0px 20px;  /* top right buttom left */
+}
+.adpstud table,th {
+	border-bottom: solid 1px #BCA6A6;
+}
+/*
+  System admin - subject
+*/
+.dsubj{
+  width: 100%; 
+  display: inline-block;
+  margin: 5px 0px 0px 20px;  /* top right buttom left */
+}
+/*
+ MODAL FORM - Message *************
+*/
+.mdmess {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 85px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.mdmess-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 35%;
+  border-radius: 11px;
+}
+/* Modal Heading */
+.mdmess-heading{
+  padding: 5px 0; 
+  height:35px; 
+  text-align: justify; 
+  vertical-align: middle;
+  background: #018749;  /* **** #1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+/* The Close Button - message */
+.closemsg {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.closemsg:hover,
+.closemsg:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+
+/* Modal form - Teacher*/
+.modaltcher {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 75px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modaltcher-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 45%;
+  height: 75%; 
+  border-radius: 11px;
+}
+/* Modal Heading */
+.modaltcher-heading{
+  padding: 5px 0; 
+  height:35px; 
+  text-align: justify; 
+  vertical-align: middle;
+  background: #018749;  /* **** #1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+.modaltcher-table{ 
+  float: left;
+  margin: 5px 25px 0px 0px;
+  border-spacing: 2px; 
+}
+/* form inside modal form - teacher */
+.ftcher input[type=text], select {
+  width: 90%; 
+  height: 45px;
+  /* padding: 8px 20px; */
+  margin: 8px 0; 
+  font-size: 12pt;
+ /* display: none; */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.ftcher input[type=button], input[type=submit]{
+  width: 25%; 
+  height: 45px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.ftspan span:hover{
+	  color: #3AAB58;
+	  cursor: pointer;
+ } 
+/* Modal form - Teaching*/
+.modalteaching {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 75px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modalteaching-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 45%;
+  height: 80%; 
+  border-radius: 11px;
+}
+/* Modal Heading */
+.modalteaching-heading{
+  padding: 5px 0; 
+  height:35px; 
+  text-align: justify; 
+  vertical-align: middle;
+  background: #018749;  /* **** #1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+/* The Close Button - teaching */
+.closetch {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.closetch:hover,
+.closetch:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/*
+  Modal form - List of student admin-students
+*/
+
+.mdstu {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 85px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.mdstu-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0px;
+  border: 1px solid #888;
+  width: 75%;
+  border-radius: 11px;
+}
+/* Modal Heading */
+.mdstu-heading{
+  color: black; /*  #FFF  */
+  padding: 5px 0; 
+  height:35px; 
+  text-align: center; 
+  vertical-align: middle;
+  background: #d7d370;  /* **** #018749#1a1a1a **** */
+  -webkit-border-top-left-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topright: 5px;
+  border-top-right-radius: 10px; 
+}
+/* The Close Button - message */
+.closestu {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.closestu:hover,
+.closestu:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+/* Standard of form elements: buttons */
+.stforme input[type=submit],input[type=reset],input[type=button] {
+  font-weight: bold;
+  font-size: 12pt;
+  color: white;
+  background-color: #008bd2; 
+  border: 1px solid #ccc;
+}
+.header-text {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+.tbbilld {
+  border-collapse: collapse;
+  width: 90%; 
+  font-size: 12pt; 
+}
+.tbbilld td, .tbbilld th {
+  border: 1px solid black;
+  padding: 3px;
+}
+.tbbilld th {
+  font-weight: bold;
+  background-color: gray;
+  text-align: center;
+}
+.dpay{
+  width: 90%;
+  display: inline-block;
+  float: left;
+}
+.subdpay{
+  float: left;	
+}
+.alink{
+  font-size: 12px;
+  color:#000;
+}
